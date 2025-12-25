@@ -1,0 +1,148 @@
+# ========================================
+# Gaussian Trading System - .gitignore
+# Author: Chris Peters
+# ========================================
+
+# Configuration files with API keys and credentials
+config.json
+my_config.json
+config_*.json
+!config.example.json
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Legacy credential files
+.tradier_credentials.json
+tradier_config.json
+
+# Bot reporter state (contains bot IDs)
+data/bot_reporter_state.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+env/
+venv/
+ENV/
+.venv/
+
+# Data and databases
+*.db
+*.db-journal
+data/db/*.db
+data/imports/*.csv
+data/*.jsonl
+data/*.json
+!data/providers.py
+data/missed_opportunities*.json
+
+# State files (large)
+state/
+*/state/
+**/decision_records.jsonl
+**/missed_opportunities*.jsonl
+**/tradability_gate_dataset.jsonl
+
+# Logs
+logs/*.log
+*.log
+crash_test.log
+
+# Models and training outputs
+models/run_*/
+models/*/
+!models/.gitkeep
+models/state/*.pkl
+models/*.pth
+models/*.pt
+models/*.pkl
+models/*.pkl.OLD
+models/*.json
+models/*.txt
+!models/README.md
+!models/FIX_PROGRESS_REPORT.md
+!models/Q_SCORER_OPTIMIZATION_REPORT.md
+
+# Trained model files (large binaries)
+*.pt
+*.pth
+*.onnx
+*.pkl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Archives
+*.tar.gz
+*.zip
+*.rar
+
+# Data Manager specific
+data-manager/data/
+data-manager/venv/
+data-manager/*.db
+data-manager/.env
+data-manager/data/.secret_key
+
+# Claude Code
+.claude/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Test caches
+.pytest_cache/
+.mypy_cache/
+
+# Node (if any frontend)
+node_modules/
+
+# Bot status (runtime state)
+bot_status.json
+

@@ -1,0 +1,20 @@
+import os
+import sys
+import subprocess
+
+os.chdir('E:/gaussian/output3')
+env = os.environ.copy()
+env['ENTRY_CONTROLLER'] = 'bandit'
+env['MODEL_RUN_DIR'] = 'models/looser_stops_test'
+env['TT_MAX_CYCLES'] = '1000'
+env['TT_PRINT_EVERY'] = '100'
+env['PAPER_TRADING'] = 'True'
+env['HMM_PURE_MODE'] = '1'  # Use HMM-only since it did slightly better
+
+print('Running HMM-PURE with LOOSER stops (6% SL, 12% TP, 3hr max)...')
+result = subprocess.run(
+    [sys.executable, 'scripts/train_time_travel.py'],
+    env=env,
+    cwd='E:/gaussian/output3'
+)
+sys.exit(result.returncode)

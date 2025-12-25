@@ -1,0 +1,154 @@
+{
+    "_README": "Copy this file to config.json and fill in your API keys",
+    "_AUTHOR": "Chris Peters",
+
+    "credentials": {
+        "tradier": {
+            "data_api_token": "YOUR_TRADIER_DATA_API_TOKEN",
+            "sandbox": {
+                "account_number": "YOUR_SANDBOX_ACCOUNT",
+                "access_token": "YOUR_SANDBOX_ACCESS_TOKEN",
+                "description": "Sandbox account for testing trades with fake money"
+            },
+            "live": {
+                "account_number": "YOUR_LIVE_ACCOUNT",
+                "access_token": "YOUR_LIVE_ACCESS_TOKEN",
+                "description": "LIVE account for real money trading - BE CAREFUL!"
+            }
+        },
+        "polygon": {
+            "api_key": "YOUR_POLYGON_API_KEY",
+            "plan": "starter",
+            "description": "Polygon.io Stocks Starter - 5 years historical, unlimited calls"
+        },
+        "alpha_vantage": {
+            "api_key": "YOUR_ALPHA_VANTAGE_KEY",
+            "description": "Alpha Vantage API - Alternative data source"
+        },
+        "fmp": {
+            "api_key": "YOUR_FMP_API_KEY",
+            "description": "Financial Modeling Prep API - Historical 1-min data",
+            "plan": "starter",
+            "requests_per_minute": 300
+        },
+        "_security_note": "IMPORTANT: Never commit config.json with real API keys!"
+    },
+
+    "trading": {
+        "symbol": "SPY",
+        "initial_balance": 5000.0,
+        "paper_initial_balance": 5000.0,
+        "simulate_settlement": true,
+        "max_positions": 3,
+        "enable_straddles": false,
+        "enable_premium_selling": false,
+        "base_confidence_threshold": 0.55,
+        "min_confidence_threshold": 0.5
+    },
+
+    "risk": {
+        "max_risk_per_trade_pct": 0.02,
+        "max_position_size_pct": 0.05,
+        "max_daily_loss_pct_warn": 0.05,
+        "max_daily_loss_pct_stop": 0.1,
+        "max_weekly_loss_pct_stop": 0.15,
+        "max_concurrent_positions": 5,
+        "position_size_confidence_clamp": {
+            "min": 0.5,
+            "max": 0.7
+        }
+    },
+
+    "risk_management": {
+        "stop_loss_pct": 8.0,
+        "take_profit_pct": 15.0,
+        "trailing_stop": {
+            "enabled": true,
+            "activation_pct": 8.0,
+            "trail_pct": 4.0
+        },
+        "max_hold_minutes": 45
+    },
+
+    "entry_controller": {
+        "type": "consensus",
+        "consensus": {
+            "min_signals_to_trade": 5,
+            "min_weighted_confidence": 0.55,
+            "enable_mean_reversion": true,
+            "enable_regime_filter": true,
+            "enable_advanced_features": true,
+            "volatility_filter": {
+                "vix_min": 12,
+                "vix_max": 35
+            }
+        },
+        "xgboost_exit": {
+            "min_profit_for_exit": 3.0,
+            "min_hold_minutes_for_exit": 10.0
+        }
+    },
+
+    "architecture": {
+        "entry_policy": {
+            "type": "unified_ppo"
+        },
+        "exit_policy": {
+            "type": "xgboost_exit",
+            "hard_stop_loss_pct": 8.0,
+            "hard_take_profit_pct": 15.0,
+            "hard_max_hold_minutes": 45
+        },
+        "predictor": {
+            "arch": "v2_slim_bayesian",
+            "frozen_during_rl": true
+        },
+        "safety_filter": {
+            "enabled": true
+        }
+    },
+
+    "neural_network": {
+        "sequence_length": 60,
+        "learning_rate": 0.0003,
+        "batch_size": 32,
+        "mc_samples": 5
+    },
+
+    "hmm": {
+        "enabled": true,
+        "n_states_trend": 3,
+        "n_states_volatility": 3,
+        "n_states_liquidity": 3,
+        "lookback_window": 100
+    },
+
+    "options": {
+        "min_days_to_expiration": 7,
+        "max_days_to_expiration": 45,
+        "preferred_delta_range": [0.30, 0.50]
+    },
+
+    "time_travel_training": {
+        "max_cycles": 5000,
+        "print_every": 500,
+        "paper_trading": true,
+        "max_hold_minutes": 45,
+        "max_positions": 3
+    },
+
+    "data_manager": {
+        "enabled": false,
+        "base_url": "http://your-data-manager-server:5050",
+        "api_key": "YOUR_DATA_MANAGER_API_KEY",
+        "_note": "Set enabled=true after setting up Data Manager server"
+    },
+
+    "bot_reporter": {
+        "name": "GaussianBot",
+        "owner": "your-name",
+        "description": "Gaussian Options Trading Bot",
+        "metrics_interval_seconds": 300,
+        "state_file": "data/bot_reporter_state.json"
+    }
+}

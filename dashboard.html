@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Trading Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-elevated: #1a1a24;
+            --border: #2a2a3a;
+            --text: #f0f0f5;
+            --text-dim: #8888a0;
+            --text-muted: #555566;
+            --accent: #7c5cff;
+            --green: #00d68f;
+            --green-dim: rgba(0, 214, 143, 0.15);
+            --red: #ff5c7c;
+            --red-dim: rgba(255, 92, 124, 0.15);
+            --yellow: #ffc233;
+            --cyan: #00c8ff;
+            --gold: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo h1 {
+            font-size: 15px;
+            background: linear-gradient(135deg, var(--gold), var(--green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .phase-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(0, 214, 143, 0.2);
+            border: 1px solid var(--green);
+            color: var(--green);
+        }
+        .phase-badge.sandbox {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+        .phase-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.3; } }
+        .sim-time .time {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .sim-time .date { font-size: 10px; color: var(--text-dim); }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+        .stat-item {
+            padding: 10px;
+            text-align: center;
+            border-right: 1px solid var(--border);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+        .stat-value { font-size: 18px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .stat-value.positive { color: var(--green); }
+        .stat-value.negative { color: var(--red); }
+        .stat-value.accent { color: var(--accent); }
+        .stat-value.cyan { color: var(--cyan); }
+        .stat-value.gold { color: var(--gold); }
+        .stat-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+        /* Main Layout */
+        .main { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* Chart - Full Width */
+        .chart-section {
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            width: 100%;
+        }
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .chart-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+        .chart-controls { display: flex; gap: 6px; }
+        .btn {
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-elevated);
+            color: var(--text-dim);
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--text); }
+        .btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+        .chart-container { 
+            height: 280px; 
+            padding: 8px; 
+            cursor: grab;
+        }
+        .chart-container:active { cursor: grabbing; }
+        .chart-container canvas { touch-action: none; }
+        .chart-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 14px;
+            background: var(--bg-elevated);
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+        .chart-legend { display: flex; gap: 12px; }
+        .legend-item { display: flex; align-items: center; gap: 4px; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .card-header {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+        .card-body { padding: 10px; }
+
+        /* Signal */
+        .signal-display { text-align: center; padding: 8px; }
+        .signal-action { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+        .signal-action.calls { color: var(--green); }
+        .signal-action.puts { color: var(--red); }
+        .signal-action.hold { color: var(--text-muted); }
+        .confidence-bar { height: 4px; background: var(--bg-dark); border-radius: 2px; margin-top: 8px; }
+        .confidence-fill { height: 100%; border-radius: 2px; }
+
+        /* Market Grid */
+        .market-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+        .market-item { background: var(--bg-elevated); border-radius: 4px; padding: 6px; text-align: center; }
+        .market-symbol { font-size: 9px; color: var(--text-muted); }
+        .market-price { font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+        /* TCN Prediction Grid */
+        .lstm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+        .lstm-item { background: var(--bg-elevated); border-radius: 4px; padding: 6px; text-align: center; }
+        .lstm-tf { font-size: 9px; color: var(--text-muted); }
+        .lstm-dir { font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+        .lstm-dir.up { color: var(--green); }
+        .lstm-dir.down { color: var(--red); }
+
+        /* Bottom Section */
+        .bottom-section {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 12px;
+        }
+
+        /* Positions */
+        .position-list { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; }
+        .position-card {
+            background: var(--bg-elevated);
+            border-radius: 6px;
+            padding: 8px;
+            border-left: 3px solid var(--accent);
+        }
+        .position-card.call { border-left-color: var(--green); }
+        .position-card.put { border-left-color: var(--red); }
+        .position-card.real { border-left-color: var(--gold); }
+        .position-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .position-type { font-size: 11px; font-weight: 600; }
+        .position-type.call { color: var(--green); }
+        .position-type.put { color: var(--red); }
+        .position-entry { font-size: 9px; color: var(--text-muted); }
+        .position-pnl { display: flex; justify-content: space-between; font-size: 11px; }
+        .position-pnl-value { font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+        .position-pnl-value.positive { color: var(--green); }
+        .position-pnl-value.negative { color: var(--red); }
+        .real-badge { 
+            background: var(--gold); 
+            color: #000; 
+            font-size: 8px; 
+            padding: 1px 4px; 
+            border-radius: 2px; 
+            font-weight: 700;
+            margin-left: 4px;
+        }
+
+        /* Trades Table */
+        .trades-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .trades-table th {
+            text-align: left;
+            padding: 6px 8px;
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+            position: sticky;
+            top: 0;
+        }
+        .trades-table td {
+            padding: 5px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            border-bottom: 1px solid var(--border);
+        }
+        .trades-table tr:hover { background: var(--bg-elevated); }
+        .trade-type {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+        .trade-type.call { background: var(--green-dim); color: var(--green); }
+        .trade-type.put { background: var(--red-dim); color: var(--red); }
+        .trade-pnl.positive { color: var(--green); }
+        .trade-pnl.negative { color: var(--red); }
+        .trade-status { font-size: 9px; padding: 2px 4px; border-radius: 2px; }
+        .trade-status.open { background: rgba(0,200,255,0.2); color: var(--cyan); }
+        .trade-account { font-size: 8px; padding: 2px 4px; border-radius: 2px; font-weight: 600; }
+        .trade-account.live { background: var(--gold); color: #000; }
+        .trade-account.paper { background: rgba(124, 92, 255, 0.3); color: var(--accent); }
+
+        .empty-state { text-align: center; padding: 16px; color: var(--text-muted); font-size: 12px; }
+        .trades-scroll { max-height: 160px; overflow-y: auto; }
+
+        /* Tradier Account Box */
+        .tradier-box {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(0, 214, 143, 0.05));
+            border: 1px solid var(--gold);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+        .tradier-label { font-size: 10px; color: var(--gold); font-weight: 600; margin-bottom: 4px; }
+        .tradier-balance { font-size: 16px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+        .tradier-details { display: flex; gap: 12px; font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+
+        /* Sync Button */
+        .sync-btn {
+            padding: 4px 8px;
+            font-size: 10px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-dim);
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .sync-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+        /* Responsive */
+        @media (max-width: 1000px) {
+            .cards-grid { grid-template-columns: repeat(2, 1fr); }
+            .bottom-section { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .stats-bar { grid-template-columns: repeat(3, 1fr); }
+            .cards-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+        <!-- Header -->
+        <header class="header">
+        <div class="logo">
+            <span style="font-size: 20px;">🚀</span>
+            <h1>LIVE TRADING DASHBOARD</h1>
+                </div>
+        <div class="phase-badge" id="phase-badge">
+            <span class="phase-dot"></span>
+            <span id="phase-text">Live Paper</span>
+            </div>
+        <div class="sim-time">
+            <div class="time" id="sim-time">--:--:--</div>
+            <div class="date" id="sim-date">----</div>
+            </div>
+        </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-label">💰 Tradier Balance</div>
+            <div class="stat-value gold" id="tradier-balance">$0</div>
+            <div class="stat-sub" id="tradier-account">Account: --</div>
+                </div>
+        <div class="stat-item">
+            <div class="stat-label">📄 Paper Balance</div>
+            <div class="stat-value" id="balance">$5,000</div>
+            <div class="stat-sub" id="pnl-sub">+$0 (0%)</div>
+                        </div>
+        <div class="stat-item">
+            <div class="stat-label">📍 Positions</div>
+            <div class="stat-value cyan" id="positions">0/2</div>
+            <div class="stat-sub" id="unrealized">Unrealized: $0</div>
+                    </div>
+        <div class="stat-item">
+            <div class="stat-label">🎯 Win Rate</div>
+            <div class="stat-value accent" id="winrate">0%</div>
+            <div class="stat-sub" id="wl-ratio">0W / 0L</div>
+                        </div>
+        <div class="stat-item">
+            <div class="stat-label">🔄 Cycles</div>
+            <div class="stat-value mono" id="cycles">0</div>
+            <div class="stat-sub" id="runtime">Runtime: 00:00:00</div>
+                        </div>
+        <div class="stat-item">
+            <div class="stat-label">💼 Trades</div>
+            <div class="stat-value mono" id="trades">0</div>
+            <div class="stat-sub" id="signals-sub">0 signals</div>
+                </div>
+            </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        <!-- Chart - Full Width -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span>📈</span>
+                    <span id="chart-symbol">SPY</span>
+                    <span> Price & Trades</span>
+                    <span class="mono" style="color: var(--cyan); margin-left: 8px;" id="chart-price">$---</span>
+                </div>
+                <div class="chart-controls">
+                    <button class="btn active" data-hours="2">2H</button>
+                    <button class="btn" data-hours="6">6H</button>
+                    <button class="btn" data-hours="24">1D</button>
+                    <button class="btn" data-hours="72">3D</button>
+                    <button class="btn" id="lstm-toggle" title="Toggle TCN Forecast">🧠</button>
+                    <button class="btn" id="reset-zoom">↺</button>
+                    </div>
+                    </div>
+            <div style="font-size: 10px; color: var(--text-muted); padding: 4px 14px;">
+                💡 Scroll to zoom • Click+drag to pan • ↺ to reset
+                    </div>
+            <div class="chart-container">
+                <canvas id="spy-chart"></canvas>
+                    </div>
+            <div class="chart-footer">
+                <div class="chart-legend">
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--green);"></span> CALL</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--red);"></span> PUT</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--gold);"></span> LIVE</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--cyan);"></span> TCN Forecast</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--accent);"></span> NOW</div>
+                    </div>
+                <div>Cycle <span id="chart-cycle" style="color: var(--cyan);">0</span> • <span id="chart-sim-time">--</span></div>
+                    </div>
+                    </div>
+
+        <!-- Cards Row -->
+        <div class="cards-grid">
+            <!-- Signal -->
+            <div class="card">
+                <div class="card-header">⚡ Signal</div>
+                <div class="signal-display">
+                    <div class="signal-action hold" id="signal-action">WAITING</div>
+                    <div style="font-size: 11px; color: var(--text-dim);">Confidence: <span class="mono" id="signal-conf">0%</span></div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="conf-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market -->
+            <div class="card">
+                <div class="card-header">📊 Market</div>
+                <div class="card-body">
+                <div class="market-grid">
+                    <div class="market-item">
+                            <div class="market-symbol">SPY</div>
+                            <div class="market-price" id="price-spy">--</div>
+                    </div>
+                    <div class="market-item">
+                            <div class="market-symbol">VIX</div>
+                            <div class="market-price" id="price-vix">--</div>
+                    </div>
+                    <div class="market-item">
+                        <div class="market-symbol">QQQ</div>
+                            <div class="market-price" id="price-qqq">--</div>
+                    </div>
+                    <div class="market-item">
+                            <div class="market-symbol">BTC</div>
+                            <div class="market-price" id="price-btc">--</div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HMM Regime -->
+            <div class="card">
+                <div class="card-header">🔮 HMM Regime</div>
+                <div class="card-body">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 4px;" id="regime-name">Unknown</div>
+                    <div style="font-size: 10px; color: var(--text-dim);">
+                        Conf: <span id="regime-conf">0%</span> • Trend: <span id="regime-trend">--</span> • Vol: <span id="regime-vol">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TCN Predictions -->
+            <div class="card">
+                <div class="card-header">🧠 TCN</div>
+                <div class="card-body">
+                    <div class="lstm-grid" id="lstm-grid">
+                        <div class="empty-state" style="grid-column: span 2; padding: 8px;">Waiting...</div>
+                </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Bottom Section -->
+        <div class="bottom-section">
+            <!-- Open Positions -->
+            <div class="card">
+                <div class="card-header">📍 Open Positions</div>
+                <div class="card-body">
+                    <div class="position-list" id="positions-list">
+                        <div class="empty-state">No open positions</div>
+                </div>
+                </div>
+            </div>
+
+            <!-- Recent Trades -->
+            <div class="card">
+                <div class="card-header" style="display: flex; align-items: center;">
+                    🎯 Recent Trades
+                    <button class="sync-btn" id="sync-btn" title="Sync paper balance to Tradier">🔄 Sync Paper</button>
+                </div>
+                <div class="trades-scroll">
+                <table class="trades-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                                <th>Acct</th>
+                            <th>Type</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                                <th>P&L</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-body">
+                            <tr><td colspan="7" class="empty-state">No trades yet</td></tr>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/data';
+        const REFRESH_MS = 1500;
+
+        const fmt = {
+            currency: (v, sign = false) => {
+                if (v == null) return '--';
+                const s = sign && v >= 0 ? '+' : '';
+                return `${s}$${Math.abs(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            },
+            pct: (v, sign = false) => {
+                if (v == null) return '--';
+                const s = sign && v >= 0 ? '+' : '';
+                return `${s}${v.toFixed(1)}%`;
+            },
+            runtime: (s) => {
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                const sec = Math.floor(s % 60);
+                return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+            }
+        };
+
+        // Chart
+        let spyChart = null;
+        let chartHours = 2;
+        let chartData = { spy_prices: [], trades: [], simulated_time: null, current_lstm: {}, current_price: 0 };
+        let showLstm = true;
+
+        // History of prediction lines for fading effect
+        const MAX_PREDICTION_HISTORY = 5;
+        let predictionHistory = [];
+
+        function initChart() {
+            const ctx = document.getElementById('spy-chart').getContext('2d');
+            spyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Price',
+                        data: [],
+                            borderColor: '#7c5cff',
+                            backgroundColor: 'rgba(124, 92, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'TCN Future',
+                            data: [],
+                            borderColor: 'rgba(0, 200, 255, 0.8)',
+                            borderWidth: 2.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                        },
+                        {
+                            label: 'TCN Past Avg',
+                            data: [],
+                            borderColor: 'rgba(255, 193, 7, 0.8)',
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            borderWidth: 2.5,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        },
+                        { label: 'Pred History 1', data: [], borderColor: 'rgba(0, 200, 255, 0.35)', borderWidth: 1.5, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
+                        { label: 'Pred History 2', data: [], borderColor: 'rgba(0, 200, 255, 0.25)', borderWidth: 1.5, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
+                        { label: 'Pred History 3', data: [], borderColor: 'rgba(0, 200, 255, 0.15)', borderWidth: 1, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
+                        { label: 'Pred History 4', data: [], borderColor: 'rgba(0, 200, 255, 0.08)', borderWidth: 1, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(18, 18, 26, 0.95)',
+                            titleColor: '#f0f0f5',
+                            bodyColor: '#8888a0',
+                            borderColor: '#2a2a3a',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
+                            filter: function(tooltipItem) {
+                                return tooltipItem.datasetIndex < 3;
+                            }
+                        },
+                        annotation: { annotations: {} },
+                        zoom: {
+                            pan: { enabled: true, mode: 'x', scaleMode: 'x' },
+                            zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MM/dd' }},
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#555566', maxTicksLimit: 8 }
+                        },
+                        y: {
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#555566', callback: v => '$' + v.toFixed(0) }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function refreshChart() {
+            try {
+                const res = await fetch('/api/chart');
+                if (!res.ok) return;
+                chartData = await res.json();
+                updateChart();
+            } catch (e) {
+                console.error('Chart error:', e);
+            }
+        }
+
+        function updateChart() {
+            if (!spyChart) return;
+            
+            // Handle empty price data
+            if (!chartData.spy_prices?.length) {
+                // Show message on empty chart
+                spyChart.data.datasets[0].data = [];
+                spyChart.options.plugins.annotation.annotations = {
+                    noData: {
+                        type: 'label',
+                        xValue: new Date(),
+                        yValue: 600,
+                        content: '📊 Waiting for price data...',
+                        color: '#8888a0',
+                        font: { size: 14 }
+                    }
+                };
+                spyChart.update('none');
+                return;
+            }
+
+            // Get reference time: use the LATEST price timestamp for live mode
+            // This ensures we show the most recent data, not stale simulated time
+            let now;
+            const lastPriceTime = chartData.spy_prices.length > 0 
+                ? new Date(chartData.spy_prices[chartData.spy_prices.length - 1].timestamp)
+                : null;
+            const simTime = chartData.simulated_time ? new Date(chartData.simulated_time) : null;
+            
+            // Use whichever is more recent (handles both training simulation and live trading)
+            if (lastPriceTime && simTime) {
+                now = lastPriceTime > simTime ? lastPriceTime : simTime;
+            } else if (lastPriceTime) {
+                now = lastPriceTime;
+            } else if (simTime) {
+                now = simTime;
+            } else {
+                now = new Date();
+            }
+
+            let cutoff = new Date(now.getTime() - chartHours * 60 * 60 * 1000);
+            
+            // Extend cutoff to include predictions if they exist
+            if (showLstm && chartData.lstm_predictions && chartData.lstm_predictions.length > 0) {
+                const firstPredTime = new Date(chartData.lstm_predictions[0].timestamp);
+                if (firstPredTime < cutoff) {
+                    // Extend window to show predictions (add 30min buffer)
+                    cutoff = new Date(firstPredTime.getTime() - 30 * 60 * 1000);
+                }
+            }
+
+            const prices = chartData.spy_prices
+                .filter(p => {
+                    const t = new Date(p.timestamp);
+                    return t >= cutoff && t <= now;
+                })
+                .map(p => ({ x: new Date(p.timestamp), y: p.close }));
+
+            spyChart.data.datasets[0].data = prices;
+
+            let lstmFutureData = [];
+            const lstmPastData = [];
+            
+            if (showLstm && chartData.lstm_predictions && chartData.lstm_predictions.length > 0) {
+                const weights = { 
+                    '5min': 0.25, '10min': 0.25, '15min': 0.25, '20min': 0.20, '30min': 0.20, 
+                    '40min': 0.15, '50min': 0.15, '1h': 0.15, '1hour': 0.15, '1h20m': 0.15,
+                    '1h40m': 0.15, '2h': 0.15, '4hour': 0.15, '12hour': 0.10, '24hour': 0.10, '48hour': 0.05
+                };
+                
+                // Build price lookup from ALL prices in window
+                const priceLookup = {};
+                for (const p of prices) {
+                    const key = new Date(p.x).toISOString().slice(0, 16);
+                    priceLookup[key] = p.y;
+                }
+                
+                for (const pred of chartData.lstm_predictions) {
+                    if (!pred.timestamp || !pred.predictions) continue;
+                    
+                    const predTime = new Date(pred.timestamp);
+                    // Allow predictions in the extended window
+                    if (predTime < cutoff || predTime > now) continue;
+                    
+                    const lookupKey = predTime.toISOString().slice(0, 16);
+                    const actualPrice = priceLookup[lookupKey] || pred.spy_price;
+                    
+                    if (!actualPrice || actualPrice <= 0) continue;
+                    
+                    let weightedSum = 0, totalWeight = 0;
+                    for (const [tf, data] of Object.entries(pred.predictions)) {
+                        if (!data?.direction || data.direction === 'N/A' || data.return === undefined) continue;
+                        const w = weights[tf] || 0.10;
+                        weightedSum += data.return * w;
+                        totalWeight += w;
+                    }
+                    
+                    if (totalWeight > 0) {
+                        const avgReturn = weightedSum / totalWeight;
+                        lstmPastData.push({ x: predTime, y: actualPrice * (1 + avgReturn / 100) });
+                    }
+                }
+                
+                lstmPastData.sort((a, b) => a.x - b.x);
+                const smoothed = [];
+                for (let i = 0; i < lstmPastData.length; i++) {
+                    const start = Math.max(0, i - 1);
+                    const end = Math.min(lstmPastData.length - 1, i + 1);
+                    let sum = 0, cnt = 0;
+                    for (let j = start; j <= end; j++) { sum += lstmPastData[j].y; cnt++; }
+                    smoothed.push({ x: lstmPastData[i].x, y: sum / cnt });
+                }
+                spyChart.data.datasets[2].data = smoothed;
+                
+                if (showLstm && smoothed.length > 0) {
+                    const lastYellow = smoothed[smoothed.length - 1];
+                    
+                    // Forecast starts from the end of the yellow line (last prediction made)
+                    // This ensures smooth connection between past and future predictions
+                    const predictionTime = lastYellow.x;
+                    const startY = lastYellow.y;
+                    
+                    // Start forecast from the same point as the last yellow point for continuity
+                    lstmFutureData.push({ x: predictionTime, y: startY });
+                    
+                    if (chartData.aggregated_predictions && chartData.aggregated_predictions.length > 0) {
+                        const sortedPreds = chartData.aggregated_predictions
+                            .filter(p => p.target_time && (p.target_price || p.predicted_return !== undefined))
+                            .sort((a, b) => new Date(a.target_time) - new Date(b.target_time));
+                        
+                        for (const pred of sortedPreds) {
+                            const targetTime = new Date(pred.target_time);
+                            // Include predictions that are after the prediction time (not chart's now)
+                            if (targetTime <= predictionTime) continue;
+                            // Also skip if too far in the past compared to current chart view
+                            if (targetTime < cutoff) continue;
+                            const futurePrice = pred.target_price || (startY * (1 + pred.predicted_return / 100));
+                            lstmFutureData.push({ x: targetTime, y: futurePrice });
+                        }
+                    }
+                    
+                    // Fallback to current_lstm if no aggregated predictions in range
+                    if (lstmFutureData.length <= 1 && chartData.current_lstm && Object.keys(chartData.current_lstm).length > 0) {
+                        const tfMinutes = {
+                            '5min': 5, '10min': 10, '15min': 15, '20min': 20, '30min': 30,
+                            '40min': 40, '50min': 50, '1h': 60, '1h20m': 80, '1h40m': 100, '2h': 120
+                        };
+                        
+                        const sortedTfs = Object.entries(chartData.current_lstm)
+                            .filter(([tf, pred]) => tf !== 'warmup' && tfMinutes[tf] && pred?.return !== undefined)
+                            .sort((a, b) => tfMinutes[a[0]] - tfMinutes[b[0]]);
+                        
+                        for (const [tf, pred] of sortedTfs) {
+                            if (pred?.direction && pred.direction !== 'N/A') {
+                                const futurePrice = startY * (1 + pred.return / 100);
+                                const futureTime = new Date(predictionTime.getTime() + tfMinutes[tf] * 60 * 1000);
+                                lstmFutureData.push({ x: futureTime, y: futurePrice });
+                            }
+                        }
+                    }
+                }
+            } else {
+                spyChart.data.datasets[2].data = [];
+                predictionHistory = [];
+                for (let i = 3; i <= 6; i++) {
+                    if (spyChart.data.datasets[i]) spyChart.data.datasets[i].data = [];
+                }
+            }
+            
+            if (lstmFutureData.length > 1) {
+                const currentDataStr = JSON.stringify(lstmFutureData.map(p => ({ x: p.x.getTime(), y: p.y.toFixed(2) })));
+                const lastHistoryStr = predictionHistory.length > 0 
+                    ? JSON.stringify(predictionHistory[0].data.map(p => ({ x: new Date(p.x).getTime(), y: p.y.toFixed(2) })))
+                    : '';
+                
+                if (currentDataStr !== lastHistoryStr) {
+                    predictionHistory.unshift({ data: lstmFutureData.map(p => ({ x: p.x, y: p.y })), timestamp: new Date() });
+                    if (predictionHistory.length > MAX_PREDICTION_HISTORY) {
+                        predictionHistory = predictionHistory.slice(0, MAX_PREDICTION_HISTORY);
+                    }
+                }
+            }
+            
+            spyChart.data.datasets[1].data = lstmFutureData;
+            
+            for (let i = 0; i < 4; i++) {
+                const historyIndex = i + 1;
+                const datasetIndex = i + 3;
+                if (historyIndex < predictionHistory.length && showLstm) {
+                    spyChart.data.datasets[datasetIndex].data = predictionHistory[historyIndex].data;
+                } else {
+                    spyChart.data.datasets[datasetIndex].data = [];
+                }
+            }
+
+            // Annotations
+            const annotations = {};
+            if (chartData.simulated_time && prices.length > 0) {
+                annotations.now = {
+                                type: 'line',
+                    xMin: now, xMax: now,
+                    borderColor: '#7c5cff',
+                                borderWidth: 2,
+                    borderDash: [5, 5],
+                    label: { display: true, content: 'NOW', position: 'start', backgroundColor: '#7c5cff', color: '#fff', font: { size: 9 }, padding: 3 }
+                };
+            }
+
+            let idx = 0;
+            if (chartData.trades) {
+                chartData.trades.forEach(trade => {
+                    const entryTime = new Date(trade.entry_time);
+                    if (entryTime < cutoff || entryTime > now) return;
+                    const price = findNearestPrice(trade.entry_time);
+                    if (!price) return;
+                    const isCall = trade.type?.includes('CALL');
+                    const isLive = trade.is_real;
+                    const color = isCall ? '#00d68f' : '#ff5c7c';
+                    const borderColor = isLive ? '#f59e0b' : '#fff';
+                    annotations[`e${idx}`] = { type: 'point', xValue: entryTime, yValue: price, backgroundColor: color, borderColor: borderColor, borderWidth: isLive ? 3 : 2, radius: isLive ? 7 : 5 };
+                    if (trade.exit_time && trade.status !== 'OPEN' && trade.status !== 'FILLED') {
+                        const exitTime = new Date(trade.exit_time);
+                        if (exitTime >= cutoff && exitTime <= now) {
+                            const exitPrice = findNearestPrice(trade.exit_time);
+                            if (exitPrice) {
+                                const pnlColor = trade.pnl > 0 ? '#00d68f' : '#ff5c7c';
+                                annotations[`x${idx}`] = { type: 'point', xValue: exitTime, yValue: exitPrice, backgroundColor: pnlColor, borderColor: '#fff', borderWidth: 2, radius: 4 };
+                                annotations[`l${idx}`] = { type: 'line', xMin: entryTime, xMax: exitTime, yMin: price, yMax: exitPrice, borderColor: pnlColor, borderWidth: 1.5 };
+                            }
+                        }
+                    }
+                    idx++;
+                });
+            }
+
+            spyChart.options.plugins.annotation.annotations = annotations;
+            spyChart.update('none');
+
+            document.getElementById('chart-cycle').textContent = chartData.cycles || 0;
+            document.getElementById('chart-sim-time').textContent = chartData.simulated_time
+                ? new Date(chartData.simulated_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '--';
+            document.getElementById('chart-price').textContent = chartData.current_price > 0 ? '$' + chartData.current_price.toFixed(2) : '$---';
+        }
+
+        function findNearestPrice(ts) {
+            if (!chartData.spy_prices?.length) return null;
+            const target = new Date(ts).getTime();
+            let nearest = chartData.spy_prices[0];
+            let minDiff = Math.abs(new Date(nearest.timestamp).getTime() - target);
+            for (const p of chartData.spy_prices) {
+                const diff = Math.abs(new Date(p.timestamp).getTime() - target);
+                if (diff < minDiff) { minDiff = diff; nearest = p; }
+            }
+            return nearest.close;
+        }
+
+        // Controls
+        document.querySelectorAll('[data-hours]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('[data-hours]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                chartHours = parseInt(this.dataset.hours);
+                predictionHistory = [];
+                updateChart();
+                spyChart?.resetZoom();
+            });
+        });
+        document.getElementById('lstm-toggle').addEventListener('click', function() {
+            showLstm = !showLstm;
+            this.classList.toggle('active', showLstm);
+            if (!showLstm) predictionHistory = [];
+            updateChart();
+        });
+        document.getElementById('reset-zoom').addEventListener('click', () => spyChart?.resetZoom());
+
+        // Sync button
+        document.getElementById('sync-btn').addEventListener('click', async function() {
+            if (!confirm('Sync paper balance to match Tradier account?')) return;
+            this.disabled = true;
+            this.textContent = '⏳...';
+            try {
+                const res = await fetch('/api/sync-paper', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    this.textContent = '✓ Done';
+                    setTimeout(() => { this.textContent = '🔄 Sync Paper'; this.disabled = false; }, 2000);
+                } else {
+                    alert('Sync failed: ' + data.error);
+                    this.textContent = '🔄 Sync Paper';
+                    this.disabled = false;
+                }
+            } catch (e) {
+                alert('Sync failed');
+                this.textContent = '🔄 Sync Paper';
+                this.disabled = false;
+            }
+        });
+
+        // Dashboard refresh
+        async function refresh() {
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) return;
+                const d = await res.json();
+
+                // Phase
+                const phaseBadge = document.getElementById('phase-badge');
+                const phaseText = document.getElementById('phase-text');
+                phaseText.textContent = d.tradier_is_sandbox ? 'Sandbox' : 'Live Trading';
+                phaseBadge.className = d.tradier_is_sandbox ? 'phase-badge sandbox' : 'phase-badge';
+
+                // Time
+                document.getElementById('sim-time').textContent = d.simulated_time || '--:--:--';
+                document.getElementById('sim-date').textContent = d.simulated_date || '----';
+
+                // Tradier Balance
+                document.getElementById('tradier-balance').textContent = d.tradier_balance > 0 ? fmt.currency(d.tradier_balance) : '--';
+                document.getElementById('tradier-account').textContent = d.tradier_account_id ? `Account: ${d.tradier_account_id}` : 'Account: --';
+
+                // Paper Balance
+                document.getElementById('balance').textContent = fmt.currency(d.current_balance);
+                const pnlSub = document.getElementById('pnl-sub');
+                pnlSub.textContent = `${fmt.currency(d.pnl, true)} (${fmt.pct(d.pnl_pct, true)})`;
+                pnlSub.style.color = d.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+                document.getElementById('positions').textContent = `${d.current_positions || 0}/${d.max_positions || 2}`;
+                document.getElementById('unrealized').textContent = `Unrealized: ${fmt.currency(d.unrealized_pnl, true)}`;
+                document.getElementById('winrate').textContent = fmt.pct(d.win_rate);
+                document.getElementById('wl-ratio').textContent = `${d.winning_trades || 0}W / ${d.losing_trades || 0}L`;
+                document.getElementById('cycles').textContent = (d.cycles || 0).toLocaleString();
+                document.getElementById('runtime').textContent = `Runtime: ${fmt.runtime(d.elapsed_seconds || 0)}`;
+                document.getElementById('trades').textContent = (d.trades || 0).toLocaleString();
+                document.getElementById('signals-sub').textContent = `${(d.signals || 0).toLocaleString()} signals`;
+
+                // Chart symbol
+                document.getElementById('chart-symbol').textContent = d.trading_symbol || 'SPY';
+
+                // Signal
+                const signalEl = document.getElementById('signal-action');
+                signalEl.className = 'signal-action';
+                let sigText = d.last_signal || 'WAITING';
+                let fillColor = 'var(--text-muted)';
+                if (sigText.includes('CALL')) { sigText = '🟢 BUY CALLS'; signalEl.classList.add('calls'); fillColor = 'var(--green)'; }
+                else if (sigText.includes('PUT')) { sigText = '🔴 BUY PUTS'; signalEl.classList.add('puts'); fillColor = 'var(--red)'; }
+                else { signalEl.classList.add('hold'); sigText = '⚪ HOLD'; }
+                signalEl.textContent = sigText;
+                document.getElementById('signal-conf').textContent = fmt.pct(d.signal_confidence);
+                const fill = document.getElementById('conf-fill');
+                fill.style.width = `${Math.min(d.signal_confidence || 0, 100)}%`;
+                fill.style.background = fillColor;
+
+                // Market
+                document.getElementById('price-spy').textContent = d.spy_price > 0 ? '$' + d.spy_price.toFixed(2) : '--';
+                document.getElementById('price-qqq').textContent = d.qqq_price > 0 ? '$' + d.qqq_price.toFixed(2) : '--';
+                document.getElementById('price-btc').textContent = d.btc_price > 0 ? '$' + d.btc_price.toFixed(0) : '--';
+                const vixEl = document.getElementById('price-vix');
+                if (d.vix_value > 0) {
+                    vixEl.textContent = d.vix_value.toFixed(2);
+                    vixEl.style.color = d.vix_value > 25 ? 'var(--red)' : d.vix_value > 15 ? 'var(--yellow)' : 'var(--green)';
+                } else { vixEl.textContent = '--'; }
+
+                // HMM
+                document.getElementById('regime-name').textContent = d.hmm_regime || 'Unknown';
+                document.getElementById('regime-conf').textContent = fmt.pct(d.hmm_confidence);
+                document.getElementById('regime-trend').textContent = d.hmm_trend || '--';
+                document.getElementById('regime-vol').textContent = d.hmm_volatility || '--';
+
+                // TCN predictions
+                updateLSTM(d.lstm_predictions);
+                updatePositions(d.open_positions_details);
+                updateTrades(d.recent_trades);
+
+            } catch (e) { console.error('Refresh error:', e); }
+        }
+
+        function updateLSTM(preds) {
+            const grid = document.getElementById('lstm-grid');
+            if (!preds || Object.keys(preds).length === 0) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column: span 2; padding: 8px;">Waiting...</div>';
+                return;
+            }
+            if (preds.warmup?.status === 'warming_up') {
+                const pct = Math.round((preds.warmup.current / preds.warmup.needed) * 100);
+                grid.innerHTML = `<div style="grid-column: span 2; text-align: center; padding: 8px;"><div style="color: var(--yellow);">⏳ ${pct}%</div></div>`;
+                return;
+            }
+            let html = '';
+            for (const [tf, p] of Object.entries(preds)) {
+                if (!p.direction) continue;
+                const cls = p.direction === 'UP' ? 'up' : 'down';
+                const arrow = p.direction === 'UP' ? '↑' : '↓';
+                html += `<div class="lstm-item"><div class="lstm-tf">${tf}</div><div class="lstm-dir ${cls}">${arrow} ${p.return > 0 ? '+' : ''}${p.return.toFixed(1)}%</div></div>`;
+            }
+            grid.innerHTML = html || '<div class="empty-state" style="grid-column: span 2; padding: 8px;">Waiting...</div>';
+        }
+
+        function updatePositions(positions) {
+            const list = document.getElementById('positions-list');
+            if (!positions?.length) { list.innerHTML = '<div class="empty-state">No open positions</div>'; return; }
+            let html = '';
+            for (const pos of positions) {
+                const isCall = pos.option_type?.includes('CALL');
+                const isReal = pos.is_real;
+                const pnlClass = (pos.unrealized_pnl || 0) >= 0 ? 'positive' : 'negative';
+                const pnlSign = pos.unrealized_pnl >= 0 ? '+' : '';
+                const cardClass = isReal ? 'real' : (isCall ? 'call' : 'put');
+                html += `
+                    <div class="position-card ${cardClass}">
+                        <div class="position-header">
+                            <span class="position-type ${isCall ? 'call' : 'put'}">${isCall ? '🟢' : '🔴'} ${pos.option_type || 'POS'}${isReal ? '<span class="real-badge">LIVE</span>' : ''}</span>
+                            <span class="position-entry">${pos.entry_date} ${pos.entry_time}</span>
+                        </div>
+                        <div class="position-pnl">
+                            <span style="color: var(--text-muted);">$${(pos.entry_price || 0).toFixed(2)} → $${(pos.current_premium || 0).toFixed(2)}</span>
+                            <span class="position-pnl-value ${pnlClass}">${pnlSign}$${Math.abs(pos.unrealized_pnl || 0).toFixed(2)}</span>
+                        </div>
+                    </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        function updateTrades(trades) {
+            const tbody = document.getElementById('trades-body');
+            if (!trades?.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No trades yet</td></tr>'; return; }
+            let html = '';
+            for (const t of trades) {
+                const isOpen = ['FILLED', 'OPEN'].includes(t.status);
+                const typeClass = t.action?.includes('CALL') ? 'call' : t.action?.includes('PUT') ? 'put' : '';
+                const pnlClass = (t.pnl || 0) > 0 ? 'positive' : (t.pnl || 0) < 0 ? 'negative' : '';
+                const acctClass = t.is_real ? 'live' : 'paper';
+                const acctText = t.is_real ? 'LIVE' : 'PAPER';
+                html += `
+                    <tr>
+                        <td>${t.date || '--'} ${t.time || ''}</td>
+                        <td><span class="trade-account ${acctClass}">${acctText}</span></td>
+                        <td><span class="trade-type ${typeClass}">${t.action || '--'}</span></td>
+                        <td>$${(t.entry_price || 0).toFixed(2)}</td>
+                        <td>${isOpen ? '--' : '$' + (t.exit_price || 0).toFixed(2)}</td>
+                        <td class="trade-pnl ${pnlClass}">${isOpen ? '--' : fmt.currency(t.pnl, true)}</td>
+                        <td>${isOpen ? '<span class="trade-status open">OPEN</span>' : t.status || '--'}</td>
+                    </tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // Init
+        initChart();
+        refresh();
+        refreshChart();
+        setInterval(refresh, REFRESH_MS);
+        setInterval(refreshChart, 2000);
+    </script>
+</body>
+</html>
+

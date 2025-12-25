@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-elevated: #1a1a24;
+            --border: #2a2a3a;
+            --text: #f0f0f5;
+            --text-dim: #8888a0;
+            --text-muted: #555566;
+            --accent: #7c5cff;
+            --green: #00d68f;
+            --green-dim: rgba(0, 214, 143, 0.15);
+            --red: #ff5c7c;
+            --red-dim: rgba(255, 92, 124, 0.15);
+            --yellow: #ffc233;
+            --cyan: #00c8ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo h1 {
+            font-size: 15px;
+            background: linear-gradient(135deg, var(--accent), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .phase-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(124, 92, 255, 0.2);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .phase-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .sim-time .time {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sim-time .date {
+            font-size: 10px;
+            color: var(--text-dim);
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-item {
+            padding: 10px;
+            text-align: center;
+            border-right: 1px solid var(--border);
+        }
+
+        .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-value.positive {
+            color: var(--green);
+        }
+
+        .stat-value.negative {
+            color: var(--red);
+        }
+
+        .stat-value.accent {
+            color: var(--accent);
+        }
+
+        .stat-value.cyan {
+            color: var(--cyan);
+        }
+
+        .stat-sub {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* Main Layout */
+        .main {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Chart - Full Width */
+        .chart-section {
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            width: 100%;
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .chart-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn {
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-elevated);
+            color: var(--text-dim);
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .chart-container {
+            height: 280px;
+            padding: 8px;
+            cursor: grab;
+        }
+
+        .chart-container:active {
+            cursor: grabbing;
+        }
+
+        .chart-container canvas {
+            touch-action: none;
+        }
+
+        .chart-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 14px;
+            background: var(--bg-elevated);
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .card-header {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        .card-body {
+            padding: 10px;
+        }
+
+        /* Signal */
+        .signal-display {
+            text-align: center;
+            padding: 8px;
+        }
+
+        .signal-action {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .signal-action.calls {
+            color: var(--green);
+        }
+
+        .signal-action.puts {
+            color: var(--red);
+        }
+
+        .signal-action.hold {
+            color: var(--text-muted);
+        }
+
+        .confidence-bar {
+            height: 4px;
+            background: var(--bg-dark);
+            border-radius: 2px;
+            margin-top: 8px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        /* Market Grid */
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+
+        .market-item {
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            padding: 6px;
+            text-align: center;
+        }
+
+        .market-symbol {
+            font-size: 9px;
+            color: var(--text-muted);
+        }
+
+        .market-price {
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* TCN Prediction Grid */
+        .lstm-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+        }
+
+        .lstm-item {
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            padding: 6px;
+            text-align: center;
+        }
+
+        .lstm-tf {
+            font-size: 9px;
+            color: var(--text-muted);
+        }
+
+        .lstm-dir {
+            font-size: 11px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .lstm-dir.up {
+            color: var(--green);
+        }
+
+        .lstm-dir.down {
+            color: var(--red);
+        }
+
+        /* Bottom Section */
+        .bottom-section {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 12px;
+        }
+
+        /* Positions */
+        .position-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .position-card {
+            background: var(--bg-elevated);
+            border-radius: 6px;
+            padding: 8px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .position-card.call {
+            border-left-color: var(--green);
+        }
+
+        .position-card.put {
+            border-left-color: var(--red);
+        }
+
+        .position-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .position-type {
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .position-type.call {
+            color: var(--green);
+        }
+
+        .position-type.put {
+            color: var(--red);
+        }
+
+        .position-entry {
+            font-size: 9px;
+            color: var(--text-muted);
+        }
+
+        .position-pnl {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+        }
+
+        .position-pnl-value {
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .position-pnl-value.positive {
+            color: var(--green);
+        }
+
+        .position-pnl-value.negative {
+            color: var(--red);
+        }
+
+        /* Trades Table */
+        .trades-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .trades-table th {
+            text-align: left;
+            padding: 6px 8px;
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+            position: sticky;
+            top: 0;
+        }
+
+        .trades-table td {
+            padding: 5px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .trades-table tr:hover {
+            background: var(--bg-elevated);
+        }
+
+        .trade-type {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+
+        .trade-type.call {
+            background: var(--green-dim);
+            color: var(--green);
+        }
+
+        .trade-type.put {
+            background: var(--red-dim);
+            color: var(--red);
+        }
+
+        .trade-pnl.positive {
+            color: var(--green);
+        }
+
+        .trade-pnl.negative {
+            color: var(--red);
+        }
+
+        .trade-status {
+            font-size: 9px;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        .trade-status.open {
+            background: rgba(0, 200, 255, 0.2);
+            color: var(--cyan);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 16px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .trades-scroll {
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 1000px) {
+            .cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .bottom-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .stats-bar {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <span style="font-size: 20px;">🎓</span>
+            <h1>TRAINING DASHBOARD</h1>
+        </div>
+        <div class="phase-badge" id="phase-badge">
+            <span class="phase-dot"></span>
+            <span id="phase-text">Training</span>
+        </div>
+        <div class="sim-time">
+            <div class="time" id="sim-time">--:--:--</div>
+            <div class="date" id="sim-date">Simulated: ----</div>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item" data-marker="trades">
+            <div class="stat-label">Balance</div>
+            <div class="stat-value" id="balance">$5,000</div>
+            <div class="stat-sub" id="pnl-sub">+$0 (0%)</div>
+        </div>
+        <div class="stat-item" data-marker="trades">
+            <div class="stat-label">Positions</div>
+            <div class="stat-value cyan" id="positions">0/2</div>
+            <div class="stat-sub" id="unrealized">Unrealized: $0</div>
+        </div>
+        <div class="stat-item" data-marker="trades">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value accent" id="winrate">0%</div>
+            <div class="stat-sub" id="wl-ratio">0W / 0L</div>
+        </div>
+        <div class="stat-item" data-marker="trades">
+            <div class="stat-label">Cycles</div>
+            <div class="stat-value mono" id="cycles">0</div>
+            <div class="stat-sub" id="runtime">Runtime: 00:00:00</div>
+        </div>
+        <div class="stat-item" data-marker="trades">
+            <div class="stat-label">Trades</div>
+            <div class="stat-value mono" id="trades">0</div>
+            <div class="stat-sub" id="signals-sub">0 signals</div>
+        </div>
+        <div class="stat-item" data-marker="trades">
+            <div class="stat-label">RL Updates</div>
+            <div class="stat-value cyan" id="rl-updates">0</div>
+            <div class="stat-sub" id="exit-decisions">0 exits</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        <!-- Chart - Full Width -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <span>📈</span>
+                    <span>SPY Price & Trades</span>
+                    <span class="mono" style="color: var(--cyan); margin-left: 8px;" id="chart-price">$---</span>
+                    <span style="color: var(--text-muted); margin-left: 12px;">|</span>
+                    <span style="color: rgba(32, 150, 90, 0.8); margin-left: 8px;">VIX</span>
+                    <span class="mono" style="color: rgba(32, 150, 90, 0.8); margin-left: 4px;" id="chart-vix">--</span>
+                    <span style="color: var(--text-muted); margin-left: 12px;">|</span>
+                    <span style="color: var(--yellow); margin-left: 8px;">Missed</span>
+                    <span class="mono" style="color: var(--green); margin-left: 4px;" id="chart-missed-winners">0</span>
+                    <span style="color: var(--text-muted);">/</span>
+                    <span class="mono" style="color: var(--red);" id="chart-avoided-losers">0</span>
+                </div>
+                <div class="chart-controls">
+                    <button class="btn active" data-hours="2">2H</button>
+                    <button class="btn" data-hours="6">6H</button>
+                    <button class="btn" data-hours="24">1D</button>
+                    <button class="btn" data-hours="72">3D</button>
+                    <button class="btn" id="lstm-toggle" title="Toggle TCN Forecast">🧠</button>
+                    <button class="btn" id="reset-zoom">↺</button>
+                </div>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); padding: 4px 14px;">
+                💡 Scroll to zoom • Click+drag to pan • ↺ to reset
+            </div>
+            <div class="chart-container">
+                <canvas id="spy-chart"></canvas>
+            </div>
+            <div class="chart-footer">
+                <div class="chart-legend">
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--green);"></span> CALL
+                    </div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--red);"></span> PUT</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--cyan);"></span> TCN
+                        Forecast</div>
+                    <div class="legend-item"><span style="color: var(--green); font-size: 14px;">▲</span> Missed Winner</div>
+                    <div class="legend-item"><span style="color: var(--red); font-size: 14px;">◆</span> Avoided Loss</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: #ffc107;"></span> Weighted Pred
+                    </div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--accent);"></span> NOW
+                    </div>
+                    <div class="legend-item"><span class="legend-dot" style="background: rgba(32, 150, 90, 0.7);"></span> VIX (BB)
+                    </div>
+                </div>
+                <div>
+                    Cycle <span id="chart-cycle" style="color: var(--cyan);">0</span> • <span
+                        id="chart-sim-time">--</span>
+                    <span id="data-lag-warning" style="display: none; margin-left: 10px; font-weight: 600;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards Row -->
+        <div class="cards-grid">
+            <!-- Signal -->
+            <div class="card">
+                <div class="card-header">⚡ Signal</div>
+                <div class="signal-display">
+                    <div class="signal-action hold" id="signal-action">WAITING</div>
+                    <div style="font-size: 11px; color: var(--text-dim);">Confidence: <span class="mono"
+                            id="signal-conf">0%</span></div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="conf-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market -->
+            <div class="card">
+                <div class="card-header">📊 Market</div>
+                <div class="card-body">
+                    <div class="market-grid">
+                        <div class="market-item">
+                            <div class="market-symbol">SPY</div>
+                            <div class="market-price" id="price-spy">--</div>
+                        </div>
+                        <div class="market-item">
+                            <div class="market-symbol">VIX</div>
+                            <div class="market-price" id="price-vix">--</div>
+                        </div>
+                        <div class="market-item">
+                            <div class="market-symbol">QQQ</div>
+                            <div class="market-price" id="price-qqq">--</div>
+                        </div>
+                        <div class="market-item">
+                            <div class="market-symbol">BTC</div>
+                            <div class="market-price" id="price-btc">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HMM Regime -->
+            <div class="card">
+                <div class="card-header">🔮 HMM Regime</div>
+                <div class="card-body">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 4px;"
+                        id="regime-name">Unknown</div>
+                    <div style="font-size: 10px; color: var(--text-dim);">
+                        Conf: <span id="regime-conf">0%</span> • Trend: <span id="regime-trend">--</span> • Vol: <span
+                            id="regime-vol">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TCN Predictions -->
+            <div class="card">
+                <div class="card-header">🧠 TCN</div>
+                <div class="card-body">
+                    <div class="lstm-grid" id="lstm-grid">
+                        <div class="empty-state" style="grid-column: span 2; padding: 8px;">Waiting...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Section -->
+        <div class="bottom-section">
+            <!-- Open Positions -->
+            <div class="card">
+                <div class="card-header">📍 Open Positions</div>
+                <div class="card-body">
+                    <div class="position-list" id="positions-list">
+                        <div class="empty-state">No open positions</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Trades -->
+            <div class="card">
+                <div class="card-header">🎯 Recent Trades</div>
+                <div class="trades-scroll">
+                    <table class="trades-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>P&L</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trades-body">
+                            <tr>
+                                <td colspan="6" class="empty-state">No trades yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/data';
+        const REFRESH_MS = 1500;
+
+        const fmt = {
+            currency: (v, sign = false) => {
+                if (v == null) return '--';
+                const s = sign && v >= 0 ? '+' : '';
+                return `${s}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            },
+            pct: (v, sign = false) => {
+                if (v == null) return '--';
+                const s = sign && v >= 0 ? '+' : '';
+                return `${s}${v.toFixed(1)}%`;
+            },
+            runtime: (s) => {
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                const sec = Math.floor(s % 60);
+                return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+            }
+        };
+
+        // Chart
+        let spyChart = null;
+        let chartHours = 2;
+        let chartData = { spy_prices: [], trades: [], simulated_time: null, current_lstm: {}, current_price: 0 };
+        let showLstm = true;
+
+        // History of prediction lines for fading effect
+        const MAX_PREDICTION_HISTORY = 5;
+        let predictionHistory = [];  // Array of { data: [...], timestamp: Date }
+
+        function initChart() {
+            const ctx = document.getElementById('spy-chart').getContext('2d');
+            spyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'SPY',
+                            data: [],
+                            borderColor: '#7c5cff',
+                            backgroundColor: 'rgba(124, 92, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'TCN Future',
+                            data: [],
+                            borderColor: 'rgba(0, 200, 255, 0.8)',
+                            borderWidth: 2.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        },
+                        {
+                            label: 'TCN Past Avg',
+                            data: [],
+                            borderColor: 'rgba(255, 193, 7, 0.8)',
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            borderWidth: 2.5,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        },
+                        // Ghost prediction history datasets (faded versions) - hidden from legend
+                        { label: 'Pred History 1', data: [], borderColor: 'rgba(0, 200, 255, 0.35)', borderWidth: 1.5, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
+                        { label: 'Pred History 2', data: [], borderColor: 'rgba(0, 200, 255, 0.25)', borderWidth: 1.5, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
+                        { label: 'Pred History 3', data: [], borderColor: 'rgba(0, 200, 255, 0.15)', borderWidth: 1, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
+                        { label: 'Pred History 4', data: [], borderColor: 'rgba(0, 200, 255, 0.08)', borderWidth: 1, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
+                        // VIX with Bollinger Bands (secondary Y-axis) - MUTED DARK GREEN (subtle)
+                        // Dataset 7: VIX main line (muted dark green, thinner)
+                        {
+                            label: 'VIX',
+                            data: [],
+                            borderColor: 'rgba(32, 150, 90, 0.7)',
+                            backgroundColor: 'rgba(32, 150, 90, 0.05)',
+                            borderWidth: 1.8,
+                            fill: false,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            yAxisID: 'y2',
+                            order: 0  // Draw on top
+                        },
+                        // Dataset 8: BB Upper (very muted green dashed) - fills DOWN to BB Lower
+                        {
+                            label: 'VIX BB Upper',
+                            data: [],
+                            borderColor: 'rgba(32, 150, 90, 0.4)',
+                            borderWidth: 1.2,
+                            borderDash: [6, 4],
+                            fill: '+1',  // Fill to NEXT dataset (BB Lower = 9)
+                            backgroundColor: 'rgba(32, 150, 90, 0.08)',
+                            tension: 0.2,
+                            pointRadius: 0,
+                            yAxisID: 'y2',
+                            order: 2
+                        },
+                        // Dataset 9: BB Lower (very muted green dashed)
+                        {
+                            label: 'VIX BB Lower',
+                            data: [],
+                            borderColor: 'rgba(32, 150, 90, 0.4)',
+                            borderWidth: 1.2,
+                            borderDash: [6, 4],
+                            fill: false,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            yAxisID: 'y2',
+                            order: 2
+                        },
+                        // Dataset 10: BB Middle/SMA (faint green dotted)
+                        {
+                            label: 'VIX BB Mid',
+                            data: [],
+                            borderColor: 'rgba(32, 150, 90, 0.3)',
+                            borderWidth: 1,
+                            borderDash: [3, 3],
+                            fill: false,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            yAxisID: 'y2',
+                            order: 1
+                        },
+                        // Dataset 11: Missed Winners (signals we rejected but would have profited)
+                        {
+                            label: 'Missed Winner',
+                            data: [],
+                            borderColor: '#00d68f',
+                            backgroundColor: 'rgba(0, 214, 143, 0.8)',
+                            borderWidth: 2,
+                            pointRadius: 8,
+                            pointStyle: 'triangle',
+                            showLine: false,
+                            order: -1  // Draw on top
+                        },
+                        // Dataset 12: Avoided Losers (signals we correctly rejected)
+                        {
+                            label: 'Avoided Loss',
+                            data: [],
+                            borderColor: '#ff5c7c',
+                            backgroundColor: 'rgba(255, 92, 124, 0.8)',
+                            borderWidth: 2,
+                            pointRadius: 8,
+                            pointStyle: 'rectRot',
+                            showLine: false,
+                            order: -1  // Draw on top
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(18, 18, 26, 0.95)',
+                            titleColor: '#f0f0f5',
+                            bodyColor: '#8888a0',
+                            borderColor: '#2a2a3a',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: true,
+                            filter: function (tooltipItem) {
+                                // Show: SPY (0), TCN Future (1), TCN Past (2), VIX (7), Missed (11), Avoided (12)
+                                // Hide: ghost history (3-6), BB bands (8-10)
+                                const idx = tooltipItem.datasetIndex;
+                                return idx < 3 || idx === 7 || idx === 11 || idx === 12;
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    const raw = context.raw;
+                                    
+                                    if (label === 'VIX') {
+                                        return `VIX: ${value.toFixed(2)}`;
+                                    }
+                                    
+                                    // Missed opportunities show extra details
+                                    if (label === 'Missed Winner' || label === 'Avoided Loss') {
+                                        const action = raw.action || '?';
+                                        const conf = (raw.confidence * 100).toFixed(0);
+                                        const ret = raw.actual_return?.toFixed(2) || '?';
+                                        return `${label}: ${action} @ $${value.toFixed(2)} (${conf}% conf, ${ret}% actual)`;
+                                    }
+                                    
+                                    return `${label}: $${value.toFixed(2)}`;
+                                }
+                            }
+                        },
+                        annotation: { annotations: {} },
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'x',
+                                scaleMode: 'x'
+                            },
+                            zoom: {
+                                wheel: { enabled: true },
+                                pinch: { enabled: true },
+                                mode: 'x'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MM/dd' } },
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#555566', maxTicksLimit: 8 }
+                        },
+                        y: {
+                            position: 'left',
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#555566', callback: v => '$' + v.toFixed(0) }
+                        },
+                        y2: {
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { 
+                                color: 'rgba(32, 150, 90, 0.6)',
+                                callback: v => v.toFixed(1)
+                            },
+                            title: {
+                                display: true,
+                                text: 'VIX',
+                                color: 'rgba(32, 150, 90, 0.7)',
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Store missed opportunities data
+        let missedOppsData = { signals: [], stats: {} };
+        
+        async function refreshChart() {
+            try {
+                // Fetch chart data and missed opportunities in parallel
+                const [chartRes, missedRes] = await Promise.all([
+                    fetch('/api/chart'),
+                    fetch('/api/missed-opportunities').catch(() => ({ ok: false }))
+                ]);
+                
+                if (chartRes.ok) {
+                    chartData = await chartRes.json();
+                    console.log('Chart data:', chartData.spy_prices?.length, 'prices');
+                }
+                
+                if (missedRes.ok) {
+                    missedOppsData = await missedRes.json();
+                    console.log('Missed opportunities:', missedOppsData.signals?.length || 0);
+                }
+                
+                updateChart();
+            } catch (e) {
+                console.error('Chart error:', e);
+            }
+        }
+
+        // Parse timestamp treating it as local time (not UTC)
+        // Timestamps from training are in ET - we display them as-is without timezone conversion
+        function parseLocalTime(ts) {
+            if (!ts) return new Date();
+            // Replace 'T' with space to force local time interpretation
+            // "2025-06-13T15:04:00" with T = parsed as UTC in many browsers
+            // "2025-06-13 15:04:00" with space = parsed as local time
+            const localTs = ts.replace('T', ' ');
+            return new Date(localTs);
+        }
+
+        function updateChart() {
+            if (!spyChart || !chartData.spy_prices?.length) {
+                console.log('No chart data to display');
+                return;
+            }
+
+            const now = chartData.simulated_time
+                ? parseLocalTime(chartData.simulated_time)
+                : parseLocalTime(chartData.spy_prices[chartData.spy_prices.length - 1].timestamp);
+
+            const cutoff = new Date(now.getTime() - chartHours * 60 * 60 * 1000);
+
+            // Find the latest timestamp in the data
+            const latestDataTime = parseLocalTime(chartData.spy_prices[chartData.spy_prices.length - 1].timestamp);
+            const dataLagMinutes = (now - latestDataTime) / (60 * 1000);
+
+            // Log data freshness warning if data is stale
+            if (dataLagMinutes > 5) {
+                console.warn(`[DATA GAP] Historical data is ${dataLagMinutes.toFixed(0)} minutes behind simulated time`);
+                console.warn(`  Latest data: ${latestDataTime.toLocaleString()}`);
+                console.warn(`  Simulated now: ${now.toLocaleString()}`);
+            }
+
+            const prices = chartData.spy_prices
+                .filter(p => {
+                    const t = parseLocalTime(p.timestamp);
+                    return t >= cutoff && t <= now;
+                })
+                .map(p => ({ x: parseLocalTime(p.timestamp), y: p.close }));
+
+            console.log('Filtered prices:', prices.length, dataLagMinutes > 5 ? `(data ${dataLagMinutes.toFixed(0)}min stale)` : '');
+            spyChart.data.datasets[0].data = prices;
+
+            // TCN Future (cyan dashed line) - calculated AFTER yellow line below
+            // Placeholder - will be filled after yellow line calculation
+            let lstmFutureData = [];
+
+            // TCN Past Average (gold line) - uses SAME weights as trading system from config.json
+            // Weights: 15min=0.25, 30min=0.20, 1hour=0.15, 4hour=0.15, 12hour=0.10, 24hour=0.10, 48hour=0.05
+            const lstmPastData = [];
+            if (showLstm && chartData.lstm_predictions && chartData.lstm_predictions.length > 0) {
+                // Match config.json prediction_timeframes weights exactly
+                const weights = {
+                    '5min': 0.25,   // Use 15min weight for short-term
+                    '10min': 0.25,
+                    '15min': 0.25,
+                    '20min': 0.20,
+                    '30min': 0.20,
+                    '40min': 0.15,
+                    '50min': 0.15,
+                    '1h': 0.15,
+                    '1hour': 0.15,
+                    '1h20m': 0.15,
+                    '1h40m': 0.15,
+                    '2h': 0.15,
+                    '4hour': 0.15,
+                    '12hour': 0.10,
+                    '24hour': 0.10,
+                    '48hour': 0.05
+                };
+
+                // Build a price lookup from actual chart data for accurate comparison
+                const priceLookup = {};
+                for (const p of prices) {
+                    const key = new Date(p.x).toISOString().slice(0, 16); // Round to minute
+                    priceLookup[key] = p.y;
+                }
+
+                for (const pred of chartData.lstm_predictions) {
+                    if (!pred.timestamp || !pred.predictions) continue;
+
+                    const predTime = parseLocalTime(pred.timestamp);
+                    if (predTime < cutoff || predTime > now) continue;
+
+                    // Use ACTUAL price from chart data, not the (possibly stale) spy_price stored with prediction
+                    const lookupKey = predTime.toISOString().slice(0, 16);
+                    const actualPrice = priceLookup[lookupKey] || pred.spy_price;
+
+                    if (!actualPrice || actualPrice <= 0) continue;
+
+                    let weightedSum = 0, totalWeight = 0;
+                    for (const [tf, data] of Object.entries(pred.predictions)) {
+                        if (!data?.direction || data.direction === 'N/A' || data.return === undefined) continue;
+                        const w = weights[tf] || 0.10;
+                        weightedSum += data.return * w;
+                        totalWeight += w;
+                    }
+
+                    if (totalWeight > 0) {
+                        const avgReturn = weightedSum / totalWeight;
+                        // Show: actual_price * (1 + predicted_return) - this is what TCN predicted
+                        lstmPastData.push({
+                            x: predTime,
+                            y: actualPrice * (1 + avgReturn / 100)
+                        });
+                    }
+                }
+
+                // Sort by time and smooth with 3-point moving average
+                lstmPastData.sort((a, b) => a.x - b.x);
+                const smoothed = [];
+                for (let i = 0; i < lstmPastData.length; i++) {
+                    const start = Math.max(0, i - 1);
+                    const end = Math.min(lstmPastData.length - 1, i + 1);
+                    let sum = 0, cnt = 0;
+                    for (let j = start; j <= end; j++) { sum += lstmPastData[j].y; cnt++; }
+                    smoothed.push({ x: lstmPastData[i].x, y: sum / cnt });
+                }
+                spyChart.data.datasets[2].data = smoothed;
+
+                // NOW calculate blue line using AGGREGATED predictions (highest confidence per target time)
+                // This shows the best prediction for each future minute, not just the latest predictions
+                if (showLstm && smoothed.length > 0) {
+                    // Get last point of yellow line (where we continue from)
+                    const lastYellow = smoothed[smoothed.length - 1];
+                    const startY = chartData.current_price || lastYellow.y;
+                    const startX = now;
+
+                    lstmFutureData.push({ x: startX, y: startY });
+
+                    // Use aggregated predictions (highest confidence per target time) if available
+                    if (chartData.aggregated_predictions && chartData.aggregated_predictions.length > 0) {
+                        // Sort by target time
+                        const sortedPreds = chartData.aggregated_predictions
+                            .filter(p => p.target_time && (p.target_price || p.predicted_return !== undefined))
+                            .sort((a, b) => parseLocalTime(a.target_time) - parseLocalTime(b.target_time));
+
+                        for (const pred of sortedPreds) {
+                            const targetTime = parseLocalTime(pred.target_time);
+                            if (targetTime <= now) continue;  // Skip past times
+
+                            // FIXED: Use absolute target_price calculated on server side
+                            // This is the actual price the model predicted, anchored to the price
+                            // at the time of prediction - NOT recalculated from current price!
+                            const futurePrice = pred.target_price || (startY * (1 + pred.predicted_return / 100));
+
+                            // Show consensus indicator in tooltip data
+                            const confidence = pred.confidence || 0;
+                            const consensus = pred.consensus;
+                            const consensusStr = consensus
+                                ? ` (${consensus.total_predictions} preds, ${(consensus.agreement_ratio * 100).toFixed(0)}% agree)`
+                                : '';
+
+                            lstmFutureData.push({
+                                x: targetTime,
+                                y: futurePrice,
+                                confidence: confidence,
+                                consensus: consensusStr
+                            });
+                        }
+
+                        const prices = sortedPreds.filter(p => p.target_price).map(p => p.target_price);
+                        const minPrice = prices.length > 0 ? Math.min(...prices).toFixed(2) : 'N/A';
+                        const maxPrice = prices.length > 0 ? Math.max(...prices).toFixed(2) : 'N/A';
+                        console.log(`[TCN Future] Using AGGREGATED predictions: ${sortedPreds.length} target times, price range: $${minPrice} - $${maxPrice}`);
+                    }
+                    // Fallback to current_lstm if no aggregated data
+                    // This uses current price since these are fresh predictions from this moment
+                    else if (chartData.current_lstm && Object.keys(chartData.current_lstm).length > 0) {
+                        const tfMinutes = {
+                            '5min': 5, '10min': 10, '15min': 15, '20min': 20, '30min': 30,
+                            '40min': 40, '50min': 50, '1h': 60, '1h20m': 80, '1h40m': 100, '2h': 120
+                        };
+
+                        const sortedTfs = Object.entries(chartData.current_lstm)
+                            .filter(([tf, pred]) => tf !== 'warmup' && tfMinutes[tf] && pred?.return !== undefined)
+                            .sort((a, b) => tfMinutes[a[0]] - tfMinutes[b[0]]);
+
+                        for (const [tf, pred] of sortedTfs) {
+                            if (pred?.direction && pred.direction !== 'N/A') {
+                                // For current predictions, we CAN use current price since they're fresh
+                                const futurePrice = startY * (1 + pred.return / 100);
+                                const futureTime = new Date(now.getTime() + tfMinutes[tf] * 60 * 1000);
+
+                                lstmFutureData.push({ x: futureTime, y: futurePrice });
+                            }
+                        }
+
+                        const maxReturn = sortedTfs.length > 0 ? Math.max(...sortedTfs.map(([_, p]) => Math.abs(p.return))) : 0;
+                        console.log(`[TCN Future] Fallback to current predictions: ${sortedTfs.length} timeframes, max predicted move: ${maxReturn.toFixed(3)}%`);
+                    }
+                }
+            } else {
+                spyChart.data.datasets[2].data = [];
+                // Clear ghost history when no TCN data
+                predictionHistory = [];
+                for (let i = 3; i <= 6; i++) {
+                    if (spyChart.data.datasets[i]) {
+                        spyChart.data.datasets[i].data = [];
+                    }
+                }
+            }
+
+            // Update prediction history with fading effect
+            // Only add to history if we have new meaningful data
+            if (lstmFutureData.length > 1) {
+                const currentDataStr = JSON.stringify(lstmFutureData.map(p => ({ x: p.x.getTime(), y: p.y.toFixed(2) })));
+                const lastHistoryStr = predictionHistory.length > 0
+                    ? JSON.stringify(predictionHistory[0].data.map(p => ({ x: new Date(p.x).getTime(), y: p.y.toFixed(2) })))
+                    : '';
+
+                // Only add if data is different from the most recent history
+                if (currentDataStr !== lastHistoryStr) {
+                    // Add current prediction to history (at front)
+                    predictionHistory.unshift({
+                        data: lstmFutureData.map(p => ({ x: p.x, y: p.y })),
+                        timestamp: new Date()
+                    });
+
+                    // Keep only MAX_PREDICTION_HISTORY items
+                    if (predictionHistory.length > MAX_PREDICTION_HISTORY) {
+                        predictionHistory = predictionHistory.slice(0, MAX_PREDICTION_HISTORY);
+                    }
+                }
+            }
+
+            // Set the current prediction line (brightest)
+            spyChart.data.datasets[1].data = lstmFutureData;
+
+            // Set ghost history lines (skip index 0 since that's current, start from index 1)
+            for (let i = 0; i < 4; i++) {
+                const historyIndex = i + 1;  // Skip the first (current) one
+                const datasetIndex = i + 3;   // Datasets 3, 4, 5, 6 are history
+
+                if (historyIndex < predictionHistory.length && showLstm) {
+                    spyChart.data.datasets[datasetIndex].data = predictionHistory[historyIndex].data;
+                } else {
+                    spyChart.data.datasets[datasetIndex].data = [];
+                }
+            }
+
+            // VIX with Bollinger Bands (datasets 7, 8, 9, 10)
+            // Dataset indices: 7=VIX, 8=BB Upper, 9=BB Lower, 10=BB Mid
+            if (chartData.vix_prices && chartData.vix_prices.length > 0) {
+                const vixData = chartData.vix_prices
+                    .filter(p => {
+                        const t = parseLocalTime(p.timestamp);
+                        return t >= cutoff && t <= now;
+                    })
+                    .map(p => ({ x: parseLocalTime(p.timestamp), y: p.close }));
+                
+                spyChart.data.datasets[7].data = vixData;
+                console.log('VIX data points:', vixData.length);
+                
+                // BB Upper
+                if (chartData.vix_bb_upper && chartData.vix_bb_upper.length > 0) {
+                    const bbUpper = chartData.vix_bb_upper
+                        .filter(p => {
+                            const t = parseLocalTime(p.timestamp);
+                            return t >= cutoff && t <= now;
+                        })
+                        .map(p => ({ x: parseLocalTime(p.timestamp), y: p.value }));
+                    spyChart.data.datasets[8].data = bbUpper;
+                }
+                
+                // BB Lower
+                if (chartData.vix_bb_lower && chartData.vix_bb_lower.length > 0) {
+                    const bbLower = chartData.vix_bb_lower
+                        .filter(p => {
+                            const t = parseLocalTime(p.timestamp);
+                            return t >= cutoff && t <= now;
+                        })
+                        .map(p => ({ x: parseLocalTime(p.timestamp), y: p.value }));
+                    spyChart.data.datasets[9].data = bbLower;
+                }
+                
+                // BB Middle (SMA)
+                if (chartData.vix_bb_middle && chartData.vix_bb_middle.length > 0) {
+                    const bbMid = chartData.vix_bb_middle
+                        .filter(p => {
+                            const t = parseLocalTime(p.timestamp);
+                            return t >= cutoff && t <= now;
+                        })
+                        .map(p => ({ x: parseLocalTime(p.timestamp), y: p.value }));
+                    spyChart.data.datasets[10].data = bbMid;
+                }
+            } else {
+                // Clear VIX datasets if no data
+                spyChart.data.datasets[7].data = [];
+                spyChart.data.datasets[8].data = [];
+                spyChart.data.datasets[9].data = [];
+                spyChart.data.datasets[10].data = [];
+            }
+
+            // === MISSED OPPORTUNITIES (Counterfactual Learning Visualization) ===
+            const missedWinners = [];
+            const avoidedLosers = [];
+            
+            if (missedOppsData.signals && missedOppsData.signals.length > 0) {
+                for (const sig of missedOppsData.signals) {
+                    if (!sig.timestamp || !sig.price) continue;
+                    
+                    const sigTime = parseLocalTime(sig.timestamp);
+                    if (sigTime < cutoff || sigTime > now) continue;
+                    
+                    const point = { 
+                        x: sigTime, 
+                        y: sig.price,
+                        // Store extra info for tooltip
+                        action: sig.action,
+                        confidence: sig.confidence,
+                        actual_return: sig.actual_return
+                    };
+                    
+                    if (sig.outcome === 'missed_winner') {
+                        missedWinners.push(point);
+                    } else if (sig.outcome === 'avoided_loser') {
+                        avoidedLosers.push(point);
+                    }
+                }
+                
+                console.log(`Missed opportunities: ${missedWinners.length} winners missed, ${avoidedLosers.length} losers avoided`);
+            }
+            
+            // Dataset 11: Missed Winners (green triangles)
+            spyChart.data.datasets[11].data = missedWinners;
+            // Dataset 12: Avoided Losers (red diamonds)
+            spyChart.data.datasets[12].data = avoidedLosers;
+
+            // Annotations
+            const annotations = {};
+            if (chartData.simulated_time && prices.length > 0) {
+                annotations.now = {
+                    type: 'line',
+                    xMin: now, xMax: now,
+                    borderColor: '#7c5cff',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    label: { display: true, content: 'NOW', position: 'start', backgroundColor: '#7c5cff', color: '#fff', font: { size: 9 }, padding: 3 }
+                };
+            }
+
+            let idx = 0;
+            if (chartData.trades) {
+                chartData.trades.forEach(trade => {
+                    const entryTime = parseLocalTime(trade.entry_time);
+                    if (entryTime < cutoff || entryTime > now) return;
+                    const price = findNearestPrice(trade.entry_time);
+                    if (!price) return;
+                    const isCall = trade.type?.includes('CALL');
+                    const color = isCall ? '#00d68f' : '#ff5c7c';
+                    annotations[`e${idx}`] = { type: 'point', xValue: entryTime, yValue: price, backgroundColor: color, borderColor: '#fff', borderWidth: 2, radius: 5 };
+                    if (trade.exit_time && trade.status !== 'OPEN' && trade.status !== 'FILLED') {
+                        const exitTime = parseLocalTime(trade.exit_time);
+                        if (exitTime >= cutoff && exitTime <= now) {
+                            const exitPrice = findNearestPrice(trade.exit_time);
+                            if (exitPrice) {
+                                const pnlColor = trade.pnl > 0 ? '#00d68f' : '#ff5c7c';
+                                annotations[`x${idx}`] = { type: 'point', xValue: exitTime, yValue: exitPrice, backgroundColor: pnlColor, borderColor: '#fff', borderWidth: 2, radius: 4 };
+                                annotations[`l${idx}`] = { type: 'line', xMin: entryTime, xMax: exitTime, yMin: price, yMax: exitPrice, borderColor: pnlColor, borderWidth: 1.5 };
+                            }
+                        }
+                    }
+                    idx++;
+                });
+            }
+
+            spyChart.options.plugins.annotation.annotations = annotations;
+            spyChart.update('none');
+
+            document.getElementById('chart-cycle').textContent = chartData.cycles || 0;
+            document.getElementById('chart-sim-time').textContent = chartData.simulated_time
+                ? parseLocalTime(chartData.simulated_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '--';
+            document.getElementById('chart-price').textContent = chartData.current_price > 0 ? '$' + chartData.current_price.toFixed(2) : '$---';
+            
+            // Update VIX display in header
+            if (chartData.vix_prices && chartData.vix_prices.length > 0) {
+                const latestVix = chartData.vix_prices[chartData.vix_prices.length - 1].close;
+                const vixEl = document.getElementById('chart-vix');
+                if (vixEl) {
+                    vixEl.textContent = latestVix.toFixed(2);
+                    // Color code VIX: muted green < 15, lighter green 15-20, yellow 20-25, orange > 25
+                    if (latestVix < 15) vixEl.style.color = 'rgba(32, 150, 90, 0.9)';
+                    else if (latestVix < 20) vixEl.style.color = 'rgba(60, 180, 110, 0.9)';
+                    else if (latestVix < 25) vixEl.style.color = 'rgba(200, 170, 50, 0.9)';
+                    else vixEl.style.color = 'rgba(220, 120, 50, 0.9)';
+                }
+            }
+            
+            // Update missed opportunities stats in header
+            if (missedOppsData.stats) {
+                const winnersEl = document.getElementById('chart-missed-winners');
+                const losersEl = document.getElementById('chart-avoided-losers');
+                if (winnersEl) winnersEl.textContent = missedOppsData.stats.total_missed_winners || missedWinners.length;
+                if (losersEl) losersEl.textContent = missedOppsData.stats.total_avoided_losers || avoidedLosers.length;
+            }
+
+            // Show data staleness warning
+            const dataLagEl = document.getElementById('data-lag-warning');
+            if (dataLagEl) {
+                if (dataLagMinutes > 5) {
+                    dataLagEl.textContent = `⚠️ Price data ${dataLagMinutes.toFixed(0)}min behind`;
+                    dataLagEl.style.display = 'inline';
+                    dataLagEl.style.color = dataLagMinutes > 30 ? '#ff5c7c' : '#ffc233';
+                } else {
+                    dataLagEl.style.display = 'none';
+                }
+            }
+        }
+
+        function findNearestPrice(ts) {
+            if (!chartData.spy_prices?.length) return null;
+            const target = parseLocalTime(ts).getTime();
+            let nearest = chartData.spy_prices[0];
+            let minDiff = Math.abs(parseLocalTime(nearest.timestamp).getTime() - target);
+            for (const p of chartData.spy_prices) {
+                const diff = Math.abs(parseLocalTime(p.timestamp).getTime() - target);
+                if (diff < minDiff) { minDiff = diff; nearest = p; }
+            }
+            return nearest.close;
+        }
+
+        // Controls
+        document.querySelectorAll('[data-hours]').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('[data-hours]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                chartHours = parseInt(this.dataset.hours);
+                // Clear prediction history when changing time range
+                predictionHistory = [];
+                updateChart();
+                spyChart?.resetZoom();
+            });
+        });
+        document.getElementById('lstm-toggle').addEventListener('click', function () {
+            showLstm = !showLstm;
+            this.classList.toggle('active', showLstm);
+            if (!showLstm) {
+                // Clear history when turning off TCN overlay
+                predictionHistory = [];
+            }
+            updateChart();
+        });
+        document.getElementById('reset-zoom').addEventListener('click', () => spyChart?.resetZoom());
+
+        // Dashboard refresh
+        async function refresh() {
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) return;
+                const d = await res.json();
+
+                // Phase
+                document.getElementById('phase-text').textContent = d.phase === 'Live Paper' ? 'Live Paper' : 'Training';
+
+                // Time
+                document.getElementById('sim-time').textContent = d.simulated_time || '--:--:--';
+                document.getElementById('sim-date').textContent = `Simulated: ${d.simulated_date || '----'}`;
+
+                // Stats
+                document.getElementById('balance').textContent = fmt.currency(d.current_balance);
+                const pnlSub = document.getElementById('pnl-sub');
+                pnlSub.textContent = `${fmt.currency(d.pnl, true)} (${fmt.pct(d.pnl_pct, true)})`;
+                pnlSub.style.color = d.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+                document.getElementById('positions').textContent = `${d.current_positions || 0}/${d.max_positions || 2}`;
+                document.getElementById('unrealized').textContent = `Unrealized: ${fmt.currency(d.unrealized_pnl, true)}`;
+                document.getElementById('winrate').textContent = fmt.pct(d.win_rate);
+                document.getElementById('wl-ratio').textContent = `${d.winning_trades || 0}W / ${d.losing_trades || 0}L`;
+                document.getElementById('cycles').textContent = (d.cycles || 0).toLocaleString();
+                document.getElementById('runtime').textContent = `Runtime: ${fmt.runtime(d.elapsed_seconds || 0)}`;
+                document.getElementById('trades').textContent = (d.trades || 0).toLocaleString();
+                document.getElementById('signals-sub').textContent = `${(d.signals || 0).toLocaleString()} signals`;
+                document.getElementById('rl-updates').textContent = (d.rl_updates || 0).toLocaleString();
+                document.getElementById('exit-decisions').textContent = `${d.exit_policy_exits || 0} exits`;
+
+                // Signal
+                const signalEl = document.getElementById('signal-action');
+                signalEl.className = 'signal-action';
+                let sigText = d.last_signal || 'WAITING';
+                let fillColor = 'var(--text-muted)';
+                if (sigText.includes('CALL')) { sigText = '🟢 BUY CALLS'; signalEl.classList.add('calls'); fillColor = 'var(--green)'; }
+                else if (sigText.includes('PUT')) { sigText = '🔴 BUY PUTS'; signalEl.classList.add('puts'); fillColor = 'var(--red)'; }
+                else { signalEl.classList.add('hold'); sigText = '⚪ HOLD'; }
+                signalEl.textContent = sigText;
+                document.getElementById('signal-conf').textContent = fmt.pct(d.signal_confidence);
+                const fill = document.getElementById('conf-fill');
+                fill.style.width = `${Math.min(d.signal_confidence || 0, 100)}%`;
+                fill.style.background = fillColor;
+
+                // Market
+                document.getElementById('price-spy').textContent = d.spy_price > 0 ? '$' + d.spy_price.toFixed(2) : '--';
+                document.getElementById('price-qqq').textContent = d.qqq_price > 0 ? '$' + d.qqq_price.toFixed(2) : '--';
+                document.getElementById('price-btc').textContent = d.btc_price > 0 ? '$' + d.btc_price.toFixed(0) : '--';
+                const vixEl = document.getElementById('price-vix');
+                if (d.vix_value > 0) {
+                    vixEl.textContent = d.vix_value.toFixed(2);
+                    vixEl.style.color = d.vix_value > 25 ? 'var(--red)' : d.vix_value > 15 ? 'var(--yellow)' : 'var(--green)';
+                } else { vixEl.textContent = '--'; }
+
+                // HMM
+                document.getElementById('regime-name').textContent = d.hmm_regime || 'Unknown';
+                document.getElementById('regime-conf').textContent = fmt.pct(d.hmm_confidence);
+                document.getElementById('regime-trend').textContent = d.hmm_trend || '--';
+                document.getElementById('regime-vol').textContent = d.hmm_volatility || '--';
+
+                // TCN predictions panel
+                updateLSTM(d.lstm_predictions);  // Function named updateLSTM for API compat
+                updatePositions(d.open_positions_details);
+                updateTrades(d.recent_trades);
+
+            } catch (e) { console.error('Refresh error:', e); }
+        }
+
+        function updateLSTM(preds) {  // Named updateLSTM for API compatibility; displays TCN predictions
+            const grid = document.getElementById('lstm-grid');
+            if (!preds || Object.keys(preds).length === 0) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column: span 2; padding: 8px;">Waiting...</div>';
+                return;
+            }
+            if (preds.warmup?.status === 'warming_up') {
+                const pct = Math.round((preds.warmup.current / preds.warmup.needed) * 100);
+                grid.innerHTML = `<div style="grid-column: span 2; text-align: center; padding: 8px;"><div style="color: var(--yellow);">⏳ ${pct}%</div></div>`;
+                return;
+            }
+            let html = '';
+            for (const [tf, p] of Object.entries(preds)) {
+                if (!p.direction) continue;
+                const cls = p.direction === 'UP' ? 'up' : 'down';
+                const arrow = p.direction === 'UP' ? '↑' : '↓';
+                html += `<div class="lstm-item"><div class="lstm-tf">${tf}</div><div class="lstm-dir ${cls}">${arrow} ${p.return > 0 ? '+' : ''}${p.return.toFixed(1)}%</div></div>`;
+            }
+            grid.innerHTML = html || '<div class="empty-state" style="grid-column: span 2; padding: 8px;">Waiting...</div>';
+        }
+
+        function updatePositions(positions) {
+            const list = document.getElementById('positions-list');
+            if (!positions?.length) { list.innerHTML = '<div class="empty-state">No open positions</div>'; return; }
+            let html = '';
+            for (const pos of positions) {
+                const isCall = pos.option_type?.includes('CALL');
+                const pnlClass = (pos.unrealized_pnl || 0) >= 0 ? 'positive' : 'negative';
+                const pnlSign = pos.unrealized_pnl >= 0 ? '+' : '';
+                html += `
+                    <div class="position-card ${isCall ? 'call' : 'put'}">
+                        <div class="position-header">
+                            <span class="position-type ${isCall ? 'call' : 'put'}">${isCall ? '🟢' : '🔴'} ${pos.option_type || 'POS'}</span>
+                            <span class="position-entry">${pos.entry_date} ${pos.entry_time}</span>
+                        </div>
+                        <div class="position-pnl">
+                            <span style="color: var(--text-muted);">$${(pos.entry_price || 0).toFixed(2)} → $${(pos.current_premium || 0).toFixed(2)}</span>
+                            <span class="position-pnl-value ${pnlClass}">${pnlSign}$${Math.abs(pos.unrealized_pnl || 0).toFixed(2)}</span>
+                        </div>
+                    </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        function updateTrades(trades) {
+            const tbody = document.getElementById('trades-body');
+            if (!trades?.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No trades yet</td></tr>'; return; }
+            let html = '';
+            for (const t of trades) {
+                const isOpen = ['FILLED', 'OPEN'].includes(t.status);
+                const typeClass = t.action?.includes('CALL') ? 'call' : t.action?.includes('PUT') ? 'put' : '';
+                const pnlClass = (t.pnl || 0) > 0 ? 'positive' : (t.pnl || 0) < 0 ? 'negative' : '';
+                html += `
+                    <tr>
+                        <td>${t.date || '--'} ${t.time || ''}</td>
+                        <td><span class="trade-type ${typeClass}">${t.action || '--'}</span></td>
+                        <td>$${(t.entry_price || 0).toFixed(2)}</td>
+                        <td>${isOpen ? '--' : '$' + (t.exit_price || 0).toFixed(2)}</td>
+                        <td class="trade-pnl ${pnlClass}">${isOpen ? '--' : fmt.currency(t.pnl, true)}</td>
+                        <td>${isOpen ? '<span class="trade-status open">OPEN</span>' : t.status || '--'}</td>
+                    </tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // Init
+        initChart();
+        refresh();
+        refreshChart();
+        setInterval(refresh, REFRESH_MS);
+        setInterval(refreshChart, 2000);
+    </script>
+</body>
+
+</html>

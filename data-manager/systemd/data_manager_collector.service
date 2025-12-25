@@ -1,0 +1,15 @@
+[Unit]
+Description=Data Manager Collector
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/gaussian/data-manager
+ExecStart=/var/gaussian/data-manager/venv/bin/python /var/gaussian/data-manager/run.py run
+Restart=always
+RestartSec=5
+EnvironmentFile=/var/gaussian/data-manager/.env
+
+[Install]
+WantedBy=multi-user.target
