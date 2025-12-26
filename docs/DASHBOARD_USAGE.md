@@ -64,9 +64,11 @@ Add these sections to your `config.json`:
 - Current balance and P&L
 - Open positions with unrealized P&L
 - Recent trades history
-- Real-time SPY price chart
+- Real-time SPY price chart with predictions
+- VIX with Bollinger Bands (toggleable via button)
 - HMM regime state
 - Signal confidence
+- All times displayed in Eastern Time (market time)
 
 ### Training Dashboard Shows:
 - Training cycles progress
@@ -75,6 +77,23 @@ Add these sections to your `config.json`:
 - Win rate and loss tracking
 - VIX with Bollinger Bands
 - Prediction accuracy metrics
+
+## Chart Features
+
+### Timezone Display
+All chart times are displayed in **Eastern Time (ET)** regardless of browser timezone. This ensures consistent display of market hours (9:30 AM - 4:00 PM ET).
+
+### VIX Bollinger Bands
+Both dashboards support VIX overlay with Bollinger Bands:
+- **VIX line** (green): Current VIX value
+- **BB Upper/Lower** (dashed green): 2 standard deviation bands
+- **BB Middle** (dotted): 20-period SMA
+- Toggle visibility with the "VIX" button in the chart controls
+
+The VIX value is also displayed in the header with color coding:
+- Green: VIX < 15 (low volatility)
+- Yellow: VIX 15-25 (moderate)
+- Red: VIX > 25 (high volatility)
 
 ## Profitability Indicators
 
@@ -98,7 +117,7 @@ A profitable model typically shows:
 Both dashboards provide these endpoints:
 
 - `/api/data` - Main dashboard data
-- `/api/chart` - Price chart data
+- `/api/chart` - Price chart data (includes VIX and Bollinger Bands)
 - `/api/health` - Server health check
 - `/api/debug` - Debug information
 
@@ -118,4 +137,10 @@ netstat -ano | findstr ":5000 :5001"
 ### Charts Not Loading
 1. Ensure historical database has data
 2. Check browser console for JavaScript errors
-3. Try refreshing the page (F5)
+3. Try hard refresh (Ctrl+F5) to clear cache
+
+### Timezone Issues
+Charts should automatically display in Eastern Time. If times appear incorrect:
+1. Hard refresh the browser (Ctrl+F5)
+2. Check browser console for JavaScript errors
+3. Verify the parseET() function is being called

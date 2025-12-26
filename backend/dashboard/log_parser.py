@@ -94,45 +94,68 @@ class LogParser:
         self._current_log_path: Optional[str] = None
     
     def find_latest_log(self) -> Optional[str]:
-        """Find the most recent log file."""
-        candidates = []
+        """Find the most recent log file.
 
-        # 1) Configured patterns
-        candidates.extend(glob.glob(self.log_pattern))
-        if not candidates:
-            candidates.extend(glob.glob(self.fallback_pattern))
+        Priority order:
+        1. Primary pattern with content (>0 bytes)
+        2. Environment variable override
+        3. Fallback pattern with content
+        4. Models directory logs (for training dashboard)
+        5. Any matching file (even empty)
+        """
+        def get_valid_files(pattern: str, require_content: bool = True) -> list:
+            """Get files matching pattern, optionally requiring content."""
+            result = []
+            for p in glob.glob(pattern):
+                try:
+                    path = Path(p)
+                    if not path.exists():
+                        continue
+                    if require_content and path.stat().st_size == 0:
+                        continue
+                    result.append(p)
+                except Exception:
+                    continue
+            return result
+
+        # 1) Primary pattern - prefer files with content
+        primary_files = get_valid_files(self.log_pattern, require_content=True)
+        if primary_files:
+            return max(primary_files, key=lambda f: Path(f).stat().st_mtime)
 
         # 2) Explicit override (useful if training logs are redirected elsewhere)
         env_log = os.environ.get("TRAINING_LOG_FILE")
-        if env_log and Path(env_log).exists():
-            candidates.append(env_log)
+        if env_log:
+            path = Path(env_log)
+            if path.exists() and path.stat().st_size > 0:
+                return env_log
 
-        # 3) Common redirect targets (PowerShell users often redirect to models/*/run.log)
-        candidates.extend(glob.glob("models/*/run*.log"))
-        candidates.extend(glob.glob("models/*/*run*.log"))
+        # 3) Fallback pattern - for live dashboard, this catches real_bot_simulation*.log
+        fallback_files = get_valid_files(self.fallback_pattern, require_content=True)
+        if fallback_files:
+            return max(fallback_files, key=lambda f: Path(f).stat().st_mtime)
 
-        # 4) If still empty, do a last-ditch scan under models/
-        if not candidates:
-            candidates.extend(glob.glob("models/**/run*.log", recursive=True))
+        # 4) Models directory logs (for training dashboard)
+        model_patterns = [
+            "models/*/run*.log",
+            "models/*/*run*.log"
+        ]
+        for pattern in model_patterns:
+            model_files = get_valid_files(pattern, require_content=True)
+            if model_files:
+                return max(model_files, key=lambda f: Path(f).stat().st_mtime)
 
-        # De-dupe and keep only existing files
-        uniq = []
-        seen = set()
-        for p in candidates:
-            try:
-                rp = str(Path(p))
-                if rp in seen:
-                    continue
-                if not Path(p).exists():
-                    continue
-                uniq.append(p)
-                seen.add(rp)
-            except Exception:
-                continue
+        # 5) Last resort - recursive search under models/
+        deep_files = get_valid_files("models/**/run*.log", require_content=True)
+        if deep_files:
+            return max(deep_files, key=lambda f: Path(f).stat().st_mtime)
 
-        if not uniq:
-            return None
-        return max(uniq, key=lambda f: Path(f).stat().st_mtime)
+        # 6) If nothing has content, try primary pattern even if empty
+        primary_any = get_valid_files(self.log_pattern, require_content=False)
+        if primary_any:
+            return max(primary_any, key=lambda f: Path(f).stat().st_mtime)
+
+        return None
     
     def parse_log_file(self, log_path: str, state: TrainingState) -> None:
         """
@@ -464,18 +487,14 @@ class LogParser:
             if len(state.log_trades) > max_trades:
                 state.log_trades = state.log_trades[-max_trades:]
         
-        # Parse Net P&L for closed trades
+        # Parse Net P&L for closed trades (win/loss counted in [CLOSE] section below)
         if "Net P&L:" in line and "$" in line:
             pnl_match = re.search(r'Net P&L:\s*\$([+-]?[\d.]+)', line)
             if pnl_match:
                 pnl_value = float(pnl_match.group(1))
-                
-                # Update wins/losses
-                if pnl_value > 0:
-                    state.account.winning_trades += 1
-                elif pnl_value < 0:
-                    state.account.losing_trades += 1
-                
+
+                # NOTE: Don't count wins/losses here - [CLOSE] section handles it
+
                 # Update most recent pending trade
                 for trade in reversed(state.log_trades):
                     if trade.status in ['OPEN', 'PENDING_PNL']:
@@ -487,7 +506,7 @@ class LogParser:
         
         # Parse [CLOSE] format
         if "[CLOSE] Trade closed:" in line:
-            pnl_match = re.search(r'P&L=\$?([+-]?[\d.]+)', line)
+            pnl_match = re.search(r'P&L=.?([+-]?[\d.]+)', line)
             if pnl_match:
                 pnl_value = float(pnl_match.group(1))
                 

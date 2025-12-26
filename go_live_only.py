@@ -18,6 +18,9 @@ from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 from pathlib import Path
 
+# Import market time utility for consistent Eastern time
+from backend.time_utils import get_market_time
+
 # Load configuration
 from config_loader import load_config
 config = load_config("config.json")
@@ -36,7 +39,7 @@ print(f"[CONFIG] Data Source: {config.get_data_source()}")
 PAPER_ONLY_MODE = True
 print(f"[CONFIG] Paper Only Mode: {PAPER_ONLY_MODE}")
 if PAPER_ONLY_MODE:
-    print(f"[CONFIG] ⚠️  LIVE TRADES DISABLED - Bot will learn with paper trades only")
+    print(f"[CONFIG] ** LIVE TRADES DISABLED - Bot will learn with paper trades only **")
 print()
 
 if len(sys.argv) < 2:

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model History Viewer</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-hover: #1a1a25;
+            --border: #2a2a3a;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --accent: #00d68f;
+            --green: #00d68f;
+            --red: #ff5c7c;
+            --blue: #5c9cff;
+            --purple: #7c5cff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar - Model List */
+        .sidebar {
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 10;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .sidebar-header .count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .model-list {
+            padding: 10px;
+        }
+
+        .model-item {
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .model-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--border);
+        }
+
+        .model-item.selected {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .model-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .model-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .model-stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .model-stat-label {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        .model-stat-value {
+            font-weight: 600;
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+        }
+
+        .model-stat-value.positive { color: var(--green); }
+        .model-stat-value.negative { color: var(--red); }
+
+        /* Main Content */
+        .main {
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .main-header {
+            margin-bottom: 30px;
+        }
+
+        .main-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .main-header .timestamp {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .stat-card-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-card-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+        }
+
+        .stat-card-value.positive { color: var(--green); }
+        .stat-card-value.negative { color: var(--red); }
+
+        /* Summary Section */
+        .summary-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-section h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .summary-content {
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            color: var(--text-muted);
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .empty-state h3 {
+            font-size: 1.25rem;
+            margin-bottom: 10px;
+        }
+
+        /* Loading */
+        .loading {
+            color: var(--text-muted);
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3a3a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>Model History</h1>
+                <div class="count" id="model-count">Loading...</div>
+            </div>
+            <div class="model-list" id="model-list">
+                <div class="loading">Loading models...</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main" id="main-content">
+            <div class="empty-state">
+                <h3>Select a Model</h3>
+                <p>Choose a model from the list to view its performance</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedModelId = null;
+
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models');
+                const data = await response.json();
+
+                document.getElementById('model-count').textContent =
+                    `${data.count} models found`;
+
+                const listEl = document.getElementById('model-list');
+
+                if (data.models.length === 0) {
+                    listEl.innerHTML = '<div class="loading">No models found</div>';
+                    return;
+                }
+
+                listEl.innerHTML = data.models.map(model => `
+                    <div class="model-item" onclick="selectModel('${model.run_id}')" id="model-${model.run_id}">
+                        <div class="model-name">${model.run_id}</div>
+                        <div class="model-stats">
+                            <div class="model-stat">
+                                <span class="model-stat-label">P&L</span>
+                                <span class="model-stat-value ${model.pnl >= 0 ? 'positive' : 'negative'}">
+                                    ${model.pnl >= 0 ? '+' : ''}${model.pnl_pct.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div class="model-stat">
+                                <span class="model-stat-label">Win Rate</span>
+                                <span class="model-stat-value">${model.win_rate.toFixed(1)}%</span>
+                            </div>
+                            <div class="model-stat">
+                                <span class="model-stat-label">Trades</span>
+                                <span class="model-stat-value">${model.total_trades}</span>
+                            </div>
+                            <div class="model-stat">
+                                <span class="model-stat-label">Cycles</span>
+                                <span class="model-stat-value">${model.total_cycles.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading models:', error);
+                document.getElementById('model-list').innerHTML =
+                    '<div class="loading">Error loading models</div>';
+            }
+        }
+
+        async function selectModel(runId) {
+            // Update selection UI
+            document.querySelectorAll('.model-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.getElementById(`model-${runId}`).classList.add('selected');
+            selectedModelId = runId;
+
+            // Load model details
+            try {
+                const response = await fetch(`/api/model/${runId}`);
+                const model = await response.json();
+
+                if (model.error) {
+                    document.getElementById('main-content').innerHTML =
+                        `<div class="empty-state"><h3>Error</h3><p>${model.error}</p></div>`;
+                    return;
+                }
+
+                const pnlClass = model.pnl >= 0 ? 'positive' : 'negative';
+                const pnlSign = model.pnl >= 0 ? '+' : '';
+
+                document.getElementById('main-content').innerHTML = `
+                    <div class="main-header">
+                        <h2>${model.run_id}</h2>
+                        <div class="timestamp">Run: ${model.timestamp} | Modified: ${model.mtime_str || 'Unknown'}</div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-label">P&L</div>
+                            <div class="stat-card-value ${pnlClass}">
+                                ${pnlSign}$${Math.abs(model.pnl).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-label">Return</div>
+                            <div class="stat-card-value ${pnlClass}">
+                                ${pnlSign}${model.pnl_pct.toFixed(2)}%
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-label">Win Rate</div>
+                            <div class="stat-card-value">${model.win_rate.toFixed(1)}%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-label">Total Trades</div>
+                            <div class="stat-card-value">${model.total_trades}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-label">Wins / Losses</div>
+                            <div class="stat-card-value">
+                                <span class="positive">${model.wins}</span> /
+                                <span class="negative">${model.losses}</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-label">Total Cycles</div>
+                            <div class="stat-card-value">${model.total_cycles.toLocaleString()}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-label">Initial Balance</div>
+                            <div class="stat-card-value">$${model.initial_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-label">Final Balance</div>
+                            <div class="stat-card-value ${pnlClass}">$${model.final_balance.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                        </div>
+                    </div>
+
+                    <div class="summary-section">
+                        <h3>Full Summary</h3>
+                        <div class="summary-content">${escapeHtml(model.raw_content)}</div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error loading model:', error);
+                document.getElementById('main-content').innerHTML =
+                    `<div class="empty-state"><h3>Error</h3><p>Failed to load model details</p></div>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load models on page load
+        loadModels();
+    </script>
+</body>
+</html>

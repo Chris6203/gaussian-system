@@ -73,8 +73,10 @@ class DatabaseLoader:
             row = cursor.fetchone()
             
             if row:
-                state.account.winning_trades = row[1] or 0
-                state.account.losing_trades = row[2] or 0
+                # Only use DB win/loss if log parser hasn't already set them
+                if state.account.winning_trades == 0 and state.account.losing_trades == 0:
+                    state.account.winning_trades = row[1] or 0
+                    state.account.losing_trades = row[2] or 0
                 db_balance = row[0] or 0
                 
                 # Only use DB balance if state hasn't been updated from logs

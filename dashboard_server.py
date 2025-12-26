@@ -57,7 +57,7 @@ def load_config() -> Dict[str, Any]:
         'host': '0.0.0.0',
         'paper_trading_db': 'data/paper_trading.db',
         'historical_db': 'data/db/historical.db',
-        'log_pattern': 'logs/trading_bot.log',
+        'log_pattern': 'logs/trading_bot.log*',
         'fallback_log_pattern': 'logs/real_bot_*.log',
         'refresh_interval_ms': 2000,
         'chart': {
@@ -884,7 +884,14 @@ def get_chart_data():
         # If no historical data, try to get live prices from market data cache
         if not spy_prices:
             spy_prices = load_live_spy_prices(chart_cfg['lookback_days'], chart_cfg['max_price_points'])
-        
+
+        # Load VIX with Bollinger Bands
+        vix_data = db_loader.load_vix_prices(
+            reference_time=reference_time,
+            lookback_days=chart_cfg['lookback_days'],
+            bb_period=20
+        )
+
         trades, annotations = db_loader.load_trades_for_chart(
             reference_time=reference_time,
             lookback_days=chart_cfg['lookback_days'],
@@ -974,7 +981,12 @@ def get_chart_data():
             'current_price': state.market.spy_price,
             'lstm_validated': validated,
             'aggregated_predictions': aggregated_list,
-            'tradier_orders': tradier_state['orders']
+            'tradier_orders': tradier_state['orders'],
+            # VIX with Bollinger Bands
+            'vix_prices': vix_data.get('vix_prices', []),
+            'vix_bb_upper': vix_data.get('bb_upper', []),
+            'vix_bb_lower': vix_data.get('bb_lower', []),
+            'vix_bb_middle': vix_data.get('bb_middle', [])
         })
         
     except Exception as e:
@@ -991,7 +1003,11 @@ def get_chart_data():
             'current_price': 0,
             'lstm_validated': [],
             'aggregated_predictions': [],
-            'tradier_orders': []
+            'tradier_orders': [],
+            'vix_prices': [],
+            'vix_bb_upper': [],
+            'vix_bb_lower': [],
+            'vix_bb_middle': []
         })
 
 
@@ -1040,7 +1056,7 @@ def debug():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print(f"🚀 Live Trading Dashboard Server v{DASHBOARD_VERSION}")
+    print(f"[*] Live Trading Dashboard Server v{DASHBOARD_VERSION}")
     print("=" * 60)
     print()
     print(f"Dashboard URL: http://localhost:{CONFIG['port']}")

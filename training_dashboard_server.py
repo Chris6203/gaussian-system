@@ -69,7 +69,7 @@ def load_config() -> Dict[str, Any]:
             'max_recent_trades': 10,
             'max_log_trades': 50,
             'max_archived_sessions': 5,
-            'initial_log_lines': 5000
+            'initial_log_lines': 500000  # Parse entire log for completed runs
         }
     }
     
@@ -844,7 +844,7 @@ def debug():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print(f"🎓 Training Dashboard Server v{DASHBOARD_VERSION}")
+    print(f"[*] Training Dashboard Server v{DASHBOARD_VERSION}")
     print("=" * 60)
     print()
     print(f"Dashboard URL: http://localhost:{CONFIG['port']}")

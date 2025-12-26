@@ -374,6 +374,9 @@
                     <span id="chart-symbol">SPY</span>
                     <span> Price & Trades</span>
                     <span class="mono" style="color: var(--cyan); margin-left: 8px;" id="chart-price">$---</span>
+                    <span style="color: var(--text-muted); margin-left: 12px;">|</span>
+                    <span style="color: rgba(32, 150, 90, 0.8); margin-left: 8px;">VIX</span>
+                    <span class="mono" style="color: rgba(32, 150, 90, 0.8); margin-left: 4px;" id="chart-vix">--</span>
                 </div>
                 <div class="chart-controls">
                     <button class="btn active" data-hours="2">2H</button>
@@ -381,6 +384,7 @@
                     <button class="btn" data-hours="24">1D</button>
                     <button class="btn" data-hours="72">3D</button>
                     <button class="btn" id="lstm-toggle" title="Toggle TCN Forecast">🧠</button>
+                    <button class="btn active" id="vix-toggle" title="Toggle VIX Bollinger" style="color: rgba(32, 150, 90, 0.9);">VIX</button>
                     <button class="btn" id="reset-zoom">↺</button>
                     </div>
                     </div>
@@ -397,6 +401,7 @@
                     <div class="legend-item"><span class="legend-dot" style="background: var(--gold);"></span> LIVE</div>
                     <div class="legend-item"><span class="legend-dot" style="background: var(--cyan);"></span> TCN Forecast</div>
                     <div class="legend-item"><span class="legend-dot" style="background: var(--accent);"></span> NOW</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: rgba(32, 150, 90, 0.7);"></span> VIX (BB)</div>
                     </div>
                 <div>Cycle <span id="chart-cycle" style="color: var(--cyan);">0</span> • <span id="chart-sim-time">--</span></div>
                     </div>
@@ -526,11 +531,49 @@
             }
         };
 
+        // Parse timestamp to display as Eastern Time regardless of browser timezone
+        // Timestamps from backend are in ET - we want chart to show those exact times
+        function parseET(timestamp) {
+            if (!timestamp) return null;
+            if (timestamp instanceof Date) return timestamp;
+
+            // Remove any timezone suffix and normalize format
+            let ts = String(timestamp).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '').replace('T', ' ');
+
+            // Parse as local time first (JavaScript interprets as browser timezone)
+            let d = new Date(ts);
+            if (isNaN(d.getTime())) {
+                // Try alternate format for Safari compatibility
+                const parts = ts.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+                if (parts) {
+                    d = new Date(parts[1], parts[2] - 1, parts[3], parts[4], parts[5], parts[6]);
+                } else {
+                    return null;
+                }
+            }
+
+            // Calculate offset to shift from "interpreted as local" to "display as ET"
+            // getTimezoneOffset() returns minutes, positive for west of UTC
+            // PST = +480min, ET in winter = +300min, ET in summer = +240min
+            const localOffsetMin = d.getTimezoneOffset();
+            const etMonth = d.getMonth();
+            const isETDST = etMonth >= 2 && etMonth <= 10; // March-October
+            const etOffsetMin = isETDST ? 240 : 300; // EDT=4hrs, EST=5hrs
+
+            // Shift: we parsed as local, but it's actually ET
+            // If local=PST(+480) and time is ET(+300), we interpreted 3hrs too late
+            // Need to subtract the difference to correct
+            const shiftMs = (etOffsetMin - localOffsetMin) * 60 * 1000;
+
+            return new Date(d.getTime() + shiftMs);
+        }
+
         // Chart
         let spyChart = null;
         let chartHours = 2;
         let chartData = { spy_prices: [], trades: [], simulated_time: null, current_lstm: {}, current_price: 0 };
         let showLstm = true;
+        let showVix = true;
 
         // History of prediction lines for fading effect
         const MAX_PREDICTION_HISTORY = 5;
@@ -577,7 +620,12 @@
                         { label: 'Pred History 1', data: [], borderColor: 'rgba(0, 200, 255, 0.35)', borderWidth: 1.5, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
                         { label: 'Pred History 2', data: [], borderColor: 'rgba(0, 200, 255, 0.25)', borderWidth: 1.5, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
                         { label: 'Pred History 3', data: [], borderColor: 'rgba(0, 200, 255, 0.15)', borderWidth: 1, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
-                        { label: 'Pred History 4', data: [], borderColor: 'rgba(0, 200, 255, 0.08)', borderWidth: 1, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false }
+                        { label: 'Pred History 4', data: [], borderColor: 'rgba(0, 200, 255, 0.08)', borderWidth: 1, borderDash: [3, 3], fill: false, tension: 0.3, pointRadius: 0, hidden: false },
+                        // VIX with Bollinger Bands (secondary Y-axis) - dataset indices 7, 8, 9, 10
+                        { label: 'VIX', data: [], borderColor: 'rgba(32, 150, 90, 0.7)', borderWidth: 1.5, fill: false, tension: 0.2, pointRadius: 0, yAxisID: 'y1' },
+                        { label: 'VIX BB Upper', data: [], borderColor: 'rgba(32, 150, 90, 0.4)', borderWidth: 1, borderDash: [3, 3], fill: '+1', backgroundColor: 'rgba(32, 150, 90, 0.08)', tension: 0.2, pointRadius: 0, yAxisID: 'y1' },
+                        { label: 'VIX BB Lower', data: [], borderColor: 'rgba(32, 150, 90, 0.4)', borderWidth: 1, borderDash: [3, 3], fill: false, tension: 0.2, pointRadius: 0, yAxisID: 'y1' },
+                        { label: 'VIX BB Mid', data: [], borderColor: 'rgba(32, 150, 90, 0.3)', borderWidth: 1, borderDash: [2, 4], fill: false, tension: 0.2, pointRadius: 0, yAxisID: 'y1' }
                     ]
                 },
                 options: {
@@ -595,7 +643,17 @@
                             padding: 10,
                             displayColors: false,
                             filter: function(tooltipItem) {
-                                return tooltipItem.datasetIndex < 3;
+                                // Show SPY (0-2), VIX main (7), hide BB bands and history
+                                const idx = tooltipItem.datasetIndex;
+                                return idx < 3 || idx === 7;
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    if (label === 'VIX') return `VIX: ${value.toFixed(2)}`;
+                                    return `${label}: $${value.toFixed(2)}`;
+                                }
                             }
                         },
                         annotation: { annotations: {} },
@@ -612,8 +670,15 @@
                             ticks: { color: '#555566', maxTicksLimit: 8 }
                         },
                         y: {
+                            position: 'left',
                             grid: { color: 'rgba(42, 42, 58, 0.5)' },
                             ticks: { color: '#555566', callback: v => '$' + v.toFixed(0) }
+                        },
+                        y1: {
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: 'rgba(32, 150, 90, 0.7)', callback: v => v.toFixed(0) },
+                            title: { display: true, text: 'VIX', color: 'rgba(32, 150, 90, 0.7)', font: { size: 10 } }
                         }
                     }
                 }
@@ -655,10 +720,10 @@
             // Get reference time: use the LATEST price timestamp for live mode
             // This ensures we show the most recent data, not stale simulated time
             let now;
-            const lastPriceTime = chartData.spy_prices.length > 0 
-                ? new Date(chartData.spy_prices[chartData.spy_prices.length - 1].timestamp)
+            const lastPriceTime = chartData.spy_prices.length > 0
+                ? parseET(chartData.spy_prices[chartData.spy_prices.length - 1].timestamp)
                 : null;
-            const simTime = chartData.simulated_time ? new Date(chartData.simulated_time) : null;
+            const simTime = chartData.simulated_time ? parseET(chartData.simulated_time) : null;
             
             // Use whichever is more recent (handles both training simulation and live trading)
             if (lastPriceTime && simTime) {
@@ -675,7 +740,7 @@
             
             // Extend cutoff to include predictions if they exist
             if (showLstm && chartData.lstm_predictions && chartData.lstm_predictions.length > 0) {
-                const firstPredTime = new Date(chartData.lstm_predictions[0].timestamp);
+                const firstPredTime = parseET(chartData.lstm_predictions[0].timestamp);
                 if (firstPredTime < cutoff) {
                     // Extend window to show predictions (add 30min buffer)
                     cutoff = new Date(firstPredTime.getTime() - 30 * 60 * 1000);
@@ -684,10 +749,10 @@
 
             const prices = chartData.spy_prices
                 .filter(p => {
-                    const t = new Date(p.timestamp);
+                    const t = parseET(p.timestamp);
                     return t >= cutoff && t <= now;
                 })
-                .map(p => ({ x: new Date(p.timestamp), y: p.close }));
+                .map(p => ({ x: parseET(p.timestamp), y: p.close }));
 
             spyChart.data.datasets[0].data = prices;
 
@@ -710,8 +775,8 @@
                 
                 for (const pred of chartData.lstm_predictions) {
                     if (!pred.timestamp || !pred.predictions) continue;
-                    
-                    const predTime = new Date(pred.timestamp);
+
+                    const predTime = parseET(pred.timestamp);
                     // Allow predictions in the extended window
                     if (predTime < cutoff || predTime > now) continue;
                     
@@ -759,10 +824,10 @@
                     if (chartData.aggregated_predictions && chartData.aggregated_predictions.length > 0) {
                         const sortedPreds = chartData.aggregated_predictions
                             .filter(p => p.target_time && (p.target_price || p.predicted_return !== undefined))
-                            .sort((a, b) => new Date(a.target_time) - new Date(b.target_time));
-                        
+                            .sort((a, b) => parseET(a.target_time) - parseET(b.target_time));
+
                         for (const pred of sortedPreds) {
-                            const targetTime = new Date(pred.target_time);
+                            const targetTime = parseET(pred.target_time);
                             // Include predictions that are after the prediction time (not chart's now)
                             if (targetTime <= predictionTime) continue;
                             // Also skip if too far in the past compared to current chart view
@@ -826,6 +891,47 @@
                 }
             }
 
+            // VIX with Bollinger Bands (datasets 7, 8, 9, 10)
+            if (showVix && chartData.vix_prices && chartData.vix_prices.length > 0) {
+                const vixData = chartData.vix_prices
+                    .filter(p => {
+                        const t = parseET(p.timestamp);
+                        return t >= cutoff && t <= now;
+                    })
+                    .map(p => ({ x: parseET(p.timestamp), y: p.close }));
+                spyChart.data.datasets[7].data = vixData;
+
+                // BB Upper
+                if (chartData.vix_bb_upper && chartData.vix_bb_upper.length > 0) {
+                    const bbUpper = chartData.vix_bb_upper
+                        .filter(p => { const t = parseET(p.timestamp); return t >= cutoff && t <= now; })
+                        .map(p => ({ x: parseET(p.timestamp), y: p.value }));
+                    spyChart.data.datasets[8].data = bbUpper;
+                }
+
+                // BB Lower
+                if (chartData.vix_bb_lower && chartData.vix_bb_lower.length > 0) {
+                    const bbLower = chartData.vix_bb_lower
+                        .filter(p => { const t = parseET(p.timestamp); return t >= cutoff && t <= now; })
+                        .map(p => ({ x: parseET(p.timestamp), y: p.value }));
+                    spyChart.data.datasets[9].data = bbLower;
+                }
+
+                // BB Middle (SMA)
+                if (chartData.vix_bb_middle && chartData.vix_bb_middle.length > 0) {
+                    const bbMid = chartData.vix_bb_middle
+                        .filter(p => { const t = parseET(p.timestamp); return t >= cutoff && t <= now; })
+                        .map(p => ({ x: parseET(p.timestamp), y: p.value }));
+                    spyChart.data.datasets[10].data = bbMid;
+                }
+            } else {
+                // Clear VIX datasets if not showing or no data
+                spyChart.data.datasets[7].data = [];
+                spyChart.data.datasets[8].data = [];
+                spyChart.data.datasets[9].data = [];
+                spyChart.data.datasets[10].data = [];
+            }
+
             // Annotations
             const annotations = {};
             if (chartData.simulated_time && prices.length > 0) {
@@ -842,7 +948,7 @@
             let idx = 0;
             if (chartData.trades) {
                 chartData.trades.forEach(trade => {
-                    const entryTime = new Date(trade.entry_time);
+                    const entryTime = parseET(trade.entry_time);
                     if (entryTime < cutoff || entryTime > now) return;
                     const price = findNearestPrice(trade.entry_time);
                     if (!price) return;
@@ -852,7 +958,7 @@
                     const borderColor = isLive ? '#f59e0b' : '#fff';
                     annotations[`e${idx}`] = { type: 'point', xValue: entryTime, yValue: price, backgroundColor: color, borderColor: borderColor, borderWidth: isLive ? 3 : 2, radius: isLive ? 7 : 5 };
                     if (trade.exit_time && trade.status !== 'OPEN' && trade.status !== 'FILLED') {
-                        const exitTime = new Date(trade.exit_time);
+                        const exitTime = parseET(trade.exit_time);
                         if (exitTime >= cutoff && exitTime <= now) {
                             const exitPrice = findNearestPrice(trade.exit_time);
                             if (exitPrice) {
@@ -871,18 +977,32 @@
 
             document.getElementById('chart-cycle').textContent = chartData.cycles || 0;
             document.getElementById('chart-sim-time').textContent = chartData.simulated_time
-                ? new Date(chartData.simulated_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                ? parseET(chartData.simulated_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' ET'
                 : '--';
             document.getElementById('chart-price').textContent = chartData.current_price > 0 ? '$' + chartData.current_price.toFixed(2) : '$---';
+
+            // Update VIX display
+            if (chartData.vix_prices && chartData.vix_prices.length > 0) {
+                const latestVix = chartData.vix_prices[chartData.vix_prices.length - 1].close;
+                const vixEl = document.getElementById('chart-vix');
+                if (vixEl) {
+                    vixEl.textContent = latestVix.toFixed(2);
+                    // Color code VIX: muted green < 15, lighter green 15-20, yellow 20-25, orange > 25
+                    if (latestVix < 15) vixEl.style.color = 'rgba(32, 150, 90, 0.9)';
+                    else if (latestVix < 20) vixEl.style.color = 'rgba(60, 180, 110, 0.9)';
+                    else if (latestVix < 25) vixEl.style.color = 'rgba(200, 170, 50, 0.9)';
+                    else vixEl.style.color = 'rgba(220, 120, 50, 0.9)';
+                }
+            }
         }
 
         function findNearestPrice(ts) {
             if (!chartData.spy_prices?.length) return null;
-            const target = new Date(ts).getTime();
+            const target = parseET(ts).getTime();
             let nearest = chartData.spy_prices[0];
-            let minDiff = Math.abs(new Date(nearest.timestamp).getTime() - target);
+            let minDiff = Math.abs(parseET(nearest.timestamp).getTime() - target);
             for (const p of chartData.spy_prices) {
-                const diff = Math.abs(new Date(p.timestamp).getTime() - target);
+                const diff = Math.abs(parseET(p.timestamp).getTime() - target);
                 if (diff < minDiff) { minDiff = diff; nearest = p; }
             }
             return nearest.close;
@@ -903,6 +1023,11 @@
             showLstm = !showLstm;
             this.classList.toggle('active', showLstm);
             if (!showLstm) predictionHistory = [];
+            updateChart();
+        });
+        document.getElementById('vix-toggle').addEventListener('click', function() {
+            showVix = !showVix;
+            this.classList.toggle('active', showVix);
             updateChart();
         });
         document.getElementById('reset-zoom').addEventListener('click', () => spyChart?.resetZoom());
