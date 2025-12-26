@@ -534,38 +534,26 @@
         // Parse timestamp to display as Eastern Time regardless of browser timezone
         // Timestamps from backend are in ET - we want chart to show those exact times
         function parseET(timestamp) {
+            // Parse timestamp and display as Eastern Time on chart
+            // Timestamps from DB are already in ET (e.g., '2025-12-26T14:26:00' = 2:26pm ET)
+            // We want the chart x-axis to show "14:26" regardless of browser timezone
             if (!timestamp) return null;
             if (timestamp instanceof Date) return timestamp;
 
             // Remove any timezone suffix and normalize format
             let ts = String(timestamp).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '').replace('T', ' ');
 
-            // Parse as local time first (JavaScript interprets as browser timezone)
-            let d = new Date(ts);
-            if (isNaN(d.getTime())) {
-                // Try alternate format for Safari compatibility
-                const parts = ts.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
-                if (parts) {
-                    d = new Date(parts[1], parts[2] - 1, parts[3], parts[4], parts[5], parts[6]);
-                } else {
-                    return null;
-                }
+            // Parse components directly to avoid timezone interpretation issues
+            const parts = ts.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+            if (parts) {
+                // Create Date using local timezone constructor
+                // This makes the chart display the hour/minute values directly
+                return new Date(parts[1], parts[2] - 1, parts[3], parts[4], parts[5], parts[6]);
             }
 
-            // Calculate offset to shift from "interpreted as local" to "display as ET"
-            // getTimezoneOffset() returns minutes, positive for west of UTC
-            // PST = +480min, ET in winter = +300min, ET in summer = +240min
-            const localOffsetMin = d.getTimezoneOffset();
-            const etMonth = d.getMonth();
-            const isETDST = etMonth >= 2 && etMonth <= 10; // March-October
-            const etOffsetMin = isETDST ? 240 : 300; // EDT=4hrs, EST=5hrs
-
-            // Shift: we parsed as local, but it's actually ET
-            // If local=PST(+480) and time is ET(+300), we interpreted 3hrs too late
-            // Need to subtract the difference to correct
-            const shiftMs = (etOffsetMin - localOffsetMin) * 60 * 1000;
-
-            return new Date(d.getTime() + shiftMs);
+            // Fallback for other formats
+            let d = new Date(ts);
+            return isNaN(d.getTime()) ? null : d;
         }
 
         // Chart
