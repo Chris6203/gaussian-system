@@ -556,6 +556,38 @@
             return isNaN(d.getTime()) ? null : d;
         }
 
+        // Convert LOCAL timestamp (from server logs in PST/PDT) to display as ET
+        // The server logs in local time, but we want to align with market time (ET)
+        function parseLocalToET(timestamp) {
+            if (!timestamp) return null;
+            if (timestamp instanceof Date) return timestamp;
+
+            // Parse the timestamp as local time first
+            let ts = String(timestamp).replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '').replace('T', ' ');
+            const parts = ts.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})?/);
+
+            let d;
+            if (parts) {
+                d = new Date(parts[1], parts[2] - 1, parts[3], parts[4], parts[5], parts[6] || 0);
+            } else {
+                d = new Date(ts);
+                if (isNaN(d.getTime())) return null;
+            }
+
+            // The timestamp was logged in local time (e.g., PST = UTC-8)
+            // But it represents a market time moment we want to show as ET (UTC-5)
+            // Shift by the difference: local offset - ET offset
+            const localOffsetMin = d.getTimezoneOffset();  // e.g., +480 for PST
+            const month = d.getMonth();
+            const isETDST = month >= 2 && month <= 10;  // March-October
+            const etOffsetMin = isETDST ? 240 : 300;  // EDT=4hrs, EST=5hrs
+
+            // Shift to make it display as the equivalent ET time
+            // If local is PST (480) and ET is EST (300), shift by 180 min = 3 hours forward
+            const shiftMs = (localOffsetMin - etOffsetMin) * 60 * 1000;
+            return new Date(d.getTime() + shiftMs);
+        }
+
         // Chart
         let spyChart = null;
         let chartHours = 2;
@@ -711,8 +743,9 @@
             const lastPriceTime = chartData.spy_prices.length > 0
                 ? parseET(chartData.spy_prices[chartData.spy_prices.length - 1].timestamp)
                 : null;
-            const simTime = chartData.simulated_time ? parseET(chartData.simulated_time) : null;
-            
+            // simulated_time is in server local time (PST), convert to ET
+            const simTime = chartData.simulated_time ? parseLocalToET(chartData.simulated_time) : null;
+
             // Use whichever is more recent (handles both training simulation and live trading)
             if (lastPriceTime && simTime) {
                 now = lastPriceTime > simTime ? lastPriceTime : simTime;
@@ -725,11 +758,12 @@
             }
 
             let cutoff = new Date(now.getTime() - chartHours * 60 * 60 * 1000);
-            
+
             // Extend cutoff to include predictions if they exist
+            // Prediction timestamps are in server local time (PST), convert to ET
             if (showLstm && chartData.lstm_predictions && chartData.lstm_predictions.length > 0) {
-                const firstPredTime = parseET(chartData.lstm_predictions[0].timestamp);
-                if (firstPredTime < cutoff) {
+                const firstPredTime = parseLocalToET(chartData.lstm_predictions[0].timestamp);
+                if (firstPredTime && firstPredTime < cutoff) {
                     // Extend window to show predictions (add 30min buffer)
                     cutoff = new Date(firstPredTime.getTime() - 30 * 60 * 1000);
                 }
@@ -764,7 +798,9 @@
                 for (const pred of chartData.lstm_predictions) {
                     if (!pred.timestamp || !pred.predictions) continue;
 
-                    const predTime = parseET(pred.timestamp);
+                    // Prediction timestamp is in server local time (PST), convert to ET
+                    const predTime = parseLocalToET(pred.timestamp);
+                    if (!predTime) continue;
                     // Allow predictions in the extended window
                     if (predTime < cutoff || predTime > now) continue;
                     
@@ -810,12 +846,14 @@
                     lstmFutureData.push({ x: predictionTime, y: startY });
                     
                     if (chartData.aggregated_predictions && chartData.aggregated_predictions.length > 0) {
+                        // Aggregated prediction target_times are derived from server local time
                         const sortedPreds = chartData.aggregated_predictions
                             .filter(p => p.target_time && (p.target_price || p.predicted_return !== undefined))
-                            .sort((a, b) => parseET(a.target_time) - parseET(b.target_time));
+                            .sort((a, b) => parseLocalToET(a.target_time) - parseLocalToET(b.target_time));
 
                         for (const pred of sortedPreds) {
-                            const targetTime = parseET(pred.target_time);
+                            const targetTime = parseLocalToET(pred.target_time);
+                            if (!targetTime) continue;
                             // Include predictions that are after the prediction time (not chart's now)
                             if (targetTime <= predictionTime) continue;
                             // Also skip if too far in the past compared to current chart view
