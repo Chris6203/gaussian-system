@@ -2140,6 +2140,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0027: v7 correct weights + tighter stops (-5%/+15%) (2025-12-28 17:46)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 33.9% |
+| P&L | -72.34% |
+| Per-Trade P&L | $-3.80 |
+| Trades | 951 |
+| Run Dir | `models/EXP-0027_IDEA-051` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Quality-filtered trades with tighter stops improve per-trade P&L
+**Result**: FAIL
+
+---
+
+
 ### EXP-0026: v6 fix + tighter stops (-5%/+15%) (2025-12-28 17:15)
 
 | Metric | Quick Test (5K) |
