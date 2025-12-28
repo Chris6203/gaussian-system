@@ -30,7 +30,7 @@
       "description": "Pretrained NN with tighter stop loss",
       "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
@@ -38,9 +38,13 @@
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T16:54:22.508293"
+      }
     }
   ],
   "next_id": 42,
-  "last_updated": "2025-12-28T13:53:42.684351"
+  "last_updated": "2025-12-28T16:54:22.508293"
 }
