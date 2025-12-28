@@ -1144,6 +1144,19 @@ if hasattr(bot, 'feature_buffer'):
 
 logger.info("[TRAIN] Each run is isolated in its own timestamped directory")
 
+# Load pretrained model if available (BEFORE overwriting save paths!)
+if os.environ.get('LOAD_PRETRAINED', '0') == '1':
+    pretrained_model_path = "models/state/trained_model.pth"
+    if os.path.exists(pretrained_model_path) and hasattr(bot, 'model') and bot.model is not None:
+        try:
+            bot.model.load_state_dict(torch.load(pretrained_model_path, map_location=bot.device))
+            logger.info(f"[PRETRAINED] Loaded neural network from {pretrained_model_path}")
+            logger.info(f"   This should make predictions more conservative, reducing trade rate")
+        except Exception as e_load:
+            logger.warning(f"[WARN] Failed to load pretrained model: {e_load}")
+    else:
+        logger.info(f"[PRETRAINED] No pretrained model found at {pretrained_model_path}")
+
 # Override bot's model save paths to use our timestamped directory
 bot.model_save_path = os.path.join(run_dir, "state", "trained_model.pth")
 bot.optimizer_save_path = os.path.join(run_dir, "state", "optimizer_state.pth")
