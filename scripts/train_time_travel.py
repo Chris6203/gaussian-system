@@ -925,9 +925,9 @@ if rl_threshold_cfg.get("enabled", False):
         logger.info(f"   Base threshold: {rl_threshold_cfg.get('base_threshold', 0.25)}")
         logger.info(f"   Use as filter: {USE_RL_THRESHOLD_FILTER}")
 
-        # Load pretrained weights if available
+        # Load pretrained weights if available (from protected directory)
         if os.environ.get('LOAD_PRETRAINED', '0') == '1':
-            pretrained_path = "models/state/rl_threshold.pth"
+            pretrained_path = "models/pretrained/rl_threshold.pth"  # Protected directory
             if os.path.exists(pretrained_path):
                 try:
                     rl_threshold_learner.load(pretrained_path)
@@ -936,7 +936,7 @@ if rl_threshold_cfg.get("enabled", False):
                 except Exception as e_load:
                     logger.warning(f"[WARN] Failed to load pretrained RL threshold: {e_load}")
             else:
-                logger.info(f"[PRETRAINED] No RL threshold file found at {pretrained_path}")
+                logger.info(f"[PRETRAINED] No RL threshold file at {pretrained_path} (OK - not required)")
     except ImportError as e:
         rl_threshold_learner = None
         USE_RL_THRESHOLD_FILTER = False
@@ -1145,17 +1145,20 @@ if hasattr(bot, 'feature_buffer'):
 logger.info("[TRAIN] Each run is isolated in its own timestamped directory")
 
 # Load pretrained model if available (BEFORE overwriting save paths!)
+# CRITICAL: Use models/pretrained/ directory which is never overwritten by training runs
 if os.environ.get('LOAD_PRETRAINED', '0') == '1':
-    pretrained_model_path = "models/state/trained_model.pth"
+    pretrained_model_path = "models/pretrained/trained_model.pth"  # Protected directory
     if os.path.exists(pretrained_model_path) and hasattr(bot, 'model') and bot.model is not None:
         try:
             bot.model.load_state_dict(torch.load(pretrained_model_path, map_location=bot.device))
             logger.info(f"[PRETRAINED] Loaded neural network from {pretrained_model_path}")
-            logger.info(f"   This should make predictions more conservative, reducing trade rate")
+            logger.info(f"   This model was trained during profitable long_run_20k")
+            logger.info(f"   Expected: lower confidences -> ~1-2% trade rate")
         except Exception as e_load:
             logger.warning(f"[WARN] Failed to load pretrained model: {e_load}")
     else:
         logger.info(f"[PRETRAINED] No pretrained model found at {pretrained_model_path}")
+        logger.info(f"   Copy from models/long_run_20k/state/trained_model.pth to use pretrained weights")
 
 # Override bot's model save paths to use our timestamped directory
 bot.model_save_path = os.path.join(run_dir, "state", "trained_model.pth")
