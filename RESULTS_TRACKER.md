@@ -2140,6 +2140,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0019: Use long_run_20k pretrained state only (2025-12-28 15:05)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.6% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 989 |
+| Run Dir | `models/EXP-0019_IDEA-012` |
+
+**Source**: CLAUDE
+**Category**: training
+**Hypothesis**: The trained state has learned good features
+**Result**: ERROR
+
+---
+
+### EXP-0020: Momentum-only entry (no HMM) (2025-12-28 15:05)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1355 |
+| Run Dir | `models/EXP-0020_IDEA-013` |
+
+**Source**: CLAUDE
+**Category**: entry_strategy
+**Hypothesis**: HMM may be adding noise, pure momentum cleaner
+**Result**: ERROR
+
+---
+
+### EXP-0021: Very tight stops (-3%) with medium TP (+8%) (2025-12-28 15:05)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1354 |
+| Run Dir | `models/EXP-0021_IDEA-014` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Tighter risk management may improve consistency
+**Result**: ERROR
+
+---
+
+### EXP-0018: HMM + Neural + RLThreshold triple filter (2025-12-28 15:05)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1123 |
+| Run Dir | `models/EXP-0018_IDEA-011` |
+
+**Source**: CLAUDE
+**Category**: entry_strategy
+**Hypothesis**: Triple confirmation = highest quality trades
+**Result**: ERROR
+
+---
+
+
 ### EXP-0017: Tighter stops (-5%) with wider TP (+15%) (2025-12-28 11:39)
 
 | Metric | Quick Test (5K) |
