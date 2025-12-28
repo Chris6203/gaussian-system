@@ -2089,4 +2089,48 @@ Focus on improving the pre-trained model baseline through:
 
 ---
 
+## Phase 24: Exit Strategy Tuning (2025-12-28)
+
+### Goal
+Improve the best-performing baseline (pre-trained model with -1.4% P&L) through exit parameter tuning.
+
+### Test Results (5K Cycles Each, Pre-trained State)
+
+| Test | Stop Loss | Take Profit | Max Hold | P&L | Trades | Result |
+|------|-----------|-------------|----------|-----|--------|--------|
+| Baseline | -8% | +12% | 45 min | -1.4% | 81 | Baseline |
+| Tight Stop | -5% | +12% | 45 min | -1.55% | 93 | ❌ Worse |
+| Wide TP | -8% | +18% | 45 min | -0.72% | 56 | ✅ Better |
+| **Short Hold** | -8% | +12% | **30 min** | **-0.58%** | 96 | ✅ **BEST** |
+| Combined | -8% | +18% | 30 min | -11.2% | 91 | ❌ Much Worse |
+
+### Key Findings
+
+1. **Shorter max hold (30 min) is best**: Reduces theta decay exposure
+2. **Improvements don't stack**: Wide TP + Short Hold combined = -11.2% (much worse)
+3. **Tight stop loss hurts**: More trades but same or worse P&L
+4. **Wide take profit helps individually**: But doesn't combine well with short hold
+
+### Why Combined Config Failed
+
+- Short hold (30 min) forces quicker exits
+- Wide TP (+18%) needs more time to reach target
+- Conflict: short time + high target = position exits on time before hitting TP
+- Result: hits stop loss more often, misses take profit
+
+### Recommendation
+
+**BEST PERFORMING SETUP (Phase 24):**
+```json
+{
+  "hard_stop_loss_pct": -8.0,
+  "hard_take_profit_pct": 12.0,
+  "hard_max_hold_minutes": 30
+}
+```
+
+**Result: -0.58% P&L, 96 trades (improved from -1.4% baseline)**
+
+---
+
 ## Phase 22: Live Trading Deployment (2025-12-24)
