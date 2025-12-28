@@ -30,7 +30,7 @@
       "description": "Correct pretrained NN from protected directory with tighter stop loss",
       "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
@@ -39,12 +39,13 @@
         "HARD_TAKE_PROFIT_PCT": "15"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T17:57:28.021638"
+      "last_result": {
+        "exp_id": "EXP-0028",
+        "per_trade_pnl": -2.5179216152019004,
+        "win_rate": 34.3
       }
     }
   ],
   "next_id": 54,
-  "last_updated": "2025-12-28T17:57:28.021638"
+  "last_updated": "2025-12-28T18:18:09.266604"
 }
