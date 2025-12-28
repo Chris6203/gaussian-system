@@ -1,160 +1,78 @@
 {
   "ideas": [
     {
-      "id": "IDEA-001",
+      "id": "IDEA-009",
       "source": "claude",
-      "timestamp": "2025-12-28T00:00:00Z",
-      "category": "exit_strategy",
-      "title": "Symmetric exit ratios (-10%/+10%)",
-      "description": "Current -8%/+12% asymmetry requires 40% win rate to break even. Test symmetric ratios.",
-      "hypothesis": "Symmetric exits will improve risk/reward math and require lower win rate to profit",
-      "priority": "high",
-      "status": "in_progress",
-      "files_to_modify": [
-        "config.json"
-      ],
-      "env_vars": {
-        "HARD_STOP_LOSS_PCT": "10",
-        "HARD_TAKE_PROFIT_PCT": "10"
-      },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:26:05.722745"
-      }
-    },
-    {
-      "id": "IDEA-002",
-      "source": "claude",
-      "timestamp": "2025-12-28T00:00:00Z",
-      "category": "exit_strategy",
-      "title": "Wider exits (-15%/+25%)",
-      "description": "Test much wider exits to let winners run and losers more room",
-      "hypothesis": "Wider exits may catch bigger moves and reduce whipsaw exits",
-      "priority": "high",
-      "status": "in_progress",
-      "files_to_modify": [
-        "config.json"
-      ],
-      "env_vars": {
-        "HARD_STOP_LOSS_PCT": "15",
-        "HARD_TAKE_PROFIT_PCT": "25"
-      },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:26:05.722745"
-      }
-    },
-    {
-      "id": "IDEA-003",
-      "source": "claude",
-      "timestamp": "2025-12-28T00:00:00Z",
-      "category": "architecture",
-      "title": "Transformer temporal encoder",
-      "description": "Replace TCN with Transformer encoder (already implemented, needs testing)",
-      "hypothesis": "Attention mechanism may better capture important price patterns",
-      "priority": "high",
-      "status": "in_progress",
-      "files_to_modify": [],
-      "env_vars": {
-        "TEMPORAL_ENCODER": "transformer"
-      },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:26:05.722745"
-      }
-    },
-    {
-      "id": "IDEA-004",
-      "source": "claude",
-      "timestamp": "2025-12-28T00:00:00Z",
-      "category": "exit_strategy",
-      "title": "Shorter max hold (20 min)",
-      "description": "Reduce max hold from 45 min to 20 min to match prediction horizon better",
-      "hypothesis": "Predictions are for 15 min, holding 45 min causes drift. Shorter hold may align better.",
-      "priority": "medium",
-      "status": "in_progress",
-      "files_to_modify": [
-        "config.json"
-      ],
-      "env_vars": {
-        "TT_MAX_HOLD_MINUTES": "20"
-      },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:26:05.722745"
-      }
-    },
-    {
-      "id": "IDEA-005",
-      "source": "claude",
-      "timestamp": "2025-12-28T00:00:00Z",
+      "timestamp": "2025-12-28T10:44:19.467216",
       "category": "entry_strategy",
-      "title": "Stricter HMM thresholds (0.75/0.25)",
-      "description": "Increase HMM threshold strictness for fewer but higher quality trades",
-      "hypothesis": "Current 0.70/0.30 may be letting through marginal signals",
-      "priority": "medium",
-      "status": "pending",
-      "files_to_modify": [],
-      "env_vars": {
-        "HMM_STRONG_BULLISH": "0.75",
-        "HMM_STRONG_BEARISH": "0.25"
-      },
-      "estimated_complexity": "low"
-    },
-    {
-      "id": "IDEA-006",
-      "source": "claude",
-      "timestamp": "2025-12-28T00:00:00Z",
-      "category": "training",
-      "title": "Fresh 3-month pretrained model",
-      "description": "Train predictor on 3 months of recent data, test on current month (walk-forward)",
-      "hypothesis": "Pre-trained model on recent data performed best in previous tests",
+      "title": "Stricter RLThresholdLearner base threshold (0.35)",
+      "description": "Increase base threshold from 0.25 to 0.35 to be even more selective",
+      "hypothesis": "Higher threshold = fewer trades = higher quality",
       "priority": "high",
-      "status": "pending",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1"
-      },
-      "estimated_complexity": "medium"
-    },
-    {
-      "id": "IDEA-007",
-      "source": "claude",
-      "timestamp": "2025-12-28T00:00:00Z",
-      "category": "architecture",
-      "title": "RMSNorm + GeGLU activations",
-      "description": "Use modern transformer components (RMSNorm, GeGLU) from T5/Gemma2",
-      "hypothesis": "Modern normalization and gated activations may improve prediction stability",
-      "priority": "medium",
-      "status": "pending",
-      "files_to_modify": [],
-      "env_vars": {
-        "NORM_TYPE": "rmsnorm",
-        "ACTIVATION_TYPE": "geglu"
-      },
-      "estimated_complexity": "low"
-    },
-    {
-      "id": "IDEA-008",
-      "source": "claude",
-      "timestamp": "2025-12-28T00:00:00Z",
-      "category": "features",
-      "title": "VVIX (volatility of volatility)",
-      "description": "Add VVIX as a feature for better regime detection",
-      "hypothesis": "VVIX spikes signal regime changes before VIX does",
-      "priority": "low",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [
-        "features/macro.py"
+        "config.json"
       ],
       "env_vars": {},
-      "estimated_complexity": "medium"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T10:44:27.186923"
+      }
+    },
+    {
+      "id": "IDEA-010",
+      "source": "claude",
+      "timestamp": "2025-12-28T10:44:19.467216",
+      "category": "exit_strategy",
+      "title": "Tighter stops (-5%) with wider TP (+15%)",
+      "description": "Cut losses faster, let winners run",
+      "hypothesis": "Asymmetric in favor of winners should improve per-trade P&L",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [
+        "config.json"
+      ],
+      "env_vars": {
+        "HARD_STOP_LOSS_PCT": "5",
+        "HARD_TAKE_PROFIT_PCT": "15"
+      },
+      "estimated_complexity": "low"
+    },
+    {
+      "id": "IDEA-011",
+      "source": "claude",
+      "timestamp": "2025-12-28T10:44:19.467216",
+      "category": "entry_strategy",
+      "title": "HMM + Neural + RLThreshold triple filter",
+      "description": "Require all 3 filters to agree before entry",
+      "hypothesis": "Triple confirmation = highest quality trades",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "REQUIRE_NEURAL_CONFIRM": "1"
+      },
+      "estimated_complexity": "low"
+    },
+    {
+      "id": "IDEA-012",
+      "source": "claude",
+      "timestamp": "2025-12-28T10:44:19.467216",
+      "category": "training",
+      "title": "Use long_run_20k pretrained state only",
+      "description": "Load pretrained model from original profitable run",
+      "hypothesis": "The trained state has learned good features",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_SOURCE": "long_run_20k"
+      },
+      "estimated_complexity": "low"
     }
   ],
-  "last_updated": "2025-12-28T13:26:05.722745",
-  "next_id": 9
+  "last_updated": "2025-12-28T10:44:27.186923",
+  "next_id": 13
 }
