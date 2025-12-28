@@ -396,7 +396,7 @@ class UnifiedOptionsBot:
         
         # Mixed Precision Training (AMP) for GPU acceleration
         self.use_amp = torch.cuda.is_available()  # Only use AMP when GPU is available
-        self.grad_scaler = torch.amp.GradScaler('cuda') if self.use_amp else None
+        self.grad_scaler = torch.cuda.amp.GradScaler() if self.use_amp else None
 
         # Model persistence (now organized in models/state/)
         self.model_save_path = "models/state/trained_model.pth"
