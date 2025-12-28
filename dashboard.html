@@ -921,33 +921,38 @@
             if (showVix && chartData.vix_prices && chartData.vix_prices.length > 0) {
                 const vixData = chartData.vix_prices
                     .filter(p => {
-                        const t = parseET(p.timestamp);
+                        const ts = Array.isArray(p) ? p[0] : p.timestamp;
+                        const t = parseET(ts);
                         return t >= cutoff && t <= now;
                     })
-                    .map(p => ({ x: parseET(p.timestamp), y: p.close }));
+                    .map(p => {
+                        const ts = Array.isArray(p) ? p[0] : p.timestamp;
+                        const val = Array.isArray(p) ? p[1] : p.close;
+                        return { x: parseET(ts), y: val };
+                    });
                 spyChart.data.datasets[7].data = vixData;
 
                 // BB Upper
                 if (chartData.vix_bb_upper && chartData.vix_bb_upper.length > 0) {
                     const bbUpper = chartData.vix_bb_upper
-                        .filter(p => { const t = parseET(p.timestamp); return t >= cutoff && t <= now; })
-                        .map(p => ({ x: parseET(p.timestamp), y: p.value }));
+                        .filter(p => { const ts = Array.isArray(p) ? p[0] : p.timestamp; const t = parseET(ts); return t >= cutoff && t <= now; })
+                        .map(p => { const ts = Array.isArray(p) ? p[0] : p.timestamp; const val = Array.isArray(p) ? p[1] : p.value; return { x: parseET(ts), y: val }; });
                     spyChart.data.datasets[8].data = bbUpper;
                 }
 
                 // BB Lower
                 if (chartData.vix_bb_lower && chartData.vix_bb_lower.length > 0) {
                     const bbLower = chartData.vix_bb_lower
-                        .filter(p => { const t = parseET(p.timestamp); return t >= cutoff && t <= now; })
-                        .map(p => ({ x: parseET(p.timestamp), y: p.value }));
+                        .filter(p => { const ts = Array.isArray(p) ? p[0] : p.timestamp; const t = parseET(ts); return t >= cutoff && t <= now; })
+                        .map(p => { const ts = Array.isArray(p) ? p[0] : p.timestamp; const val = Array.isArray(p) ? p[1] : p.value; return { x: parseET(ts), y: val }; });
                     spyChart.data.datasets[9].data = bbLower;
                 }
 
                 // BB Middle (SMA)
                 if (chartData.vix_bb_middle && chartData.vix_bb_middle.length > 0) {
                     const bbMid = chartData.vix_bb_middle
-                        .filter(p => { const t = parseET(p.timestamp); return t >= cutoff && t <= now; })
-                        .map(p => ({ x: parseET(p.timestamp), y: p.value }));
+                        .filter(p => { const ts = Array.isArray(p) ? p[0] : p.timestamp; const t = parseET(ts); return t >= cutoff && t <= now; })
+                        .map(p => { const ts = Array.isArray(p) ? p[0] : p.timestamp; const val = Array.isArray(p) ? p[1] : p.value; return { x: parseET(ts), y: val }; });
                     spyChart.data.datasets[10].data = bbMid;
                 }
             } else {

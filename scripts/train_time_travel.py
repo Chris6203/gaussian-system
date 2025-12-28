@@ -74,10 +74,10 @@ _tt_config, _entry_config, _full_config = _load_training_config()
 # Training settings from config.json
 TT_VERBOSE = _tt_config.get('verbose', False)
 TT_QUIET = _tt_config.get('quiet', False)
-TT_PRINT_EVERY = int(_tt_config.get('print_every', 20))
+TT_PRINT_EVERY = int(os.environ.get('TT_PRINT_EVERY', _tt_config.get('print_every', 20)))
 TT_DASH_EVERY = 5
-TT_MAX_CYCLES = int(_tt_config.get('max_cycles', 0))
-TT_MAX_HOLD_MINUTES = int(_tt_config.get('max_hold_minutes', 45))
+TT_MAX_CYCLES = int(os.environ.get('TT_MAX_CYCLES', _tt_config.get('max_cycles', 0)))
+TT_MAX_HOLD_MINUTES = int(os.environ.get('TT_MAX_HOLD_MINUTES', _tt_config.get('max_hold_minutes', 45)))
 TT_MAX_POSITIONS = int(_tt_config.get('max_positions', 3))
 
 # Data interval from config.json (default: 1m, can be 5m for less noise)
@@ -924,6 +924,19 @@ if rl_threshold_cfg.get("enabled", False):
         logger.info("[ADAPTIVE] RL Threshold Learner initialized")
         logger.info(f"   Base threshold: {rl_threshold_cfg.get('base_threshold', 0.25)}")
         logger.info(f"   Use as filter: {USE_RL_THRESHOLD_FILTER}")
+
+        # Load pretrained weights if available
+        if os.environ.get('LOAD_PRETRAINED', '0') == '1':
+            pretrained_path = "models/state/rl_threshold.pth"
+            if os.path.exists(pretrained_path):
+                try:
+                    rl_threshold_learner.load(pretrained_path)
+                    logger.info(f"[PRETRAINED] Loaded RL threshold learner from {pretrained_path}")
+                    logger.info(f"   Composite threshold: {rl_threshold_learner.composite_threshold:.4f}")
+                except Exception as e_load:
+                    logger.warning(f"[WARN] Failed to load pretrained RL threshold: {e_load}")
+            else:
+                logger.info(f"[PRETRAINED] No RL threshold file found at {pretrained_path}")
     except ImportError as e:
         rl_threshold_learner = None
         USE_RL_THRESHOLD_FILTER = False

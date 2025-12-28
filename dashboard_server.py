@@ -548,6 +548,114 @@ def fetch_tradier_intraday_prices(lookback_days: int = 3, max_points: int = 1000
     return prices
 
 
+
+
+def fetch_tradier_vix_prices(lookback_days: int = 3, max_points: int = 10000) -> List[Dict[str, Any]]:
+    """Fetch live VIX prices from Tradier API."""
+    import pytz
+    prices = []
+    try:
+        import requests
+        from tradier_credentials import TradierCredentials
+        from trading_mode import get_trading_mode
+        mode = get_trading_mode()
+        creds = TradierCredentials()
+        if mode['is_sandbox']:
+            if not creds.has_sandbox_credentials():
+                return prices
+            cred_data = creds.get_sandbox_credentials()
+            base_url = 'https://sandbox.tradier.com/v1'
+        else:
+            if not creds.has_live_credentials():
+                return prices
+            cred_data = creds.get_live_credentials()
+            base_url = 'https://api.tradier.com/v1'
+        headers = {
+            'Authorization': f'Bearer {cred_data["access_token"]}',
+            'Accept': 'application/json'
+        }
+        start_date = (get_market_time() - timedelta(days=lookback_days)).strftime('%Y-%m-%d')
+        resp = requests.get(
+            f'{base_url}/markets/timesales',
+            params={'symbol': 'VIX', 'interval': '1min', 'start': f'{start_date} 09:30', 'session_filter': 'all'},
+            headers=headers, timeout=10
+        )
+
+        # Convert ET timestamps to local time (to match simulated_time format)
+        eastern = pytz.timezone('US/Eastern')
+        local_tz = datetime.now().astimezone().tzinfo
+
+        def et_to_local(ts_str):
+            """Convert ET timestamp string to local time string."""
+            try:
+                dt = datetime.strptime(ts_str, '%Y-%m-%dT%H:%M:%S')
+                dt_et = eastern.localize(dt)
+                dt_local = dt_et.astimezone(local_tz)
+                return dt_local.strftime('%Y-%m-%dT%H:%M:%S')
+            except:
+                return ts_str
+
+        if resp.status_code == 200:
+            data = resp.json()
+            series = data.get('series', {})
+            if series and 'data' in series:
+                candles = series['data']
+                if not isinstance(candles, list):
+                    candles = [candles]
+                for candle in candles[-max_points:]:
+                    ts = candle.get('time', candle.get('timestamp', ''))
+                    prices.append({
+                        'timestamp': et_to_local(ts),
+                        'close': float(candle.get('close', candle.get('price', 0))),
+                        'high': float(candle.get('high', candle.get('close', 0))),
+                        'low': float(candle.get('low', candle.get('close', 0))),
+                        'open': float(candle.get('open', candle.get('close', 0)))
+                    })
+
+        # Fetch real-time quote to fill in the gap (timesales has ~15min delay)
+        quote_resp = requests.get(
+            f'{base_url}/markets/quotes',
+            params={'symbols': 'VIX'},
+            headers=headers, timeout=10
+        )
+        if quote_resp.status_code == 200:
+            quote_data = quote_resp.json()
+            quotes = quote_data.get('quotes', {})
+            quote = quotes.get('quote', {})
+            if quote and quote.get('last'):
+                # Use local time to match simulated_time
+                now_local = datetime.now()
+                last_price = float(quote.get('last', 0))
+                # Fill gap from last timesales to now with the current quote
+                if prices:
+                    last_ts = prices[-1]['timestamp']
+                    # Parse last timestamp (already in local time after conversion)
+                    try:
+                        last_dt = datetime.strptime(last_ts, '%Y-%m-%dT%H:%M:%S')
+                        # Add intermediate points every minute to fill the gap
+                        current = last_dt + timedelta(minutes=1)
+                        while current <= now_local:
+                            prices.append({
+                                'timestamp': current.strftime('%Y-%m-%dT%H:%M:%S'),
+                                'close': last_price,
+                                'high': last_price,
+                                'low': last_price,
+                                'open': last_price
+                            })
+                            current += timedelta(minutes=1)
+                    except:
+                        # Fallback: just add current point
+                        prices.append({
+                            'timestamp': now_local.strftime('%Y-%m-%dT%H:%M:%S'),
+                            'close': last_price,
+                            'high': float(quote.get('high', last_price)),
+                            'low': float(quote.get('low', last_price)),
+                            'open': float(quote.get('open', last_price))
+                        })
+    except Exception as e:
+        print(f'Error fetching Tradier VIX prices: {e}')
+    return prices
+
 def load_tradier_account() -> None:
     """Load Tradier account info."""
     global tradier_state
@@ -885,12 +993,35 @@ def get_chart_data():
         if not spy_prices:
             spy_prices = load_live_spy_prices(chart_cfg['lookback_days'], chart_cfg['max_price_points'])
 
-        # Load VIX with Bollinger Bands
-        vix_data = db_loader.load_vix_prices(
-            reference_time=reference_time,
-            lookback_days=chart_cfg['lookback_days'],
-            bb_period=20
-        )
+        # Load VIX with Bollinger Bands - try live Tradier first, then DB
+        vix_data = {'vix_prices': [], 'bb_upper': [], 'bb_lower': [], 'bb_middle': []}
+        try:
+            live_vix = fetch_tradier_vix_prices(chart_cfg['lookback_days'], chart_cfg['max_price_points'])
+            if live_vix:
+                # Calculate Bollinger Bands from live data
+                raw_prices = [[v['timestamp'], v['close']] for v in live_vix]
+                vix_data['vix_prices'] = raw_prices
+                # Simple BB calculation
+                bb_period = 20
+                closes = [p[1] for p in raw_prices]
+                for i, price in enumerate(raw_prices):
+                    if i >= bb_period - 1:
+                        window = closes[i - bb_period + 1:i + 1]
+                        sma = sum(window) / len(window)
+                        std = (sum((x - sma) ** 2 for x in window) / len(window)) ** 0.5
+                        vix_data['bb_middle'].append([price[0], sma])
+                        vix_data['bb_upper'].append([price[0], sma + 2 * std])
+                        vix_data['bb_lower'].append([price[0], sma - 2 * std])
+        except Exception as e:
+            print(f"Error loading live VIX: {e}")
+
+        # Fallback to DB if no live data
+        if not vix_data['vix_prices']:
+            vix_data = db_loader.load_vix_prices(
+                reference_time=reference_time,
+                lookback_days=chart_cfg['lookback_days'],
+                bb_period=20
+            )
 
         trades, annotations = db_loader.load_trades_for_chart(
             reference_time=reference_time,

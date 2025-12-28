@@ -15,7 +15,8 @@ Port: 5002 (configurable in config.json)
 import json
 import os
 import re
-from datetime import datetime
+import sqlite3
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -210,6 +211,44 @@ def load_decision_records(run_id: str, limit: int = 100) -> List[Dict[str, Any]]
         return []
 
 
+def load_trades_from_db(run_id: str, summary: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Load trades from paper_trading.db for a given model run.
+
+    Currently loads all trades. In the future, we could link trades to model runs
+    via a run_id column in the trades table.
+    """
+    db_path = Path('data/paper_trading.db')
+    if not db_path.exists():
+        return []
+
+    trades = []
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # For now, load all completed trades
+        # TODO: Add run_id column to trades table to link trades to specific runs
+        cursor.execute("""
+            SELECT * FROM trades
+            WHERE status IS NOT NULL AND status != 'OPEN'
+            ORDER BY timestamp ASC
+        """)
+
+        rows = cursor.fetchall()
+
+        for row in rows:
+            trade = dict(row)
+            trades.append(trade)
+
+        conn.close()
+
+    except Exception as e:
+        print(f"Error loading trades from DB: {e}")
+
+    return trades
+
+
 # =============================================================================
 # API ROUTES
 # =============================================================================
@@ -253,25 +292,54 @@ def get_model(run_id: str):
 
 @app.route('/api/model/<run_id>/trades')
 def get_model_trades(run_id: str):
-    """Get trade/decision records for a model."""
-    records = load_decision_records(run_id, limit=500)
+    """Get trades for a model from paper_trading.db."""
+    # First get the model summary to get timestamp
+    models_dir = Path(CONFIG['models_dir'])
+    summary_path = models_dir / run_id / 'SUMMARY.txt'
+    summary = parse_summary_txt(summary_path)
 
-    # Extract just the trade-relevant info
+    if not summary:
+        return jsonify({'error': f'Model {run_id} not found'}), 404
+
+    # Load trades from database
+    db_trades = load_trades_from_db(run_id, summary)
+
+    # Format trades for the frontend
     trades = []
-    for r in records:
-        if r.get('action') in ['BUY_CALLS', 'BUY_PUTS', 'EXIT']:
-            trades.append({
-                'timestamp': r.get('timestamp', ''),
-                'action': r.get('action', ''),
-                'confidence': r.get('confidence', 0),
-                'predicted_return': r.get('predicted_return', 0),
-                'vix_level': r.get('vix_level', 0)
-            })
+    for t in db_trades:
+        entry_price = t.get('premium_paid', 0) or t.get('entry_price', 0) or 0
+        exit_price = t.get('exit_price', 0) or 0
+        profit_loss = t.get('profit_loss', 0) or 0
+
+        # Calculate P&L percentage
+        pnl_pct = 0
+        if entry_price and entry_price > 0:
+            pnl_pct = (profit_loss / entry_price) * 100
+
+        trade = {
+            'id': t.get('id', ''),
+            'timestamp': t.get('timestamp', ''),
+            'entry_time': t.get('timestamp', ''),
+            'exit_time': t.get('exit_timestamp', ''),
+            'option_type': t.get('option_type', ''),
+            'entry_price': entry_price,
+            'exit_price': exit_price,
+            'profit_loss': profit_loss,
+            'pnl_pct': pnl_pct,
+            'exit_reason': t.get('status', ''),
+            'contracts': t.get('quantity', 1),
+            'symbol': t.get('symbol', 'SPY'),
+            'strike': t.get('strike_price', 0),
+            'confidence': t.get('ml_confidence', 0)
+        }
+
+        trades.append(trade)
 
     return jsonify({
         'trades': trades,
-        'total_records': len(records),
-        'trade_count': len(trades)
+        'trade_count': len(trades),
+        'model_timestamp': summary.get('timestamp', ''),
+        'source': 'paper_trading.db'
     })
 
 
@@ -282,6 +350,73 @@ def health():
         'status': 'ok',
         'version': DASHBOARD_VERSION,
         'models_dir': CONFIG['models_dir']
+    })
+
+
+@app.route('/api/spy_prices')
+def get_spy_prices():
+    """Get SPY price data for a date range."""
+    from flask import request
+
+    start = request.args.get('start', '')
+    end = request.args.get('end', '')
+
+    # Try historical database
+    db_path = Path('data/db/historical.db')
+    if not db_path.exists():
+        db_path = Path('data/historical.db')
+
+    if not db_path.exists():
+        return jsonify({'prices': [], 'error': 'No historical database found'})
+
+    prices = []
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Get SPY prices from historical_data table
+        if start and end:
+            cursor.execute("""
+                SELECT timestamp, close_price, high_price, low_price, open_price, volume
+                FROM historical_data
+                WHERE symbol = 'SPY' AND timestamp >= ? AND timestamp <= ?
+                ORDER BY timestamp ASC
+            """, (start, end))
+        else:
+            # Get last day of data
+            cursor.execute("""
+                SELECT timestamp, close_price, high_price, low_price, open_price, volume
+                FROM historical_data
+                WHERE symbol = 'SPY'
+                ORDER BY timestamp DESC
+                LIMIT 500
+            """)
+
+        rows = cursor.fetchall()
+
+        for row in rows:
+            prices.append({
+                'timestamp': row[0],
+                'close': row[1],
+                'high': row[2],
+                'low': row[3],
+                'open': row[4],
+                'volume': row[5]
+            })
+
+        # Reverse if we got DESC order
+        if not start:
+            prices = prices[::-1]
+
+        conn.close()
+
+    except Exception as e:
+        print(f"Error loading SPY prices: {e}")
+        return jsonify({'prices': [], 'error': str(e)})
+
+    return jsonify({
+        'prices': prices,
+        'count': len(prices)
     })
 
 

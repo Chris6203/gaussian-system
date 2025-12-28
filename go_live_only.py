@@ -36,7 +36,7 @@ print(f"[CONFIG] Data Source: {config.get_data_source()}")
 # PAPER ONLY MODE - Set to True to disable all live trading
 # Set to False when ready to resume live trades
 # ============================================================================
-PAPER_ONLY_MODE = True
+PAPER_ONLY_MODE = False
 print(f"[CONFIG] Paper Only Mode: {PAPER_ONLY_MODE}")
 if PAPER_ONLY_MODE:
     print(f"[CONFIG] ** LIVE TRADES DISABLED - Bot will learn with paper trades only **")

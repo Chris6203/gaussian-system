@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Model History Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
     <style>
         :root {
             --bg-dark: #0a0a0f;
@@ -224,6 +228,88 @@
             text-align: center;
         }
 
+        /* Charts */
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+
+        .chart-container.tall {
+            height: 350px;
+        }
+
+        /* Trades Table */
+        .trades-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .trades-table th,
+        .trades-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .trades-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+
+        .trades-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .trade-type {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .trade-type.call {
+            background: rgba(0, 214, 143, 0.2);
+            color: var(--green);
+        }
+
+        .trade-type.put {
+            background: rgba(255, 92, 124, 0.2);
+            color: var(--red);
+        }
+
+        .trades-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -316,6 +402,10 @@
             }
         }
 
+        let equityChart = null;
+        let pnlChart = null;
+        let priceChart = null;
+
         async function selectModel(runId) {
             // Update selection UI
             document.querySelectorAll('.model-item').forEach(el => {
@@ -324,10 +414,51 @@
             document.getElementById(`model-${runId}`).classList.add('selected');
             selectedModelId = runId;
 
-            // Load model details
+            // Load model details and trades
             try {
-                const response = await fetch(`/api/model/${runId}`);
-                const model = await response.json();
+                const [modelResp, tradesResp] = await Promise.all([
+                    fetch(`/api/model/${runId}`),
+                    fetch(`/api/model/${runId}/trades`)
+                ]);
+                const model = await modelResp.json();
+                const tradesData = await tradesResp.json();
+
+                // Get date range from trades for SPY prices
+                const trades = tradesData.trades || [];
+                let startDate = '', endDate = '';
+
+                // Try to get full training date range from model timestamp or trades
+                if (trades.length > 0) {
+                    const times = trades.map(t => t.entry_time || t.timestamp).filter(t => t);
+                    if (times.length > 0) {
+                        startDate = times[0].split('T')[0];
+                        // Use the last trade exit time or entry time
+                        const lastTrade = trades[trades.length - 1];
+                        const lastTime = lastTrade.exit_time || lastTrade.entry_time || lastTrade.timestamp;
+                        endDate = lastTime ? lastTime.split('T')[0] : startDate;
+                    }
+                }
+
+                // If model has timestamp, use it as end date (training completion)
+                if (model.timestamp) {
+                    // Parse model timestamp (format: YYYYMMDD_HHMMSS or similar)
+                    const match = model.timestamp.match(/(\d{4})(\d{2})(\d{2})/);
+                    if (match) {
+                        const modelEndDate = `${match[1]}-${match[2]}-${match[3]}`;
+                        // Extend end date to model completion date if later
+                        if (!endDate || modelEndDate > endDate) {
+                            endDate = modelEndDate;
+                        }
+                    }
+                }
+
+                // Fetch SPY prices for the full date range
+                let spyPrices = [];
+                if (startDate) {
+                    const pricesResp = await fetch(`/api/spy_prices?start=${startDate}&end=${endDate}T23:59:59`);
+                    const pricesData = await pricesResp.json();
+                    spyPrices = pricesData.prices || [];
+                }
 
                 if (model.error) {
                     document.getElementById('main-content').innerHTML =
@@ -386,11 +517,65 @@
                         </div>
                     </div>
 
+                    <div class="charts-section">
+                        <div class="chart-card full-width">
+                            <h3>SPY Price with Trades
+                                <button onclick="resetPriceZoom()" style="float:right;background:#6366f1;color:#fff;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:0.8rem;">Reset Zoom</button>
+                                <span style="float:right;color:#888;font-size:0.75rem;margin-right:15px;font-weight:normal;">Drag to zoom • Ctrl+scroll to zoom • Shift+drag to pan</span>
+                            </h3>
+                            <div id="priceDataWarning" style="display:none;background:#ff5c7c22;border:1px solid #ff5c7c;color:#ff5c7c;padding:8px 12px;border-radius:4px;margin-bottom:10px;font-size:0.85rem;"></div>
+                            <div class="chart-container tall">
+                                <canvas id="priceChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card full-width">
+                            <h3>Equity Curve</h3>
+                            <div class="chart-container tall">
+                                <canvas id="equityChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Trade P&L Distribution</h3>
+                            <div class="chart-container">
+                                <canvas id="pnlChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Win/Loss by Type</h3>
+                            <div class="chart-container">
+                                <canvas id="typeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-section">
+                        <h3>Trade History (${trades.length} trades)</h3>
+                        <div class="trades-scroll">
+                            <table class="trades-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Type</th>
+                                        <th>Entry Time</th>
+                                        <th>Exit Time</th>
+                                        <th>P&L</th>
+                                        <th>P&L %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trades-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="summary-section">
                         <h3>Full Summary</h3>
                         <div class="summary-content">${escapeHtml(model.raw_content)}</div>
                     </div>
                 `;
+
+                // Render charts
+                renderCharts(trades, model, spyPrices);
 
             } catch (error) {
                 console.error('Error loading model:', error);
@@ -399,10 +584,466 @@
             }
         }
 
+        function renderCharts(trades, model, spyPrices = []) {
+            // Destroy existing charts
+            if (equityChart) equityChart.destroy();
+            if (pnlChart) pnlChart.destroy();
+            if (priceChart) priceChart.destroy();
+
+            // Build equity curve data
+            let balance = model.initial_balance;
+            const equityData = [{x: 0, y: balance}];
+            const pnlValues = [];
+            const tradesBody = document.getElementById('trades-body');
+            let tradesHtml = '';
+
+            let callWins = 0, callLosses = 0, putWins = 0, putLosses = 0;
+
+            trades.forEach((trade, idx) => {
+                // Support both old and new field names
+                const pnl = trade.profit_loss || trade.pnl || 0;
+                const optionType = trade.option_type || trade.type || '';
+
+                balance += pnl;
+                equityData.push({x: idx + 1, y: balance});
+                pnlValues.push(pnl);
+
+                const isCall = optionType.toLowerCase().includes('call');
+                const isPut = optionType.toLowerCase().includes('put');
+                const isWin = pnl > 0;
+
+                if (isCall) { isWin ? callWins++ : callLosses++; }
+                if (isPut) { isWin ? putWins++ : putLosses++; }
+
+                const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+                const pnlPct = trade.pnl_pct || (pnl / model.initial_balance * 100);
+
+                // Format times nicely
+                const entryTime = trade.entry_time ? trade.entry_time.replace('T', ' ').slice(0, 16) : 'N/A';
+                const exitTime = trade.exit_time ? trade.exit_time.replace('T', ' ').slice(0, 16) : 'N/A';
+
+                tradesHtml += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td><span class="trade-type ${isCall ? 'call' : 'put'}">${optionType || 'N/A'}</span></td>
+                        <td>${entryTime}</td>
+                        <td>${exitTime}</td>
+                        <td class="${pnlClass}">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</td>
+                        <td class="${pnlClass}">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</td>
+                    </tr>
+                `;
+            });
+
+            tradesBody.innerHTML = tradesHtml || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No trades recorded</td></tr>';
+
+            // Equity Chart
+            const equityCtx = document.getElementById('equityChart').getContext('2d');
+            equityChart = new Chart(equityCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Balance',
+                        data: equityData,
+                        borderColor: model.pnl >= 0 ? '#00d68f' : '#ff5c7c',
+                        backgroundColor: model.pnl >= 0 ? 'rgba(0,214,143,0.1)' : 'rgba(255,92,124,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `$${ctx.parsed.y.toFixed(2)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Trade #', color: '#888' },
+                            grid: { color: '#2a2a3a' },
+                            ticks: { color: '#888' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Balance ($)', color: '#888' },
+                            grid: { color: '#2a2a3a' },
+                            ticks: { color: '#888', callback: v => '$' + v.toLocaleString() }
+                        }
+                    }
+                }
+            });
+
+            // P&L Distribution Chart
+            const pnlCtx = document.getElementById('pnlChart').getContext('2d');
+            const pnlColors = pnlValues.map(v => v >= 0 ? '#00d68f' : '#ff5c7c');
+            pnlChart = new Chart(pnlCtx, {
+                type: 'bar',
+                data: {
+                    labels: pnlValues.map((_, i) => i + 1),
+                    datasets: [{
+                        label: 'P&L',
+                        data: pnlValues,
+                        backgroundColor: pnlColors,
+                        borderRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `$${ctx.parsed.y.toFixed(2)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Trade #', color: '#888' },
+                            grid: { display: false },
+                            ticks: { color: '#888' }
+                        },
+                        y: {
+                            title: { display: true, text: 'P&L ($)', color: '#888' },
+                            grid: { color: '#2a2a3a' },
+                            ticks: { color: '#888' }
+                        }
+                    }
+                }
+            });
+
+            // Win/Loss by Type Chart
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            new Chart(typeCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['CALL Wins', 'CALL Losses', 'PUT Wins', 'PUT Losses'],
+                    datasets: [{
+                        data: [callWins, callLosses, putWins, putLosses],
+                        backgroundColor: ['#00d68f', '#ff5c7c', '#00d68f', '#ff5c7c'],
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#888' } },
+                        y: { grid: { color: '#2a2a3a' }, ticks: { color: '#888' } }
+                    }
+                }
+            });
+
+            // SPY Price Chart with Trade Markers
+            const warningEl = document.getElementById('priceDataWarning');
+            if (warningEl) warningEl.style.display = 'none';
+
+            if (spyPrices.length > 0) {
+                const priceCtx = document.getElementById('priceChart').getContext('2d');
+
+                // Convert SPY prices to chart data
+                const priceData = spyPrices.map(p => ({
+                    x: new Date(p.timestamp),
+                    y: p.close
+                }));
+
+                // Check data coverage
+                if (trades.length > 0 && priceData.length > 0) {
+                    const priceStart = priceData[0].x;
+                    const priceEnd = priceData[priceData.length - 1].x;
+                    const tradeTimes = trades.map(t => new Date(t.exit_time || t.entry_time || t.timestamp)).filter(t => !isNaN(t));
+                    const tradeStart = new Date(Math.min(...tradeTimes));
+                    const tradeEnd = new Date(Math.max(...tradeTimes));
+
+                    let warnings = [];
+                    if (tradeStart < priceStart) {
+                        warnings.push(`Trades start at ${tradeStart.toLocaleTimeString()} but price data starts at ${priceStart.toLocaleTimeString()}`);
+                    }
+                    if (tradeEnd > priceEnd) {
+                        warnings.push(`Trades end at ${tradeEnd.toLocaleTimeString()} but price data ends at ${priceEnd.toLocaleTimeString()}`);
+                    }
+                    if (warnings.length > 0 && warningEl) {
+                        warningEl.innerHTML = '⚠️ Incomplete price data: ' + warnings.join('. ') + '. Some trades may not display correctly.';
+                        warningEl.style.display = 'block';
+                    }
+                }
+
+                // Helper to find closest price
+                function findClosestPrice(targetTime) {
+                    let closestPrice = null;
+                    let minDiff = Infinity;
+                    for (const p of spyPrices) {
+                        const pTime = new Date(p.timestamp);
+                        const diff = Math.abs(pTime - targetTime);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestPrice = p.close;
+                        }
+                    }
+                    return closestPrice;
+                }
+
+                // Create trade lines (entry to exit) colored by profit/loss
+                const profitLines = [];
+                const lossLines = [];
+
+                trades.forEach(t => {
+                    if (!t.exit_time) return;
+
+                    const entryTime = new Date(t.entry_time || t.timestamp);
+                    const exitTime = new Date(t.exit_time);
+                    const pnl = t.profit_loss || t.pnl || 0;
+                    const entryPrice = findClosestPrice(entryTime);
+                    const exitPrice = findClosestPrice(exitTime);
+
+                    if (!entryPrice || !exitPrice) return;
+
+                    const lineData = [
+                        { x: entryTime, y: entryPrice },
+                        { x: exitTime, y: exitPrice }
+                    ];
+
+                    if (pnl >= 0) {
+                        profitLines.push(lineData);
+                    } else {
+                        lossLines.push(lineData);
+                    }
+                });
+
+                // Create entry markers (green triangles for calls, red for puts)
+                const entryPoints = trades.map(t => {
+                    const entryTime = new Date(t.entry_time || t.timestamp);
+                    const optionType = t.option_type || t.type || '';
+                    const isCall = optionType.toLowerCase().includes('call');
+                    const closestPrice = findClosestPrice(entryTime);
+
+                    return {
+                        x: entryTime,
+                        y: closestPrice || 0,
+                        isCall: isCall,
+                        pnl: t.profit_loss || t.pnl || 0
+                    };
+                }).filter(p => p.y > 0);
+
+                // Create exit markers
+                const exitPoints = trades.map(t => {
+                    const exitTime = new Date(t.exit_time);
+                    if (!t.exit_time) return null;
+
+                    const pnl = t.profit_loss || t.pnl || 0;
+                    const closestPrice = findClosestPrice(exitTime);
+
+                    return {
+                        x: exitTime,
+                        y: closestPrice || 0,
+                        pnl: pnl
+                    };
+                }).filter(p => p && p.y > 0);
+
+                // Build datasets - add trade lines first (behind markers)
+                const datasets = [
+                    {
+                        label: 'SPY Price',
+                        data: priceData,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        order: 3
+                    }
+                ];
+
+                // Add profit trade lines (green)
+                profitLines.forEach((line, i) => {
+                    datasets.push({
+                        label: i === 0 ? 'Profit Trade' : '',
+                        data: line,
+                        borderColor: '#00d68f',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0,
+                        fill: false,
+                        order: 2
+                    });
+                });
+
+                // Add loss trade lines (red)
+                lossLines.forEach((line, i) => {
+                    datasets.push({
+                        label: i === 0 ? 'Loss Trade' : '',
+                        data: line,
+                        borderColor: '#ff5c7c',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0,
+                        fill: false,
+                        order: 2
+                    });
+                });
+
+                // Add marker datasets
+                datasets.push({
+                    label: 'CALL Entry',
+                    data: entryPoints.filter(p => p.isCall),
+                    backgroundColor: '#00d68f',
+                    borderColor: '#00d68f',
+                    pointStyle: 'triangle',
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    showLine: false,
+                    order: 1
+                });
+
+                datasets.push({
+                    label: 'PUT Entry',
+                    data: entryPoints.filter(p => !p.isCall),
+                    backgroundColor: '#ff5c7c',
+                    borderColor: '#ff5c7c',
+                    pointStyle: 'triangle',
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    rotation: 180,
+                    showLine: false,
+                    order: 1
+                });
+
+                datasets.push({
+                    label: 'Exit (Win)',
+                    data: exitPoints.filter(p => p.pnl > 0),
+                    backgroundColor: '#00d68f',
+                    borderColor: '#fff',
+                    pointStyle: 'rect',
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    borderWidth: 2,
+                    showLine: false,
+                    order: 0
+                });
+
+                datasets.push({
+                    label: 'Exit (Loss)',
+                    data: exitPoints.filter(p => p.pnl <= 0),
+                    backgroundColor: '#ff5c7c',
+                    borderColor: '#fff',
+                    pointStyle: 'rect',
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    borderWidth: 2,
+                    showLine: false,
+                    order: 0
+                });
+
+                priceChart = new Chart(priceCtx, {
+                    type: 'line',
+                    data: { datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'nearest',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: '#888',
+                                    usePointStyle: true,
+                                    filter: function(item) {
+                                        // Hide duplicate trade line labels
+                                        return item.text !== '';
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        if (ctx.dataset.label === 'SPY Price') {
+                                            return `SPY: $${ctx.parsed.y.toFixed(2)}`;
+                                        }
+                                        if (ctx.dataset.label === 'Profit Trade' || ctx.dataset.label === 'Loss Trade') {
+                                            return null; // Hide tooltip for trade lines
+                                        }
+                                        const point = ctx.raw;
+                                        if (point.pnl !== undefined) {
+                                            const pnlStr = point.pnl >= 0 ? `+$${point.pnl.toFixed(2)}` : `-$${Math.abs(point.pnl).toFixed(2)}`;
+                                            return `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)} (${pnlStr})`;
+                                        }
+                                        return `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`;
+                                    }
+                                }
+                            },
+                            zoom: {
+                                pan: {
+                                    enabled: true,
+                                    mode: 'x',
+                                    modifierKey: 'shift'  // Hold shift to pan
+                                },
+                                zoom: {
+                                    wheel: {
+                                        enabled: true,
+                                        modifierKey: 'ctrl'  // Ctrl+scroll to zoom
+                                    },
+                                    pinch: { enabled: true },
+                                    drag: {
+                                        enabled: true,
+                                        backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                                        borderColor: '#6366f1',
+                                        borderWidth: 2,
+                                        threshold: 10  // Minimum drag distance
+                                    },
+                                    mode: 'x'  // Zoom X-axis only for cleaner behavior
+                                },
+                                limits: {
+                                    x: { minRange: 60000 }  // Minimum 1 minute range
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM d',
+                                        hour: 'MMM d HH:mm'
+                                    }
+                                },
+                                title: { display: true, text: 'Date', color: '#888' },
+                                grid: { color: '#2a2a3a' },
+                                ticks: { color: '#888', maxRotation: 45, maxTicksLimit: 15 }
+                            },
+                            y: {
+                                title: { display: true, text: 'SPY Price ($)', color: '#888' },
+                                grid: { color: '#2a2a3a' },
+                                ticks: { color: '#888', callback: v => '$' + v.toFixed(0) }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function resetPriceZoom() {
+            if (priceChart) {
+                priceChart.resetZoom();
+            }
         }
 
         // Load models on page load
