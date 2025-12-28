@@ -122,15 +122,16 @@
       "description": "Train predictor on 3 months of recent data, test on current month (walk-forward)",
       "hypothesis": "Pre-trained model on recent data performed best in previous tests",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1"
       },
       "estimated_complexity": "medium",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:14:45.043098"
+      "last_result": {
+        "exp_id": "EXP-0013",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     },
     {
@@ -142,16 +143,17 @@
       "description": "Use modern transformer components (RMSNorm, GeGLU) from T5/Gemma2",
       "hypothesis": "Modern normalization and gated activations may improve prediction stability",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [],
       "env_vars": {
         "NORM_TYPE": "rmsnorm",
         "ACTIVATION_TYPE": "geglu"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:14:45.043098"
+      "last_result": {
+        "exp_id": "EXP-0014",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     },
     {
@@ -163,18 +165,19 @@
       "description": "Add VVIX as a feature for better regime detection",
       "hypothesis": "VVIX spikes signal regime changes before VIX does",
       "priority": "low",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [
         "features/macro.py"
       ],
       "env_vars": {},
       "estimated_complexity": "medium",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:14:45.043098"
+      "last_result": {
+        "exp_id": "EXP-0015",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     }
   ],
-  "last_updated": "2025-12-28T13:14:45.043098",
+  "last_updated": "2025-12-28T13:15:14.062735",
   "next_id": 9
 }

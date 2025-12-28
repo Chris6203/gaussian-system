@@ -2140,6 +2140,58 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0015: VVIX (volatility of volatility) (2025-12-28 13:15)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0015_IDEA-008` |
+
+**Source**: CLAUDE
+**Category**: features
+**Hypothesis**: VVIX spikes signal regime changes before VIX does
+**Result**: ERROR
+
+---
+
+### EXP-0013: Fresh 3-month pretrained model (2025-12-28 13:15)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0013_IDEA-006` |
+
+**Source**: CLAUDE
+**Category**: training
+**Hypothesis**: Pre-trained model on recent data performed best in previous tests
+**Result**: ERROR
+
+---
+
+### EXP-0014: RMSNorm + GeGLU activations (2025-12-28 13:15)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0014_IDEA-007` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Modern normalization and gated activations may improve prediction stability
+**Result**: ERROR
+
+---
+
+
 ### EXP-0012: Stricter HMM thresholds (0.75/0.25) (2025-12-28 13:13)
 
 | Metric | Quick Test (5K) |
