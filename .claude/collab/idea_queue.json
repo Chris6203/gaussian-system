@@ -9,7 +9,7 @@
       "description": "Current -8%/+12% asymmetry requires 40% win rate to break even. Test symmetric ratios.",
       "hypothesis": "Symmetric exits will improve risk/reward math and require lower win rate to profit",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [
         "config.json"
       ],
@@ -17,7 +17,11 @@
         "HARD_STOP_LOSS_PCT": "10",
         "HARD_TAKE_PROFIT_PCT": "10"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T10:11:09.013352"
+      }
     },
     {
       "id": "IDEA-002",
@@ -139,6 +143,6 @@
       "estimated_complexity": "medium"
     }
   ],
-  "last_updated": "2025-12-28T18:10:00.000000",
+  "last_updated": "2025-12-28T10:11:09.013352",
   "next_id": 9
 }
