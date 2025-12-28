@@ -1692,7 +1692,14 @@ for idx, sim_time in enumerate(common_times):
         
         # Set the current time in our time-travel data source
         tt_source.set_time(sim_time)
-        
+
+        # Set simulation time for event calendar (Jerry's event halts feature)
+        try:
+            from backend.event_calendar import set_simulation_time
+            set_simulation_time(sim_time)
+        except ImportError:
+            pass  # Event calendar not available
+
         # ============================================================================
         # DATA AVAILABILITY CHECK: Skip if required symbols don't have data
         # ============================================================================
@@ -1855,6 +1862,14 @@ for idx, sim_time in enumerate(common_times):
 
                     # Use centralized P&L calculation (prevents 100x multiplier bug)
                     pnl_pct = compute_pnl_pct(trade)
+
+                    # JERRY'S KILL SWITCHES: Record trade result for consecutive loss tracking
+                    try:
+                        from backend.kill_switches import record_trade
+                        is_win = trade.get('pnl', 0) > 0
+                        record_trade(pnl_pct, is_win)
+                    except ImportError:
+                        pass  # Kill switches not available
 
                     # Direction controller learning - record outcome
                     if HAS_DIRECTION_CONTROLLER and direction_controller is not None:
@@ -4077,7 +4092,14 @@ if os.environ.get('ENABLE_LIVE_MODE', 'false').lower() == 'true':
             bot.paper_trader.simulated_time = sim_time
             bot.paper_trader.simulation_mode = True  # Required for get_market_time() to return simulated_time
             bot.current_time = sim_time
-            
+
+            # Set simulation time for event calendar (Jerry's event halts feature)
+            try:
+                from backend.event_calendar import set_simulation_time
+                set_simulation_time(sim_time)
+            except ImportError:
+                pass
+
             # Log for tracking
             logger.info(f"[LIVE] Processing new bar: {sim_time} | Price: ${current_price:.2f}")
             

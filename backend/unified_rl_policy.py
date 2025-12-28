@@ -31,6 +31,15 @@ import logging
 # Regime filter for quality gating
 from backend.regime_filter import get_regime_filter, RegimeDecision
 
+# Event calendar for CPI/FOMC halts (Jerry's improvement)
+from backend.event_calendar import should_halt_for_event
+
+# Kill switches for consecutive losses, drawdowns (Jerry's improvement)
+from backend.kill_switches import check_kill_switches
+
+# Fuzzy logic scoring for trade quality (Jerry's improvement)
+from backend.fuzzy_scoring import should_allow_trade as fuzzy_allow_trade
+
 logger = logging.getLogger(__name__)
 
 
@@ -292,12 +301,32 @@ class UnifiedRLPolicy:
     ) -> Tuple[int, float, Dict]:
         """
         Select action given current state.
-        
+
         Returns:
             action: 0=HOLD, 1=BUY_CALL, 2=BUY_PUT, 3=EXIT
             confidence: How confident the policy is
             details: Extra info for logging
         """
+        # JERRY'S EVENT-DRIVEN HALTS: Block new entries during CPI/FOMC/NFP
+        if not state.is_in_trade:
+            halted, event_info = should_halt_for_event()
+            if halted:
+                event_type = event_info.get('type', 'unknown')
+                mins_to = event_info.get('minutes_to_event', 0)
+                mins_since = event_info.get('minutes_since_event', 0)
+                if mins_to > 0:
+                    logger.info(f"📅 EVENT HALT: {event_type} in {mins_to} min - blocking new entries")
+                else:
+                    logger.info(f"📅 EVENT HALT: {event_type} was {abs(mins_since)} min ago - blocking new entries")
+                return self.HOLD, 0.0, {'reason': 'event_halt', 'event': event_info}
+
+        # JERRY'S KILL SWITCHES: Non-overridable halt after consecutive losses/drawdown
+        if not state.is_in_trade:
+            kill_halted, kill_reason = check_kill_switches()
+            if kill_halted:
+                logger.warning(f"🛑 KILL SWITCH ACTIVE: {kill_reason} - blocking all entries")
+                return self.HOLD, 0.0, {'reason': 'kill_switch', 'kill_reason': kill_reason}
+
         # RULE-BASED SAFETY CHECKS (always apply, even in RL mode)
         if state.is_in_trade:
             # Force exit on stop loss
@@ -412,11 +441,39 @@ class UnifiedRLPolicy:
                 details['regime_state'] = regime_decision.regime_state
                 details['position_scale'] = regime_decision.position_scale
 
+            # === JERRY'S FUZZY LOGIC: Trade quality scoring (when enabled) ===
+            # Check fuzzy score before proceeding with entry
+            try:
+                # Determine proposed action from signals
+                if state.hmm_trend > 0.55 and state.predicted_direction > 0:
+                    proposed_action = 'BUY_CALL'
+                elif state.hmm_trend < 0.45 and state.predicted_direction < 0:
+                    proposed_action = 'BUY_PUT'
+                else:
+                    proposed_action = 'HOLD'
+
+                fuzzy_allowed, fuzzy_score, fuzzy_breakdown = fuzzy_allow_trade(
+                    vix=state.vix_level,
+                    hmm_confidence=state.hmm_confidence,
+                    predicted_direction=state.predicted_direction,
+                    hmm_trend=state.hmm_trend,
+                    model_confidence=state.prediction_confidence,
+                    proposed_action=proposed_action
+                )
+                details['fuzzy_score'] = fuzzy_score
+                details['fuzzy_breakdown'] = fuzzy_breakdown
+
+                if not fuzzy_allowed:
+                    logger.info(f"FUZZY VETO: Score {fuzzy_score:.3f} below threshold")
+                    return self.HOLD, fuzzy_score, {**details, 'reason': 'fuzzy_veto'}
+            except Exception as e:
+                logger.debug(f"Fuzzy scoring error: {e}")
+
             # === THRESHOLDS (configurable via env vars for testing) ===
             # Updated defaults based on Phase 11 analysis: relaxed thresholds = 3x better P&L
-            HMM_STRONG_BULLISH = float(os.environ.get('HMM_STRONG_BULLISH', '0.70'))  # RESTORED: Original strict value'))  # Was 0.70
-            HMM_STRONG_BEARISH = float(os.environ.get('HMM_STRONG_BEARISH', '0.30'))  # RESTORED: Original strict value'))  # Was 0.30
-            HMM_MIN_CONFIDENCE = float(os.environ.get('HMM_MIN_CONFIDENCE', '0.70'))  # RESTORED: Original strict value'))  # Was 0.70
+            HMM_STRONG_BULLISH = float(os.environ.get('HMM_STRONG_BULLISH', '0.70'))
+            HMM_STRONG_BEARISH = float(os.environ.get('HMM_STRONG_BEARISH', '0.30'))
+            HMM_MIN_CONFIDENCE = float(os.environ.get('HMM_MIN_CONFIDENCE', '0.70'))
             HMM_MAX_VOLATILITY = float(os.environ.get('HMM_MAX_VOLATILITY', '0.70'))
 
             # Neural confirmation settings (enable via env var)

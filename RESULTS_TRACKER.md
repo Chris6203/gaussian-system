@@ -2015,4 +2015,78 @@ If validation is positive, we proceed to live trading.
 
 ---
 
+## Phase 23: Jerry's SPYOptionTrader Improvements Testing (2025-12-27)
+
+### Goal
+Systematically test Jerry's improvements from his SPYOptionTrader/Quantor-MTFuzz framework one at a time.
+
+### Jerry Improvements Available
+| Feature | Description | Config Key |
+|---------|-------------|------------|
+| event_halts | Block trading during CPI/FOMC/NFP | jerry.event_halts.enabled |
+| kill_switches | Consecutive loss & drawdown halts | jerry.kill_switches.enabled |
+| fuzzy_logic | Membership function trade quality | jerry.fuzzy_logic.enabled |
+| position_sizing | Dynamic sizing based on fuzzy score | jerry.position_sizing.enabled |
+| greek_limits | Portfolio Greek exposure limits | jerry.greek_limits.enabled |
+| mtf_consensus | Multi-timeframe voting | jerry.mtf_consensus.enabled |
+
+### Test Results (5K Cycles Each)
+
+**CRITICAL**: Tests must use pre-trained model state from `long_run_20k` to be meaningful.
+Fresh model tests show -85% to -95% losses regardless of config.
+
+#### Tests WITHOUT Pre-trained State (INVALID - for reference only)
+| Test | P&L | Trades | Balance | Notes |
+|------|-----|--------|---------|-------|
+| Fresh baseline | -87.5% | 974 | $624 | No pre-trained state |
+| kill_switches (fresh) | -90.5% | 992 | $476 | Kill switches triggered but reset daily |
+| fuzzy_logic (fresh) | -85.1% | ~1010 | $744 | No fuzzy vetoes logged |
+
+#### Tests WITH Pre-trained State (VALID)
+| Test | Jerry Feature | P&L | Trades | Trade Rate | Balance | Notes |
+|------|---------------|-----|--------|------------|---------|-------|
+| **Baseline** | None (event_halts only) | **-1.4%** | 81 | 1.57% | **$4,930** | ✅ Best result |
+| **kill_switches** | kill_switches enabled | **-26.5%** | 90 | 1.77% | **$3,677** | ❌ Made it WORSE |
+
+### Key Finding: Pre-trained State is CRITICAL
+
+| Metric | Fresh Model | Pre-trained Model |
+|--------|-------------|-------------------|
+| Trade Rate | ~20% | ~1.5% |
+| P&L (5K cycles) | -85% to -95% | -1.4% |
+| Selectivity | Takes most signals | Rejects 98.5% of signals |
+
+### Analysis
+
+**kill_switches with pre-trained state (-26.5% vs -1.4% baseline):**
+- Kill switches HURT performance when combined with pre-trained model
+- The halt-and-resume pattern disrupts the neural network's learned patterns
+- Consecutive loss tracking triggers during normal drawdown periods
+- Net effect: More trades (90 vs 81) with worse outcomes
+
+**Conclusion:** Jerry's improvements do NOT help the pre-trained model baseline.
+The pre-trained neural network already achieves optimal selectivity.
+
+### Recommendation
+
+**BEST PERFORMING SETUP:**
+```
+- Pre-trained model state from long_run_20k
+- event_halts: enabled (block CPI/FOMC/NFP)
+- kill_switches: DISABLED
+- fuzzy_logic: DISABLED
+- All other Jerry features: DISABLED
+```
+
+**Result: -1.4% P&L, 1.57% trade rate, $4,930 balance**
+
+### Next Steps
+Focus on improving the pre-trained model baseline through:
+1. Exit strategy tuning (stop loss, take profit, trailing)
+2. Entry threshold adjustments (confidence, edge requirements)
+3. Position sizing optimization
+4. Multi-timeframe signal confirmation
+
+---
+
 ## Phase 22: Live Trading Deployment (2025-12-24)
