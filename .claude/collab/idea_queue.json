@@ -1,6 +1,22 @@
 {
   "ideas": [
     {
+      "id": "IDEA-016",
+      "source": "claude",
+      "timestamp": "2025-12-28T11:40:45.841923",
+      "category": "baseline",
+      "title": "Baseline with pretrained state + filter",
+      "description": "Test the baseline config with pretrained state loaded",
+      "hypothesis": "This should reproduce the profitable performance of long_run_20k",
+      "priority": "critical",
+      "status": "already_tested",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1"
+      },
+      "estimated_complexity": "low"
+    },
+    {
       "id": "IDEA-009",
       "source": "claude",
       "timestamp": "2025-12-28T10:44:19.467216",
@@ -9,11 +25,13 @@
       "description": "Increase base threshold from 0.25 to 0.35 to be even more selective",
       "hypothesis": "Higher threshold = fewer trades = higher quality",
       "priority": "high",
-      "status": "rejected",
+      "status": "already_tested",
       "files_to_modify": [
         "config.json"
       ],
-      "env_vars": {},
+      "env_vars": {
+        "LOAD_PRETRAINED": "1"
+      },
       "estimated_complexity": "low",
       "last_result": {
         "exp_id": "EXP-0016",
@@ -30,19 +48,24 @@
       "description": "Cut losses faster, let winners run",
       "hypothesis": "Asymmetric in favor of winners should improve per-trade P&L",
       "priority": "high",
-      "status": "rejected",
+      "status": "in_progress",
       "files_to_modify": [
         "config.json"
       ],
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "15"
+        "HARD_TAKE_PROFIT_PCT": "15",
+        "LOAD_PRETRAINED": "1"
       },
       "estimated_complexity": "low",
       "last_result": {
         "exp_id": "EXP-0017",
         "per_trade_pnl": -4.772925824175824,
         "win_rate": 39.9
+      },
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T11:41:01.338106"
       }
     },
     {
@@ -54,16 +77,13 @@
       "description": "Require all 3 filters to agree before entry",
       "hypothesis": "Triple confirmation = highest quality trades",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
-        "REQUIRE_NEURAL_CONFIRM": "1"
+        "REQUIRE_NEURAL_CONFIRM": "1",
+        "LOAD_PRETRAINED": "1"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T14:18:20.338707"
-      }
+      "estimated_complexity": "low"
     },
     {
       "id": "IDEA-012",
@@ -74,17 +94,13 @@
       "description": "Load pretrained model from original profitable run",
       "hypothesis": "The trained state has learned good features",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "PRETRAINED_SOURCE": "long_run_20k"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T14:18:20.338707"
-      }
+      "estimated_complexity": "low"
     },
     {
       "id": "IDEA-013",
@@ -95,16 +111,13 @@
       "description": "Use only momentum signals for entry, bypass HMM",
       "hypothesis": "HMM may be adding noise, pure momentum cleaner",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
-        "ENTRY_CONTROLLER": "direction"
+        "ENTRY_CONTROLLER": "direction",
+        "LOAD_PRETRAINED": "1"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T14:18:20.338707"
-      }
+      "estimated_complexity": "low"
     },
     {
       "id": "IDEA-014",
@@ -115,17 +128,14 @@
       "description": "Cut losses very fast, take smaller profits",
       "hypothesis": "Tighter risk management may improve consistency",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "3",
-        "HARD_TAKE_PROFIT_PCT": "8"
+        "HARD_TAKE_PROFIT_PCT": "8",
+        "LOAD_PRETRAINED": "1"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T14:18:20.338707"
-      }
+      "estimated_complexity": "low"
     },
     {
       "id": "IDEA-015",
@@ -140,11 +150,12 @@
       "files_to_modify": [],
       "env_vars": {
         "TRADING_END_HOUR": "11",
-        "TRADING_END_MINUTE": "30"
+        "TRADING_END_MINUTE": "30",
+        "LOAD_PRETRAINED": "1"
       },
       "estimated_complexity": "low"
     }
   ],
-  "last_updated": "2025-12-28T11:39:59.264174",
-  "next_id": 16
+  "last_updated": "2025-12-28T11:41:01.338106",
+  "next_id": 17
 }
