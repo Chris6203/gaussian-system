@@ -196,7 +196,7 @@ def get_tested_idea_hashes() -> Set[str]:
         return tested
 
     try:
-        for line in log_path.read_text().strip().split("\n"):
+        for line in log_path.read_text(encoding='utf-8').strip().split("\n"):
             if not line:
                 continue
             try:
@@ -295,14 +295,14 @@ def release_idea_locks(idea_ids: List[str]):
 def load_json(path: Path) -> dict:
     """Load JSON file, return empty dict if not exists."""
     if path.exists():
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding='utf-8'))
     return {}
 
 
 def save_json(path: Path, data: dict):
     """Save JSON file with pretty printing."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2))
+    path.write_text(jso, encoding='utf-8')n.dumps(data, indent=2))
 
 
 def append_jsonl(path: Path, record: dict):
@@ -318,7 +318,7 @@ def get_next_experiment_id() -> str:
     if not log_path.exists():
         return "EXP-0001"
 
-    lines = log_path.read_text().strip().split("\n")
+    lines = log_path.read_text(encoding='utf-8').strip().split("\n")
     if not lines or not lines[0]:
         return "EXP-0001"
 
@@ -378,13 +378,13 @@ def ask_codex_for_ideas() -> List[dict]:
         logger.warning("Prompt template not found")
         return []
 
-    prompt_template = prompt_path.read_text()
+    prompt_template = prompt_path.read_text(encoding='utf-8')
 
     # Get recent experiments
     experiment_log = COLLAB_DIR / "experiments" / "experiment_log.jsonl"
     recent = []
     if experiment_log.exists():
-        lines = experiment_log.read_text().strip().split("\n")[-20:]
+        lines = experiment_log.read_text(encoding='utf-8').strip().split("\n")[-20:]
         for line in lines:
             if line:
                 try:
@@ -560,7 +560,7 @@ def run_experiment(idea: dict, exp_id: str, cycles: int, gpu_id: int = 0) -> dic
 
 def parse_summary(summary_path: Path, run_dir: str) -> dict:
     """Parse SUMMARY.txt to extract metrics."""
-    text = summary_path.read_text()
+    text = summary_path.read_text(encoding='utf-8')
     result = {"run_dir": run_dir}
 
     # Extract metrics using regex patterns
@@ -646,7 +646,7 @@ def run_parallel_experiments(ideas: List[dict], cycles: int) -> List[tuple]:
 def update_scoreboard(experiments: List[tuple], is_validation: bool = False):
     """Update RESULTS_TRACKER.md with experiment results."""
     tracker_path = BASE_DIR / "RESULTS_TRACKER.md"
-    content = tracker_path.read_text()
+    content = tracker_path.read_text(encoding='utf-8')
 
     # Find or create automated section
     section_header = "## Automated Optimization Results"
@@ -691,7 +691,7 @@ def update_scoreboard(experiments: List[tuple], is_validation: bool = False):
     idx = content.find(section_header) + len(section_header)
     content = content[:idx] + "\n" + "".join(entries) + content[idx:]
 
-    tracker_path.write_text(content)
+    tracker_path.write_text(con, encoding='utf-8')tent)
     logger.info(f"Updated scoreboard with {len(experiments)} experiments")
 
 
