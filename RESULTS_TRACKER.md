@@ -2140,6 +2140,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0017: Tighter stops (-5%) with wider TP (+15%) (2025-12-28 11:39)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.9% |
+| P&L | -69.49% |
+| Per-Trade P&L | $-4.77 |
+| Trades | 728 |
+| Run Dir | `models/EXP-0017_IDEA-010` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Asymmetric in favor of winners should improve per-trade P&L
+**Result**: FAIL
+
+---
+
+
 ### EXP-0016: Stricter RLThresholdLearner base threshold (0.35) (2025-12-28 11:10)
 
 | Metric | Quick Test (5K) |

@@ -30,7 +30,7 @@
       "description": "Cut losses faster, let winners run",
       "hypothesis": "Asymmetric in favor of winners should improve per-trade P&L",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [
         "config.json"
       ],
@@ -39,9 +39,10 @@
         "HARD_TAKE_PROFIT_PCT": "15"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T11:16:17.995798"
+      "last_result": {
+        "exp_id": "EXP-0017",
+        "per_trade_pnl": -4.772925824175824,
+        "win_rate": 39.9
       }
     },
     {
@@ -144,6 +145,6 @@
       "estimated_complexity": "low"
     }
   ],
-  "last_updated": "2025-12-28T14:18:20.338707",
+  "last_updated": "2025-12-28T11:39:59.264174",
   "next_id": 16
 }
