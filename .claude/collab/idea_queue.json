@@ -1,51 +1,64 @@
 {
   "ideas": [
     {
-      "id": "IDEA-052",
+      "id": "IDEA-054",
       "source": "claude",
-      "timestamp": "2025-12-28T14:55:00.000000",
-      "category": "baseline",
-      "title": "Protected pretrained directory (v8)",
-      "description": "Fixed pretrained loading to use models/pretrained/ instead of models/state/",
-      "hypothesis": "Previous tests failed because experiments corrupted models/state/. Now using protected directory.",
+      "timestamp": "2025-12-28T15:22:00.000000",
+      "category": "validation",
+      "title": "20K validation of protected pretrained",
+      "description": "Extended 20K cycle test to validate low trade rate with pretrained model",
+      "hypothesis": "With 0.24% trade rate, 20K cycles = ~48 trades, enough for statistical significance",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v8_protected_dir"
+        "PRETRAINED_VERSION": "v8_20k_validation",
+        "TT_MAX_CYCLES": "20000"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T14:54:57.111158"
-      }
+      "validation_test": true
     },
     {
-      "id": "IDEA-053",
+      "id": "IDEA-055",
       "source": "claude",
-      "timestamp": "2025-12-28T14:55:00.000000",
+      "timestamp": "2025-12-28T15:22:00.000000",
       "category": "exit_strategy",
-      "title": "Protected pretrained + tighter stops (-5%/+15%)",
-      "description": "Correct pretrained NN from protected directory with tighter stop loss",
-      "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
+      "title": "20K validation with tighter stops (-5%/+15%)",
+      "description": "20K cycle test with pretrained model and tighter exit parameters",
+      "hypothesis": "Tighter stops may reduce losses on bad trades",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v8_tighter",
+        "PRETRAINED_VERSION": "v8_20k_tight",
+        "TT_MAX_CYCLES": "20000",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
       "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0028",
-        "per_trade_pnl": -2.5179216152019004,
-        "win_rate": 34.3
-      }
+      "validation_test": true
+    },
+    {
+      "id": "IDEA-056",
+      "source": "claude",
+      "timestamp": "2025-12-28T15:22:00.000000",
+      "category": "baseline",
+      "title": "Lower bandit gate threshold (15% conf)",
+      "description": "Reduce min_confidence from 20% to 15% to increase trade rate",
+      "hypothesis": "Slightly lower threshold may capture more good trades while still filtering bad ones",
+      "priority": "medium",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_VERSION": "v8_lower_gate",
+        "TRAIN_MIN_CONF": "0.15"
+      },
+      "estimated_complexity": "low"
     }
   ],
-  "next_id": 54,
-  "last_updated": "2025-12-28T18:18:09.266604"
+  "next_id": 57,
+  "last_updated": "2025-12-28T15:22:00.000000"
 }
