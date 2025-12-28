@@ -48,7 +48,7 @@
       "description": "Pretrained RL threshold with tighter stop loss",
       "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
@@ -57,9 +57,10 @@
         "HARD_TAKE_PROFIT_PCT": "15"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T15:49:25.226588"
+      "last_result": {
+        "exp_id": "EXP-0022",
+        "per_trade_pnl": null,
+        "win_rate": 37.8
       }
     },
     {
@@ -71,7 +72,7 @@
       "description": "Pretrained RL threshold with wider take profit",
       "hypothesis": "Quality trades may run further, capture more upside",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
@@ -79,12 +80,13 @@
         "HARD_TAKE_PROFIT_PCT": "20"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T15:49:25.226588"
+      "last_result": {
+        "exp_id": "EXP-0023",
+        "per_trade_pnl": null,
+        "win_rate": 36.3
       }
     }
   ],
   "next_id": 28,
-  "last_updated": "2025-12-28T15:49:25.226588"
+  "last_updated": "2025-12-28T16:10:53.424366"
 }
