@@ -9,42 +9,74 @@
       "description": "Pretrained state NOW in models/state/, CRITICAL test",
       "hypothesis": "With pretrained RLThresholdLearner, should get 1-2% trade rate",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "tested",
+      "result": "failed",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "PRETRAINED_VERSION": "v2_long_run_20k"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T12:12:19.635133"
-      }
+      "estimated_complexity": "low"
     },
     {
-      "id": "IDEA-021",
+      "id": "IDEA-025",
       "source": "claude",
-      "timestamp": "2025-12-28T12:08:13.234328",
-      "category": "exit_strategy",
-      "title": "Pretrained v2 + tighter stops (-5%/+15%)",
-      "description": "Pretrained state with tighter stop loss",
-      "hypothesis": "Tighter stops on quality trades should improve per-trade P&L",
-      "priority": "high",
+      "timestamp": "2025-12-28T12:45:00.000000",
+      "category": "baseline",
+      "title": "RL threshold loading fix v3",
+      "description": "Test with NEW loading code that explicitly loads rl_threshold.pth",
+      "hypothesis": "With rl_threshold.pth actually LOADED, trade rate drops to 1-2%",
+      "priority": "critical",
       "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v2_long_run_20k",
-        "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "15"
+        "PRETRAINED_VERSION": "v3_loading_fix"
       },
       "estimated_complexity": "low",
       "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T15:27:50.445521"
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T12:46:39.675438"
       }
+    },
+    {
+      "id": "IDEA-026",
+      "source": "claude",
+      "timestamp": "2025-12-28T12:45:00.000000",
+      "category": "exit_strategy",
+      "title": "v3 fix + tighter stops (-5%/+15%)",
+      "description": "Pretrained RL threshold with tighter stop loss",
+      "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_VERSION": "v3_loading_fix",
+        "HARD_STOP_LOSS_PCT": "5",
+        "HARD_TAKE_PROFIT_PCT": "15"
+      },
+      "estimated_complexity": "low"
+    },
+    {
+      "id": "IDEA-027",
+      "source": "claude",
+      "timestamp": "2025-12-28T12:45:00.000000",
+      "category": "exit_strategy",
+      "title": "v3 fix + wider take profit (+20%)",
+      "description": "Pretrained RL threshold with wider take profit",
+      "hypothesis": "Quality trades may run further, capture more upside",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_VERSION": "v3_loading_fix",
+        "HARD_TAKE_PROFIT_PCT": "20"
+      },
+      "estimated_complexity": "low"
     }
   ],
-  "next_id": 22,
-  "last_updated": "2025-12-28T15:27:50.445521"
+  "next_id": 28,
+  "last_updated": "2025-12-28T12:46:39.675438"
 }
