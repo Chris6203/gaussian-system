@@ -40,8 +40,8 @@
       },
       "estimated_complexity": "low",
       "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:49:37.112638"
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T11:16:17.995798"
       }
     },
     {
@@ -53,16 +53,12 @@
       "description": "Require all 3 filters to agree before entry",
       "hypothesis": "Triple confirmation = highest quality trades",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "REQUIRE_NEURAL_CONFIRM": "1"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:49:37.112638"
-      }
+      "estimated_complexity": "low"
     },
     {
       "id": "IDEA-012",
@@ -73,19 +69,65 @@
       "description": "Load pretrained model from original profitable run",
       "hypothesis": "The trained state has learned good features",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "PRETRAINED_SOURCE": "long_run_20k"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:49:37.112638"
-      }
+      "estimated_complexity": "low"
+    },
+    {
+      "id": "IDEA-013",
+      "source": "claude",
+      "timestamp": "2025-12-28T11:12:58.012480",
+      "category": "entry_strategy",
+      "title": "Momentum-only entry (no HMM)",
+      "description": "Use only momentum signals for entry, bypass HMM",
+      "hypothesis": "HMM may be adding noise, pure momentum cleaner",
+      "priority": "medium",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "ENTRY_CONTROLLER": "direction"
+      },
+      "estimated_complexity": "low"
+    },
+    {
+      "id": "IDEA-014",
+      "source": "claude",
+      "timestamp": "2025-12-28T11:12:58.012480",
+      "category": "exit_strategy",
+      "title": "Very tight stops (-3%) with medium TP (+8%)",
+      "description": "Cut losses very fast, take smaller profits",
+      "hypothesis": "Tighter risk management may improve consistency",
+      "priority": "medium",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "HARD_STOP_LOSS_PCT": "3",
+        "HARD_TAKE_PROFIT_PCT": "8"
+      },
+      "estimated_complexity": "low"
+    },
+    {
+      "id": "IDEA-015",
+      "source": "claude",
+      "timestamp": "2025-12-28T11:12:58.012480",
+      "category": "timing",
+      "title": "Morning only trading (9:30-11:30 ET)",
+      "description": "Only trade during high volume morning session",
+      "hypothesis": "Morning has better price action and liquidity",
+      "priority": "medium",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "TRADING_END_HOUR": "11",
+        "TRADING_END_MINUTE": "30"
+      },
+      "estimated_complexity": "low"
     }
   ],
-  "last_updated": "2025-12-28T11:10:14.996649",
-  "next_id": 13
+  "last_updated": "2025-12-28T11:16:17.995798",
+  "next_id": 16
 }
