@@ -69,49 +69,55 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 def git_pull_latest() -> bool:
-    """Pull latest changes from GitHub. Returns True if successful."""
+    """Pull latest changes from GitHub. Returns True if successful.
+
+    Uses a simple strategy: fetch + reset to avoid merge conflicts.
+    Local uncommitted changes to collab files will be overwritten by remote.
+    """
     if not GIT_SYNC_ENABLED:
         return True
 
     try:
-        # Stash any local changes first
-        subprocess.run(
-            ["git", "stash", "--include-untracked"],
-            cwd=str(BASE_DIR),
-            capture_output=True,
-            timeout=30
-        )
-
-        # Pull with rebase to avoid merge commits
-        result = subprocess.run(
-            ["git", "pull", "--rebase", "origin", "main"],
+        # Fetch latest
+        fetch_result = subprocess.run(
+            ["git", "fetch", "origin", "main"],
             cwd=str(BASE_DIR),
             capture_output=True,
             text=True,
-            timeout=60
-        )
-
-        # Pop stash if we had local changes
-        subprocess.run(
-            ["git", "stash", "pop"],
-            cwd=str(BASE_DIR),
-            capture_output=True,
             timeout=30
         )
 
-        if result.returncode == 0:
-            if "Already up to date" not in result.stdout:
-                logger.info(f"[SYNC] Pulled latest changes from GitHub")
-            return True
-        else:
-            logger.warning(f"[SYNC] Git pull failed: {result.stderr}")
+        if fetch_result.returncode != 0:
+            logger.warning(f"[SYNC] Git fetch failed: {fetch_result.stderr}")
             return False
 
+        # Check if we're behind
+        status = subprocess.run(
+            ["git", "status", "-uno"],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if "Your branch is behind" in status.stdout or "have diverged" in status.stdout:
+            # Reset to remote (accept remote changes for collab files)
+            logger.info("[SYNC] Syncing with remote...")
+            subprocess.run(
+                ["git", "reset", "--hard", "origin/main"],
+                cwd=str(BASE_DIR),
+                capture_output=True,
+                timeout=30
+            )
+            logger.info("[SYNC] Synced with remote")
+
+        return True
+
     except subprocess.TimeoutExpired:
-        logger.warning("[SYNC] Git pull timed out")
+        logger.warning("[SYNC] Git operation timed out")
         return False
     except Exception as e:
-        logger.warning(f"[SYNC] Git pull error: {e}")
+        logger.warning(f"[SYNC] Git error: {e}")
         return False
 
 
