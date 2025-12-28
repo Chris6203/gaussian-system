@@ -30,7 +30,7 @@
       "description": "Pretrained RL threshold with tighter stop loss",
       "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
@@ -38,7 +38,11 @@
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T16:26:58.034761"
+      }
     },
     {
       "id": "IDEA-033",
@@ -49,16 +53,20 @@
       "description": "Pretrained RL threshold with wider take profit",
       "hypothesis": "Quality trades may run further, capture more upside",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "PRETRAINED_VERSION": "v5_verified",
         "HARD_TAKE_PROFIT_PCT": "20"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T16:26:58.034761"
+      }
     }
   ],
   "next_id": 34,
-  "last_updated": "2025-12-28T13:22:24.446682"
+  "last_updated": "2025-12-28T16:26:58.034761"
 }
