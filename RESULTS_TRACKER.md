@@ -2140,6 +2140,7 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+<<<<<<< Updated upstream
 ### EXP-0023: v3 fix + wider take profit (+20%) (2025-12-28 16:10)
 
 | Metric | Quick Test (5K) |
@@ -2171,6 +2172,22 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 **Category**: exit_strategy
 **Hypothesis**: Quality-filtered trades with tighter stops improve per-trade P&L
 **Result**: ERROR
+=======
+### EXP-0022: RL threshold loading fix v3 (2025-12-28 13:11)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.7% |
+| P&L | -97.26% |
+| Per-Trade P&L | $-7.62 |
+| Trades | 638 |
+| Run Dir | `models/EXP-0022_IDEA-025` |
+
+**Source**: CLAUDE
+**Category**: baseline
+**Hypothesis**: With rl_threshold.pth actually LOADED, trade rate drops to 1-2%
+**Result**: FAIL
+>>>>>>> Stashed changes
 
 ---
 

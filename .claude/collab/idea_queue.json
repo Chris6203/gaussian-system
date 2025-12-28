@@ -1,92 +1,64 @@
 {
   "ideas": [
     {
-      "id": "IDEA-020",
+      "id": "IDEA-031",
       "source": "claude",
-      "timestamp": "2025-12-28T12:08:13.234328",
+      "timestamp": "2025-12-28T13:21:00.000000",
       "category": "baseline",
-      "title": "Baseline with pretrained state v2",
-      "description": "Pretrained state NOW in models/state/, CRITICAL test",
-      "hypothesis": "With pretrained RLThresholdLearner, should get 1-2% trade rate",
-      "priority": "critical",
-      "status": "tested",
-      "result": "failed",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v2_long_run_20k"
-      },
-      "estimated_complexity": "low"
-    },
-    {
-      "id": "IDEA-025",
-      "source": "claude",
-      "timestamp": "2025-12-28T12:45:00.000000",
-      "category": "baseline",
-      "title": "RL threshold loading fix v3",
-      "description": "Test with NEW loading code that explicitly loads rl_threshold.pth",
-      "hypothesis": "With rl_threshold.pth actually LOADED, trade rate drops to 1-2%",
+      "title": "RL threshold loading fix v5 (verified code)",
+      "description": "Test with committed loading code - verified to be in scripts/train_time_travel.py",
+      "hypothesis": "With rl_threshold.pth LOADED, trade rate drops from 15% to 1-2%",
       "priority": "critical",
       "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v3_loading_fix"
+        "PRETRAINED_VERSION": "v5_verified"
       },
       "estimated_complexity": "low",
       "lock": {
         "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T12:46:39.675438"
+        "locked_at": "2025-12-28T13:22:24.446682"
       }
     },
     {
-      "id": "IDEA-026",
+      "id": "IDEA-032",
       "source": "claude",
-      "timestamp": "2025-12-28T12:45:00.000000",
+      "timestamp": "2025-12-28T13:21:00.000000",
       "category": "exit_strategy",
-      "title": "v3 fix + tighter stops (-5%/+15%)",
+      "title": "v5 fix + tighter stops (-5%/+15%)",
       "description": "Pretrained RL threshold with tighter stop loss",
       "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v3_loading_fix",
+        "PRETRAINED_VERSION": "v5_verified",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0022",
-        "per_trade_pnl": null,
-        "win_rate": 37.8
-      }
+      "estimated_complexity": "low"
     },
     {
-      "id": "IDEA-027",
+      "id": "IDEA-033",
       "source": "claude",
-      "timestamp": "2025-12-28T12:45:00.000000",
+      "timestamp": "2025-12-28T13:21:00.000000",
       "category": "exit_strategy",
-      "title": "v3 fix + wider take profit (+20%)",
+      "title": "v5 fix + wider take profit (+20%)",
       "description": "Pretrained RL threshold with wider take profit",
       "hypothesis": "Quality trades may run further, capture more upside",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v3_loading_fix",
+        "PRETRAINED_VERSION": "v5_verified",
         "HARD_TAKE_PROFIT_PCT": "20"
       },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0023",
-        "per_trade_pnl": null,
-        "win_rate": 36.3
-      }
+      "estimated_complexity": "low"
     }
   ],
-  "next_id": 28,
-  "last_updated": "2025-12-28T16:10:53.424366"
+  "next_id": 34,
+  "last_updated": "2025-12-28T13:22:24.446682"
 }
