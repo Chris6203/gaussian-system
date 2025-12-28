@@ -9,13 +9,17 @@
       "description": "Fixed pretrained loading to use models/pretrained/ instead of models/state/",
       "hypothesis": "Previous tests failed because experiments corrupted models/state/. Now using protected directory.",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "PRETRAINED_VERSION": "v8_protected_dir"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T14:54:57.111158"
+      }
     },
     {
       "id": "IDEA-053",
@@ -38,5 +42,5 @@
     }
   ],
   "next_id": 54,
-  "last_updated": "2025-12-28T14:55:00.000000"
+  "last_updated": "2025-12-28T14:54:57.111158"
 }
