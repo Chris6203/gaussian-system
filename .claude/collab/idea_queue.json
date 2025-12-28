@@ -29,7 +29,7 @@
       "description": "Cut losses faster, let winners run",
       "hypothesis": "Asymmetric in favor of winners should improve per-trade P&L",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [
         "config.json"
       ],
@@ -37,7 +37,11 @@
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:49:37.112638"
+      }
     },
     {
       "id": "IDEA-011",
@@ -48,12 +52,16 @@
       "description": "Require all 3 filters to agree before entry",
       "hypothesis": "Triple confirmation = highest quality trades",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "REQUIRE_NEURAL_CONFIRM": "1"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:49:37.112638"
+      }
     },
     {
       "id": "IDEA-012",
@@ -64,15 +72,19 @@
       "description": "Load pretrained model from original profitable run",
       "hypothesis": "The trained state has learned good features",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "PRETRAINED_SOURCE": "long_run_20k"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:49:37.112638"
+      }
     }
   ],
-  "last_updated": "2025-12-28T10:44:27.186923",
+  "last_updated": "2025-12-28T13:49:37.112638",
   "next_id": 13
 }
