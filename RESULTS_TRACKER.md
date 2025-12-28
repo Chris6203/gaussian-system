@@ -6,7 +6,8 @@ Track configuration changes and their impact on performance.
 
 | Run | Date | Entry Controller | Win Rate | P&L | Trades | Cycles | Notes |
 |-----|------|------------------|----------|-----|--------|--------|-------|
-| run_20251220_073149 | 2025-12-20 | bandit (default) | 40.9% | +$4,264 (+85%) | 7,407 | 23,751 | **BEST RESULT** - Long run baseline |
+| **dec_validation_v2** | 2025-12-24 | pretrained | **59.8%** | **+$20,670 (+413%)** | 61 | 2,995 | **CURRENT BEST** - Pretrained on 3mo, tested Dec 2025 |
+| run_20251220_073149 | 2025-12-20 | bandit (default) | 40.9% | +$4,264 (+85%) | 7,407 | 23,751 | Previous best - Long run baseline |
 | run_20251220_120723 | 2025-12-20 | bandit | 36.6% | +$2,129 (+42.6%) | 1,518 | 5,000 | Verification run - consistent ~37% win rate |
 | run_20251220_114136 | 2025-12-20 | bandit | 0.0% | -$4,749 (-95%) | 13 | 100 | Short test (need more cycles) |
 
@@ -2134,3 +2135,170 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 ---
 
 ## Phase 22: Live Trading Deployment (2025-12-24)
+
+---
+
+## Automated Optimization Results
+
+### EXP-0006: Wider exits (-15%/+25%) (2025-12-28 12:04)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0006_IDEA-002` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Wider exits may catch bigger moves and reduce whipsaw exits
+**Result**: ERROR
+
+---
+
+### EXP-0005: Symmetric exit ratios (-10%/+10%) (2025-12-28 12:04)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0005_IDEA-001` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Symmetric exits will improve risk/reward math and require lower win rate to profit
+**Result**: ERROR
+
+---
+
+### EXP-0007: Transformer temporal encoder (2025-12-28 12:04)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0007_IDEA-003` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Attention mechanism may better capture important price patterns
+**Result**: ERROR
+
+---
+
+### EXP-0008: Shorter max hold (20 min) (2025-12-28 12:04)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0008_IDEA-004` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Predictions are for 15 min, holding 45 min causes drift. Shorter hold may align better.
+**Result**: ERROR
+
+---
+
+
+### EXP-0002: Fresh 3-month pretrained model (2025-12-28 11:54)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0002_IDEA-006` |
+
+**Source**: CLAUDE
+**Category**: training
+**Hypothesis**: Pre-trained model on recent data performed best in previous tests
+**Result**: ERROR
+
+---
+
+### EXP-0001: Stricter HMM thresholds (0.75/0.25) (2025-12-28 11:54)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0001_IDEA-005` |
+
+**Source**: CLAUDE
+**Category**: entry_strategy
+**Hypothesis**: Current 0.70/0.30 may be letting through marginal signals
+**Result**: ERROR
+
+---
+
+### EXP-0003: RMSNorm + GeGLU activations (2025-12-28 11:54)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0003_IDEA-007` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Modern normalization and gated activations may improve prediction stability
+**Result**: ERROR
+
+---
+
+### EXP-0004: VVIX (volatility of volatility) (2025-12-28 11:54)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0004_IDEA-008` |
+
+**Source**: CLAUDE
+**Category**: features
+**Hypothesis**: VVIX spikes signal regime changes before VIX does
+**Result**: ERROR
+
+---
+
+
+This section is automatically updated by the Claude-Codex continuous optimizer.
+
+### Summary Statistics
+
+| Metric | Value |
+|--------|-------|
+| Best Win Rate | **59.8%** (dec_validation_v2) |
+| Best Per-Trade P&L | **$338.86** (dec_validation_v2) |
+| Best Total P&L | **+413.41%** (dec_validation_v2) |
+| Parallel GPUs | 2x Tesla P40 |
+| Experiments/Batch | 4 |
+
+### Current Leaderboard
+
+| Rank | Run | Win Rate | Per-Trade P&L | Total P&L | Trades | Date |
+|------|-----|----------|---------------|-----------|--------|------|
+| 1 | dec_validation_v2 | 59.8% | $338.86 | +413% | 61 | 2025-12-24 |
+| 2 | run_20251220_073149 | 40.9% | $1.40 | +85% | 7,407 | 2025-12-20 |
+
+### Automated Experiments Log
+
+*Experiments will be logged here automatically as they complete.*
+
+---

@@ -1,0 +1,10 @@
+{
+  "current_experiment": null,
+  "status": "idle",
+  "last_completed": null,
+  "experiments_today": 0,
+  "parallel_slots": {
+    "gpu_0": null,
+    "gpu_1": null
+  }
+}

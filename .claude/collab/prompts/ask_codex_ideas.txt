@@ -1,0 +1,72 @@
+You are an AI trading system architect reviewing the Gaussian Options Trading Bot.
+
+CURRENT BEST CONFIGURATION:
+- Method: 3-month pretrained predictor, tested on current month (walk-forward)
+- Entry: Bandit mode (HMM + Neural confirmation)
+- HMM thresholds: trend > 0.70 (bullish) or < 0.30 (bearish), confidence > 0.70
+- Exit: -8% stop loss, +12% take profit, 45-minute max hold
+- **BEST Result: 59.8% win rate, +$338.86 per-trade P&L, +413% total P&L**
+
+BASELINE (without pretraining):
+- 40.9% win rate, +$1.40 per-trade P&L, +85% total P&L
+
+KNOWN ISSUES:
+1. Exit ratio asymmetry (-8%/+12%) requires 40% win rate just to break even
+2. Prediction horizon mismatch (predicting 15min but holding 45min)
+3. Neural predictions are unreliable (~50% accuracy) - hence HMM-only works better
+4. Transformer architecture implemented but untested
+
+KEY LEARNINGS (DO NOT SUGGEST THESE AGAIN):
+{INSERT_LEARNINGS}
+
+RECENT EXPERIMENTS:
+{INSERT_RECENT_EXPERIMENTS}
+
+HARDWARE AVAILABLE:
+- 2x Tesla P40 GPUs (48GB total VRAM)
+- Can run 4 experiments in parallel
+
+Please suggest 3-5 NEW improvement ideas across these categories:
+1. Exit strategy (stop loss %, take profit %, max hold time, trailing stops)
+2. Entry strategy (HMM thresholds, confidence requirements)
+3. Architecture changes (temporal encoder type, normalization, activations)
+4. Feature engineering (new signals, indicators, data sources)
+5. Risk management (position sizing, daily limits)
+6. Training methodology (walk-forward, ensemble, different loss functions)
+
+For each idea, provide:
+- title: Short descriptive title
+- description: What to change
+- hypothesis: Why this might improve results
+- category: Which category above
+- priority: high/medium/low
+- env_vars: Environment variables to set for testing (if applicable)
+- files_to_modify: Which files need changes (if any code changes needed)
+- estimated_complexity: low/medium/high
+
+IMPORTANT:
+- Focus on ideas NOT already in the failed_approaches list
+- Prioritize quick-to-test ideas (config changes via env vars)
+- Consider the exit ratio problem as top priority
+- Output valid JSON that can be appended to idea_queue.json
+
+Output format:
+{
+  "new_ideas": [
+    {
+      "id": "IDEA-XXX",
+      "source": "codex",
+      "timestamp": "ISO8601",
+      "category": "...",
+      "title": "...",
+      "description": "...",
+      "hypothesis": "...",
+      "priority": "...",
+      "status": "pending",
+      "files_to_modify": [...],
+      "env_vars": {...},
+      "estimated_complexity": "..."
+    }
+  ],
+  "reasoning": "Brief explanation of why these ideas were chosen"
+}
