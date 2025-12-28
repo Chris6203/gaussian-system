@@ -9,7 +9,7 @@
       "description": "Current -8%/+12% asymmetry requires 40% win rate to break even. Test symmetric ratios.",
       "hypothesis": "Symmetric exits will improve risk/reward math and require lower win rate to profit",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [
         "config.json"
       ],
@@ -28,7 +28,7 @@
       "description": "Test much wider exits to let winners run and losers more room",
       "hypothesis": "Wider exits may catch bigger moves and reduce whipsaw exits",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [
         "config.json"
       ],
@@ -47,7 +47,7 @@
       "description": "Replace TCN with Transformer encoder (already implemented, needs testing)",
       "hypothesis": "Attention mechanism may better capture important price patterns",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer"
@@ -63,7 +63,7 @@
       "description": "Reduce max hold from 45 min to 20 min to match prediction horizon better",
       "hypothesis": "Predictions are for 15 min, holding 45 min causes drift. Shorter hold may align better.",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [
         "config.json"
       ],
@@ -81,17 +81,13 @@
       "description": "Increase HMM threshold strictness for fewer but higher quality trades",
       "hypothesis": "Current 0.70/0.30 may be letting through marginal signals",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T12:32:32.856160"
-      }
+      "estimated_complexity": "low"
     },
     {
       "id": "IDEA-006",
@@ -102,16 +98,12 @@
       "description": "Train predictor on 3 months of recent data, test on current month (walk-forward)",
       "hypothesis": "Pre-trained model on recent data performed best in previous tests",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1"
       },
-      "estimated_complexity": "medium",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T12:32:32.856160"
-      }
+      "estimated_complexity": "medium"
     },
     {
       "id": "IDEA-007",
@@ -122,17 +114,13 @@
       "description": "Use modern transformer components (RMSNorm, GeGLU) from T5/Gemma2",
       "hypothesis": "Modern normalization and gated activations may improve prediction stability",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "NORM_TYPE": "rmsnorm",
         "ACTIVATION_TYPE": "geglu"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T12:32:32.856160"
-      }
+      "estimated_complexity": "low"
     },
     {
       "id": "IDEA-008",
@@ -143,18 +131,14 @@
       "description": "Add VVIX as a feature for better regime detection",
       "hypothesis": "VVIX spikes signal regime changes before VIX does",
       "priority": "low",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [
         "features/macro.py"
       ],
       "env_vars": {},
-      "estimated_complexity": "medium",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T12:32:32.856160"
-      }
+      "estimated_complexity": "medium"
     }
   ],
-  "last_updated": "2025-12-28T12:32:32.856160",
+  "last_updated": "2025-12-28T18:10:00.000000",
   "next_id": 9
 }
