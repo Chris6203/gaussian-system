@@ -2140,6 +2140,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0012: Stricter HMM thresholds (0.75/0.25) (2025-12-28 13:13)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0012_IDEA-005` |
+
+**Source**: CLAUDE
+**Category**: entry_strategy
+**Hypothesis**: Current 0.70/0.30 may be letting through marginal signals
+**Result**: ERROR
+
+---
+
+### EXP-0010: Transformer temporal encoder (2025-12-28 13:13)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0010_IDEA-003` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Attention mechanism may better capture important price patterns
+**Result**: ERROR
+
+---
+
+### EXP-0009: Wider exits (-15%/+25%) (2025-12-28 13:13)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0009_IDEA-002` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Wider exits may catch bigger moves and reduce whipsaw exits
+**Result**: ERROR
+
+---
+
+### EXP-0011: Shorter max hold (20 min) (2025-12-28 13:13)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0011_IDEA-004` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Predictions are for 15 min, holding 45 min causes drift. Shorter hold may align better.
+**Result**: ERROR
+
+---
+
+
 ### EXP-0006: Wider exits (-15%/+25%) (2025-12-28 12:04)
 
 | Metric | Quick Test (5K) |

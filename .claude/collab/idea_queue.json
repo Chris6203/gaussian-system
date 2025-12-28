@@ -32,7 +32,7 @@
       "description": "Test much wider exits to let winners run and losers more room",
       "hypothesis": "Wider exits may catch bigger moves and reduce whipsaw exits",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [
         "config.json"
       ],
@@ -41,9 +41,10 @@
         "HARD_TAKE_PROFIT_PCT": "25"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:13:14.088461"
+      "last_result": {
+        "exp_id": "EXP-0009",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     },
     {
@@ -55,15 +56,16 @@
       "description": "Replace TCN with Transformer encoder (already implemented, needs testing)",
       "hypothesis": "Attention mechanism may better capture important price patterns",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [],
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:13:14.088461"
+      "last_result": {
+        "exp_id": "EXP-0010",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     },
     {
@@ -75,7 +77,7 @@
       "description": "Reduce max hold from 45 min to 20 min to match prediction horizon better",
       "hypothesis": "Predictions are for 15 min, holding 45 min causes drift. Shorter hold may align better.",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [
         "config.json"
       ],
@@ -83,9 +85,10 @@
         "TT_MAX_HOLD_MINUTES": "20"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:13:14.088461"
+      "last_result": {
+        "exp_id": "EXP-0011",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     },
     {
@@ -97,16 +100,17 @@
       "description": "Increase HMM threshold strictness for fewer but higher quality trades",
       "hypothesis": "Current 0.70/0.30 may be letting through marginal signals",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "files_to_modify": [],
       "env_vars": {
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25"
       },
       "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T13:13:14.088461"
+      "last_result": {
+        "exp_id": "EXP-0012",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     },
     {
@@ -159,6 +163,6 @@
       "estimated_complexity": "medium"
     }
   ],
-  "last_updated": "2025-12-28T13:13:14.088461",
+  "last_updated": "2025-12-28T13:13:43.452715",
   "next_id": 9
 }
