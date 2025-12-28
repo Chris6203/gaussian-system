@@ -1148,7 +1148,27 @@ logger.info("[TRAIN] Each run is isolated in its own timestamped directory")
 # CRITICAL: Use models/pretrained/ directory which is never overwritten by training runs
 if os.environ.get('LOAD_PRETRAINED', '0') == '1':
     pretrained_model_path = "models/pretrained/trained_model.pth"  # Protected directory
-    if os.path.exists(pretrained_model_path) and hasattr(bot, 'model') and bot.model is not None:
+    if os.path.exists(pretrained_model_path):
+        # Force model initialization if not already done
+        if not hasattr(bot, 'model') or bot.model is None:
+            from bot_modules.neural_networks import create_predictor
+            logger.info(f"[PRETRAINED] Forcing model initialization for pretrained loading...")
+            predictor_arch = "v2_slim_bayesian"  # Default architecture
+            try:
+                cfg = bot.config.config if bot.config else {}
+                predictor_arch = cfg.get("architecture", {}).get("predictor", {}).get("arch", predictor_arch)
+            except Exception:
+                pass
+            bot.model = create_predictor(
+                arch=predictor_arch,
+                feature_dim=bot.feature_dim,
+                sequence_length=bot.sequence_length,
+                use_gaussian_kernels=True,
+            )
+            bot.model.to(bot.device)
+            bot.model_initialized = True
+            logger.info(f"[PRETRAINED] Model created with arch={predictor_arch}")
+
         try:
             bot.model.load_state_dict(torch.load(pretrained_model_path, map_location=bot.device))
             logger.info(f"[PRETRAINED] Loaded neural network from {pretrained_model_path}")
