@@ -302,7 +302,7 @@ def load_json(path: Path) -> dict:
 def save_json(path: Path, data: dict):
     """Save JSON file with pretty printing."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(jso, encoding='utf-8')n.dumps(data, indent=2))
+    path.write_text(json.dumps(data, indent=2), encoding='utf-8')
 
 
 def append_jsonl(path: Path, record: dict):
@@ -691,7 +691,7 @@ def update_scoreboard(experiments: List[tuple], is_validation: bool = False):
     idx = content.find(section_header) + len(section_header)
     content = content[:idx] + "\n" + "".join(entries) + content[idx:]
 
-    tracker_path.write_text(con, encoding='utf-8')tent)
+    tracker_path.write_text(content, encoding='utf-8')
     logger.info(f"Updated scoreboard with {len(experiments)} experiments")
 
 
