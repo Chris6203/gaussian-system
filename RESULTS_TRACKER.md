@@ -2140,6 +2140,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0016: Stricter RLThresholdLearner base threshold (0.35) (2025-12-28 11:10)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.5% |
+| P&L | -73.6% |
+| Per-Trade P&L | $-4.80 |
+| Trades | 766 |
+| Run Dir | `models/EXP-0016_IDEA-009` |
+
+**Source**: CLAUDE
+**Category**: entry_strategy
+**Hypothesis**: Higher threshold = fewer trades = higher quality
+**Result**: FAIL
+
+---
+
+
 ### EXP-0015: VVIX (volatility of volatility) (2025-12-28 13:15)
 
 | Metric | Quick Test (5K) |
