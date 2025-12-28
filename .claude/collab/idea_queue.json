@@ -1,185 +1,46 @@
 {
   "ideas": [
     {
-      "id": "IDEA-016",
+      "id": "IDEA-020",
       "source": "claude",
-      "timestamp": "2025-12-28T11:40:45.841923",
+      "timestamp": "2025-12-28T12:08:13.234328",
       "category": "baseline",
-      "title": "Baseline with pretrained state + filter",
-      "description": "Test the baseline config with pretrained state loaded",
-      "hypothesis": "This should reproduce the profitable performance of long_run_20k",
+      "title": "Baseline with pretrained state v2",
+      "description": "Pretrained state NOW in models/state/, CRITICAL test",
+      "hypothesis": "With pretrained RLThresholdLearner, should get 1-2% trade rate",
       "priority": "critical",
-      "status": "already_tested",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1"
-      },
-      "estimated_complexity": "low"
-    },
-    {
-      "id": "IDEA-009",
-      "source": "claude",
-      "timestamp": "2025-12-28T10:44:19.467216",
-      "category": "entry_strategy",
-      "title": "Stricter RLThresholdLearner base threshold (0.35)",
-      "description": "Increase base threshold from 0.25 to 0.35 to be even more selective",
-      "hypothesis": "Higher threshold = fewer trades = higher quality",
-      "priority": "high",
-      "status": "already_tested",
-      "files_to_modify": [
-        "config.json"
-      ],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1"
-      },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0016",
-        "per_trade_pnl": -4.804308093994778,
-        "win_rate": 39.5
-      }
-    },
-    {
-      "id": "IDEA-010",
-      "source": "claude",
-      "timestamp": "2025-12-28T10:44:19.467216",
-      "category": "exit_strategy",
-      "title": "Tighter stops (-5%) with wider TP (+15%)",
-      "description": "Cut losses faster, let winners run",
-      "hypothesis": "Asymmetric in favor of winners should improve per-trade P&L",
-      "priority": "high",
       "status": "in_progress",
-      "files_to_modify": [
-        "config.json"
-      ],
-      "env_vars": {
-        "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "15",
-        "LOAD_PRETRAINED": "1"
-      },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0017",
-        "per_trade_pnl": -4.772925824175824,
-        "win_rate": 39.9
-      },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T11:41:01.338106"
-      }
-    },
-    {
-      "id": "IDEA-011",
-      "source": "claude",
-      "timestamp": "2025-12-28T10:44:19.467216",
-      "category": "entry_strategy",
-      "title": "HMM + Neural + RLThreshold triple filter",
-      "description": "Require all 3 filters to agree before entry",
-      "hypothesis": "Triple confirmation = highest quality trades",
-      "priority": "high",
-      "status": "rejected",
-      "files_to_modify": [],
-      "env_vars": {
-        "REQUIRE_NEURAL_CONFIRM": "1",
-        "LOAD_PRETRAINED": "1"
-      },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0018",
-        "per_trade_pnl": null,
-        "win_rate": 39.1
-      }
-    },
-    {
-      "id": "IDEA-012",
-      "source": "claude",
-      "timestamp": "2025-12-28T10:44:19.467216",
-      "category": "training",
-      "title": "Use long_run_20k pretrained state only",
-      "description": "Load pretrained model from original profitable run",
-      "hypothesis": "The trained state has learned good features",
-      "priority": "high",
-      "status": "rejected",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_SOURCE": "long_run_20k"
-      },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0019",
-        "per_trade_pnl": null,
-        "win_rate": 39.6
-      }
-    },
-    {
-      "id": "IDEA-013",
-      "source": "claude",
-      "timestamp": "2025-12-28T11:12:58.012480",
-      "category": "entry_strategy",
-      "title": "Momentum-only entry (no HMM)",
-      "description": "Use only momentum signals for entry, bypass HMM",
-      "hypothesis": "HMM may be adding noise, pure momentum cleaner",
-      "priority": "medium",
-      "status": "rejected",
-      "files_to_modify": [],
-      "env_vars": {
-        "ENTRY_CONTROLLER": "direction",
-        "LOAD_PRETRAINED": "1"
-      },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0020",
-        "per_trade_pnl": null,
-        "win_rate": 34.5
-      }
-    },
-    {
-      "id": "IDEA-014",
-      "source": "claude",
-      "timestamp": "2025-12-28T11:12:58.012480",
-      "category": "exit_strategy",
-      "title": "Very tight stops (-3%) with medium TP (+8%)",
-      "description": "Cut losses very fast, take smaller profits",
-      "hypothesis": "Tighter risk management may improve consistency",
-      "priority": "medium",
-      "status": "rejected",
-      "files_to_modify": [],
-      "env_vars": {
-        "HARD_STOP_LOSS_PCT": "3",
-        "HARD_TAKE_PROFIT_PCT": "8",
-        "LOAD_PRETRAINED": "1"
-      },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0021",
-        "per_trade_pnl": null,
-        "win_rate": 38.0
-      }
-    },
-    {
-      "id": "IDEA-015",
-      "source": "claude",
-      "timestamp": "2025-12-28T11:12:58.012480",
-      "category": "timing",
-      "title": "Morning only trading (9:30-11:30 ET)",
-      "description": "Only trade during high volume morning session",
-      "hypothesis": "Morning has better price action and liquidity",
-      "priority": "medium",
-      "status": "in_progress",
-      "files_to_modify": [],
-      "env_vars": {
-        "TRADING_END_HOUR": "11",
-        "TRADING_END_MINUTE": "30",
-        "LOAD_PRETRAINED": "1"
+        "PRETRAINED_VERSION": "v2_long_run_20k"
       },
       "estimated_complexity": "low",
       "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T15:06:29.677476"
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T12:12:19.635133"
       }
+    },
+    {
+      "id": "IDEA-021",
+      "source": "claude",
+      "timestamp": "2025-12-28T12:08:13.234328",
+      "category": "exit_strategy",
+      "title": "Pretrained v2 + tighter stops (-5%/+15%)",
+      "description": "Pretrained state with tighter stop loss",
+      "hypothesis": "Tighter stops on quality trades should improve per-trade P&L",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_VERSION": "v2_long_run_20k",
+        "HARD_STOP_LOSS_PCT": "5",
+        "HARD_TAKE_PROFIT_PCT": "15"
+      },
+      "estimated_complexity": "low"
     }
   ],
-  "last_updated": "2025-12-28T15:06:29.677476",
-  "next_id": 17
+  "next_id": 22,
+  "last_updated": "2025-12-28T12:12:19.635133"
 }
