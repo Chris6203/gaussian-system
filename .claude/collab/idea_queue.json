@@ -32,7 +32,7 @@
       "description": "Test much wider exits to let winners run and losers more room",
       "hypothesis": "Wider exits may catch bigger moves and reduce whipsaw exits",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [
         "config.json"
       ],
@@ -40,7 +40,11 @@
         "HARD_STOP_LOSS_PCT": "15",
         "HARD_TAKE_PROFIT_PCT": "25"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:13:14.088461"
+      }
     },
     {
       "id": "IDEA-003",
@@ -51,12 +55,16 @@
       "description": "Replace TCN with Transformer encoder (already implemented, needs testing)",
       "hypothesis": "Attention mechanism may better capture important price patterns",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:13:14.088461"
+      }
     },
     {
       "id": "IDEA-004",
@@ -67,14 +75,18 @@
       "description": "Reduce max hold from 45 min to 20 min to match prediction horizon better",
       "hypothesis": "Predictions are for 15 min, holding 45 min causes drift. Shorter hold may align better.",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [
         "config.json"
       ],
       "env_vars": {
         "TT_MAX_HOLD_MINUTES": "20"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:13:14.088461"
+      }
     },
     {
       "id": "IDEA-005",
@@ -85,13 +97,17 @@
       "description": "Increase HMM threshold strictness for fewer but higher quality trades",
       "hypothesis": "Current 0.70/0.30 may be letting through marginal signals",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:13:14.088461"
+      }
     },
     {
       "id": "IDEA-006",
@@ -143,6 +159,6 @@
       "estimated_complexity": "medium"
     }
   ],
-  "last_updated": "2025-12-28T10:11:09.013352",
+  "last_updated": "2025-12-28T13:13:14.088461",
   "next_id": 9
 }
