@@ -1,74 +1,46 @@
 {
   "ideas": [
     {
-      "id": "IDEA-031",
+      "id": "IDEA-040",
       "source": "claude",
-      "timestamp": "2025-12-28T13:21:00.000000",
+      "timestamp": "2025-12-28T14:00:00.000000",
       "category": "baseline",
-      "title": "RL threshold loading fix v5 (verified code)",
-      "description": "Test with committed loading code - verified to be in scripts/train_time_travel.py",
-      "hypothesis": "With rl_threshold.pth LOADED, trade rate drops from 15% to 1-2%",
+      "title": "NN loading fix v6 (neural network weights)",
+      "description": "Load pretrained neural network - THIS is the source of selectivity",
+      "hypothesis": "Trained NN outputs lower confidences, fewer trades pass bandit_gate",
       "priority": "critical",
       "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v5_verified"
+        "PRETRAINED_VERSION": "v6_nn_loading"
       },
       "estimated_complexity": "low",
       "lock": {
         "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T13:22:24.446682"
+        "locked_at": "2025-12-28T13:53:42.684351"
       }
     },
     {
-      "id": "IDEA-032",
+      "id": "IDEA-041",
       "source": "claude",
-      "timestamp": "2025-12-28T13:21:00.000000",
+      "timestamp": "2025-12-28T14:00:00.000000",
       "category": "exit_strategy",
-      "title": "v5 fix + tighter stops (-5%/+15%)",
-      "description": "Pretrained RL threshold with tighter stop loss",
+      "title": "v6 fix + tighter stops (-5%/+15%)",
+      "description": "Pretrained NN with tighter stop loss",
       "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v5_verified",
+        "PRETRAINED_VERSION": "v6_nn_loading",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0024",
-        "per_trade_pnl": null,
-        "win_rate": 37.7
-      }
-    },
-    {
-      "id": "IDEA-033",
-      "source": "claude",
-      "timestamp": "2025-12-28T13:21:00.000000",
-      "category": "exit_strategy",
-      "title": "v5 fix + wider take profit (+20%)",
-      "description": "Pretrained RL threshold with wider take profit",
-      "hypothesis": "Quality trades may run further, capture more upside",
-      "priority": "high",
-      "status": "rejected",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v5_verified",
-        "HARD_TAKE_PROFIT_PCT": "20"
-      },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0025",
-        "per_trade_pnl": null,
-        "win_rate": 36.3
-      }
+      "estimated_complexity": "low"
     }
   ],
-  "next_id": 34,
-  "last_updated": "2025-12-28T16:48:19.853521"
+  "next_id": 42,
+  "last_updated": "2025-12-28T13:53:42.684351"
 }
