@@ -1,51 +1,42 @@
 {
   "ideas": [
     {
-      "id": "IDEA-050",
+      "id": "IDEA-052",
       "source": "claude",
-      "timestamp": "2025-12-28T14:20:00.000000",
+      "timestamp": "2025-12-28T14:55:00.000000",
       "category": "baseline",
-      "title": "Correct long_run_20k weights (v7)",
-      "description": "Copied ORIGINAL trained_model.pth from long_run_20k/state/",
-      "hypothesis": "Original trained NN outputs lower confidences, 1-2% trade rate",
+      "title": "Protected pretrained directory (v8)",
+      "description": "Fixed pretrained loading to use models/pretrained/ instead of models/state/",
+      "hypothesis": "Previous tests failed because experiments corrupted models/state/. Now using protected directory.",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v7_correct_weights"
+        "PRETRAINED_VERSION": "v8_protected_dir"
       },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T14:22:48.450107"
-      }
+      "estimated_complexity": "low"
     },
     {
-      "id": "IDEA-051",
+      "id": "IDEA-053",
       "source": "claude",
-      "timestamp": "2025-12-28T14:20:00.000000",
+      "timestamp": "2025-12-28T14:55:00.000000",
       "category": "exit_strategy",
-      "title": "v7 correct weights + tighter stops (-5%/+15%)",
-      "description": "Correct pretrained NN with tighter stop loss",
+      "title": "Protected pretrained + tighter stops (-5%/+15%)",
+      "description": "Correct pretrained NN from protected directory with tighter stop loss",
       "hypothesis": "Quality-filtered trades with tighter stops improve per-trade P&L",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v7_correct_weights",
+        "PRETRAINED_VERSION": "v8_tighter",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
-      "estimated_complexity": "low",
-      "last_result": {
-        "exp_id": "EXP-0027",
-        "per_trade_pnl": -3.803470031545741,
-        "win_rate": 33.9
-      }
+      "estimated_complexity": "low"
     }
   ],
-  "next_id": 52,
-  "last_updated": "2025-12-28T17:46:24.326063"
+  "next_id": 54,
+  "last_updated": "2025-12-28T14:55:00.000000"
 }
