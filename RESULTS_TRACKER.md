@@ -2140,6 +2140,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0025: v5 fix + wider take profit (+20%) (2025-12-28 16:48)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1224 |
+| Run Dir | `models/EXP-0025_IDEA-033` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Quality trades may run further, capture more upside
+**Result**: ERROR
+
+---
+
+### EXP-0024: v5 fix + tighter stops (-5%/+15%) (2025-12-28 16:48)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.7% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1319 |
+| Run Dir | `models/EXP-0024_IDEA-032` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Quality-filtered trades with tighter stops improve per-trade P&L
+**Result**: ERROR
+
+---
+
+
 <<<<<<< Updated upstream
 ### EXP-0023: v3 fix + wider take profit (+20%) (2025-12-28 16:10)
 
