@@ -9,13 +9,17 @@
       "description": "Copied ORIGINAL trained_model.pth from long_run_20k/state/",
       "hypothesis": "Original trained NN outputs lower confidences, 1-2% trade rate",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "PRETRAINED_VERSION": "v7_correct_weights"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T14:22:48.450107"
+      }
     },
     {
       "id": "IDEA-051",
@@ -38,5 +42,5 @@
     }
   ],
   "next_id": 52,
-  "last_updated": "2025-12-28T14:25:00.000000"
+  "last_updated": "2025-12-28T14:22:48.450107"
 }
