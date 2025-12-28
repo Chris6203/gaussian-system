@@ -1150,10 +1150,12 @@ if os.environ.get('LOAD_PRETRAINED', '0') == '1':
     pretrained_model_path = "models/pretrained/trained_model.pth"  # Protected directory
     if os.path.exists(pretrained_model_path):
         # Force model initialization if not already done
+        # IMPORTANT: Use feature_dim=59 to match long_run_20k pretrained model
         if not hasattr(bot, 'model') or bot.model is None:
             from bot_modules.neural_networks import create_predictor
             logger.info(f"[PRETRAINED] Forcing model initialization for pretrained loading...")
             predictor_arch = "v2_slim_bayesian"  # Default architecture
+            pretrained_feature_dim = 59  # Must match long_run_20k training
             try:
                 cfg = bot.config.config if bot.config else {}
                 predictor_arch = cfg.get("architecture", {}).get("predictor", {}).get("arch", predictor_arch)
@@ -1161,13 +1163,14 @@ if os.environ.get('LOAD_PRETRAINED', '0') == '1':
                 pass
             bot.model = create_predictor(
                 arch=predictor_arch,
-                feature_dim=bot.feature_dim,
+                feature_dim=pretrained_feature_dim,  # Use pretrained dimensions
                 sequence_length=bot.sequence_length,
                 use_gaussian_kernels=True,
             )
             bot.model.to(bot.device)
             bot.model_initialized = True
-            logger.info(f"[PRETRAINED] Model created with arch={predictor_arch}")
+            bot.feature_dim = pretrained_feature_dim  # Update bot's feature_dim to match
+            logger.info(f"[PRETRAINED] Model created with arch={predictor_arch}, feature_dim={pretrained_feature_dim}")
 
         try:
             bot.model.load_state_dict(torch.load(pretrained_model_path, map_location=bot.device))
