@@ -9,7 +9,7 @@
       "description": "Current -8%/+12% asymmetry requires 40% win rate to break even. Test symmetric ratios.",
       "hypothesis": "Symmetric exits will improve risk/reward math and require lower win rate to profit",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [
         "config.json"
       ],
@@ -17,7 +17,11 @@
         "HARD_STOP_LOSS_PCT": "10",
         "HARD_TAKE_PROFIT_PCT": "10"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:26:05.722745"
+      }
     },
     {
       "id": "IDEA-002",
@@ -28,7 +32,7 @@
       "description": "Test much wider exits to let winners run and losers more room",
       "hypothesis": "Wider exits may catch bigger moves and reduce whipsaw exits",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [
         "config.json"
       ],
@@ -36,7 +40,11 @@
         "HARD_STOP_LOSS_PCT": "15",
         "HARD_TAKE_PROFIT_PCT": "25"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:26:05.722745"
+      }
     },
     {
       "id": "IDEA-003",
@@ -47,12 +55,16 @@
       "description": "Replace TCN with Transformer encoder (already implemented, needs testing)",
       "hypothesis": "Attention mechanism may better capture important price patterns",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:26:05.722745"
+      }
     },
     {
       "id": "IDEA-004",
@@ -63,14 +75,18 @@
       "description": "Reduce max hold from 45 min to 20 min to match prediction horizon better",
       "hypothesis": "Predictions are for 15 min, holding 45 min causes drift. Shorter hold may align better.",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [
         "config.json"
       ],
       "env_vars": {
         "TT_MAX_HOLD_MINUTES": "20"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T13:26:05.722745"
+      }
     },
     {
       "id": "IDEA-005",
@@ -139,6 +155,6 @@
       "estimated_complexity": "medium"
     }
   ],
-  "last_updated": "2025-12-28T13:30:00Z",
+  "last_updated": "2025-12-28T13:26:05.722745",
   "next_id": 9
 }
