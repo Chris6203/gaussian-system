@@ -77,13 +77,17 @@
       "description": "Require all 3 filters to agree before entry",
       "hypothesis": "Triple confirmation = highest quality trades",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "REQUIRE_NEURAL_CONFIRM": "1",
         "LOAD_PRETRAINED": "1"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T14:42:46.210207"
+      }
     },
     {
       "id": "IDEA-012",
@@ -94,13 +98,17 @@
       "description": "Load pretrained model from original profitable run",
       "hypothesis": "The trained state has learned good features",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "PRETRAINED_SOURCE": "long_run_20k"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T14:42:46.210207"
+      }
     },
     {
       "id": "IDEA-013",
@@ -111,13 +119,17 @@
       "description": "Use only momentum signals for entry, bypass HMM",
       "hypothesis": "HMM may be adding noise, pure momentum cleaner",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "ENTRY_CONTROLLER": "direction",
         "LOAD_PRETRAINED": "1"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T14:42:46.210207"
+      }
     },
     {
       "id": "IDEA-014",
@@ -128,14 +140,18 @@
       "description": "Cut losses very fast, take smaller profits",
       "hypothesis": "Tighter risk management may improve consistency",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "3",
         "HARD_TAKE_PROFIT_PCT": "8",
         "LOAD_PRETRAINED": "1"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T14:42:46.210207"
+      }
     },
     {
       "id": "IDEA-015",
@@ -156,6 +172,6 @@
       "estimated_complexity": "low"
     }
   ],
-  "last_updated": "2025-12-28T11:41:01.338106",
+  "last_updated": "2025-12-28T14:42:46.210207",
   "next_id": 17
 }
