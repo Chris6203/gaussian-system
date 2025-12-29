@@ -408,14 +408,18 @@
       "description": "Tighter stop with tighter TP",
       "hypothesis": "May have higher hit rate with smaller targets",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "4",
         "HARD_TAKE_PROFIT_PCT": "25"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T00:17:52.982412"
       }
     }
   ],
   "next_id": 82,
-  "last_updated": "2025-12-28T20:58:06.464465"
+  "last_updated": "2025-12-29T00:17:52.982412"
 }
