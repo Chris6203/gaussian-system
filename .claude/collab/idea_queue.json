@@ -155,11 +155,15 @@
       "description": "Very high R:R ratio test",
       "hypothesis": "Extreme R:R may compensate for lower win rate",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "4",
         "HARD_TAKE_PROFIT_PCT": "32"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T10:16:17.691856"
       }
     },
     {
@@ -171,12 +175,16 @@
       "description": "Validate IDEA-069 winning config over 20K cycles",
       "hypothesis": "46.9% WR with 5:1 R:R should remain favorable",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "6",
         "HARD_TAKE_PROFIT_PCT": "30",
         "TT_MAX_CYCLES": "20000"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T10:16:17.691856"
       }
     },
     {
@@ -188,11 +196,15 @@
       "description": "Tighter on both sides",
       "hypothesis": "May have higher win rate with smaller swings",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "25"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T10:16:17.691856"
       }
     },
     {
@@ -204,12 +216,16 @@
       "description": "Validate IDEA-073 best config over 20K",
       "hypothesis": "43.6% WR with 6:1 R:R at -$0.23/trade",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "30",
         "TT_MAX_CYCLES": "20000"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T10:16:17.691856"
       }
     },
     {
@@ -278,5 +294,5 @@
     }
   ],
   "next_id": 87,
-  "last_updated": "2025-12-29T10:15:16.183523"
+  "last_updated": "2025-12-29T10:16:17.691856"
 }
