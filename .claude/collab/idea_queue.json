@@ -6,130 +6,86 @@
       "timestamp": "2025-12-28T15:22:00.000000",
       "category": "validation",
       "title": "20K validation of protected pretrained",
-      "description": "Extended 20K cycle test to validate low trade rate with pretrained model",
-      "hypothesis": "With 0.24% trade rate, 20K cycles = ~48 trades, enough for statistical significance",
-      "priority": "critical",
       "status": "in_progress",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v8_20k_validation",
-        "TT_MAX_CYCLES": "20000"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T18:24:11.869353"
-      }
+      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T18:24:11.869353"}
     },
     {
       "id": "IDEA-055",
       "source": "claude",
-      "timestamp": "2025-12-28T15:22:00.000000",
-      "category": "exit_strategy",
-      "title": "20K validation with tighter stops (-5%/+15%)",
-      "description": "20K cycle test with pretrained model and tighter exit parameters",
-      "hypothesis": "Tighter stops may reduce losses on bad trades",
-      "priority": "high",
       "status": "in_progress",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v8_20k_tight",
-        "TT_MAX_CYCLES": "20000",
-        "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "15"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T18:24:11.869353"
-      }
+      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T18:24:11.869353"}
     },
     {
       "id": "IDEA-056",
       "source": "claude",
-      "timestamp": "2025-12-28T15:22:00.000000",
-      "category": "baseline",
-      "title": "Lower bandit gate threshold (15% conf)",
-      "description": "Reduce min_confidence from 20% to 15% to increase trade rate",
-      "hypothesis": "Slightly lower threshold may capture more good trades while still filtering bad ones",
-      "priority": "medium",
       "status": "in_progress",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "PRETRAINED_VERSION": "v8_lower_gate",
-        "TRAIN_MIN_CONF": "0.15"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T18:24:11.869353"
-      }
+      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T18:24:11.869353"}
     },
     {
       "id": "IDEA-057",
       "source": "claude",
-      "timestamp": "2025-12-28T17:10:00.000000",
-      "category": "exit_strategy",
-      "title": "Pretrained + wider take profit (+20%)",
-      "description": "Use pretrained model with wider take profit to capture more upside",
-      "hypothesis": "With selective entries, let winners run longer",
-      "priority": "high",
       "status": "in_progress",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_TAKE_PROFIT_PCT": "20"
-      },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:08:13.950556"
-      }
+      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T20:08:13.950556"}
     },
     {
       "id": "IDEA-058",
       "source": "claude",
-      "timestamp": "2025-12-28T17:10:00.000000",
-      "category": "exit_strategy",
-      "title": "Pretrained + faster exits (max 30 min hold)",
-      "description": "Reduce max hold time from 45 to 30 minutes",
-      "hypothesis": "Faster exits may reduce theta decay losses",
-      "priority": "high",
       "status": "in_progress",
-      "files_to_modify": [],
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "TT_MAX_HOLD_MINUTES": "30"
-      },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:08:13.950556"
-      }
+      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T20:08:13.950556"}
     },
     {
       "id": "IDEA-059",
       "source": "claude",
-      "timestamp": "2025-12-28T17:10:00.000000",
-      "category": "exit_strategy",
-      "title": "Pretrained + balanced exits (-6%/+18%)",
-      "description": "Balanced risk/reward ratio with pretrained filtering",
-      "hypothesis": "3:1 reward/risk ratio with quality entries should improve P&L",
-      "priority": "high",
       "status": "in_progress",
-      "files_to_modify": [],
+      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T20:08:13.950556"}
+    },
+    {
+      "id": "IDEA-060",
+      "source": "claude",
+      "timestamp": "2025-12-28T17:15:00.000000",
+      "category": "exit_strategy",
+      "title": "5K quick test: wider TP (+25%)",
+      "description": "Quick test with pretrained and much wider take profit",
+      "hypothesis": "Selective entries may benefit from letting winners run even longer",
+      "priority": "high",
+      "status": "pending",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "6",
-        "HARD_TAKE_PROFIT_PCT": "18"
-      },
-      "estimated_complexity": "low",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:08:13.950556"
+        "HARD_TAKE_PROFIT_PCT": "25"
+      }
+    },
+    {
+      "id": "IDEA-061",
+      "source": "claude",
+      "timestamp": "2025-12-28T17:15:00.000000",
+      "category": "exit_strategy",
+      "title": "5K quick test: tighter stop + wider TP (-5%/+25%)",
+      "description": "Asymmetric risk/reward with pretrained filtering",
+      "hypothesis": "5:1 reward/risk ratio should improve P&L with quality entries",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "5",
+        "HARD_TAKE_PROFIT_PCT": "25"
+      }
+    },
+    {
+      "id": "IDEA-062",
+      "source": "claude",
+      "timestamp": "2025-12-28T17:15:00.000000",
+      "category": "exit_strategy",
+      "title": "5K quick test: max 20 min hold",
+      "description": "Very fast exits to avoid theta decay",
+      "hypothesis": "Very short holds may improve options trading with quality entries",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "TT_MAX_HOLD_MINUTES": "20"
       }
     }
   ],
-  "next_id": 60,
-  "last_updated": "2025-12-28T20:08:13.950556"
+  "next_id": 63,
+  "last_updated": "2025-12-28T17:15:00.000000"
 }
