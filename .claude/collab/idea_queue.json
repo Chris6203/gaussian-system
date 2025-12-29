@@ -148,14 +148,15 @@
       "description": "Per-trade P&L improved +25%->+30%, try +40%",
       "hypothesis": "Trend shows wider TP = better per-trade P&L",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_TAKE_PROFIT_PCT": "40"
       },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T18:16:03.836722"
+      "last_result": {
+        "exp_id": "EXP-0029",
+        "per_trade_pnl": -2.5733333333333333,
+        "win_rate": 11.1
       }
     },
     {
@@ -223,5 +224,5 @@
     }
   ],
   "next_id": 73,
-  "last_updated": "2025-12-28T18:16:03.836722"
+  "last_updated": "2025-12-28T18:39:36.498863"
 }
