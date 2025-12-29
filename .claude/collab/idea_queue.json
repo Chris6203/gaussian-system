@@ -241,11 +241,15 @@
       "description": "IDEA-069 (-6%/+30%) was best at -$0.63/trade. Try wider TP.",
       "hypothesis": "Wider TP may push to profitability",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "6",
         "HARD_TAKE_PROFIT_PCT": "35"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T11:47:29.444274"
       }
     },
     {
@@ -257,11 +261,15 @@
       "description": "Give trades more room with slightly wider stop",
       "hypothesis": "May reduce premature stop-outs while keeping good R:R",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "7",
         "HARD_TAKE_PROFIT_PCT": "30"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T11:47:29.444274"
       }
     },
     {
@@ -273,11 +281,15 @@
       "description": "Test slightly tighter TP for higher hit rate",
       "hypothesis": "Smaller target may increase win rate enough",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "6",
         "HARD_TAKE_PROFIT_PCT": "28"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T11:47:29.444274"
       }
     },
     {
@@ -289,14 +301,18 @@
       "description": "Between -5% (worse) and -6% (best) stops",
       "hypothesis": "Fine-tune the stop loss level",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "5.5",
         "HARD_TAKE_PROFIT_PCT": "30"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T11:47:29.444274"
       }
     }
   ],
   "next_id": 87,
-  "last_updated": "2025-12-29T11:46:28.042064"
+  "last_updated": "2025-12-29T11:47:29.444274"
 }
