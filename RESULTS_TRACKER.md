@@ -2140,6 +2140,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0030: 5K test: wide TP + tighter stop (-6%/+30%) (2025-12-28 19:04)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.9% |
+| P&L | -0.4% |
+| Per-Trade P&L | $-0.63 |
+| Trades | 32 |
+| Run Dir | `models/EXP-0030_IDEA-069` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: May improve per-trade P&L with better R:R
+**Result**: FAIL
+
+---
+
+
 ### EXP-0029: 5K test: very wide TP (+40%) (2025-12-28 18:39)
 
 | Metric | Quick Test (5K) |

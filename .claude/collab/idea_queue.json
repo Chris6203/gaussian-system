@@ -168,15 +168,16 @@
       "description": "Combine proven +30% TP with tighter -6% stop",
       "hypothesis": "May improve per-trade P&L with better R:R",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "6",
         "HARD_TAKE_PROFIT_PCT": "30"
       },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T18:40:38.636164"
+      "last_result": {
+        "exp_id": "EXP-0030",
+        "per_trade_pnl": -0.628125,
+        "win_rate": 46.9
       }
     },
     {
@@ -228,5 +229,5 @@
     }
   ],
   "next_id": 73,
-  "last_updated": "2025-12-28T18:40:38.636164"
+  "last_updated": "2025-12-28T19:04:48.953904"
 }
