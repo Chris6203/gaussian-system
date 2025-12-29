@@ -224,14 +224,18 @@
       "description": "Give trades room with wider stop loss",
       "hypothesis": "May reduce premature stop-outs",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "12",
         "HARD_TAKE_PROFIT_PCT": "20"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T22:24:15.361690"
       }
     }
   ],
   "next_id": 73,
-  "last_updated": "2025-12-28T19:05:51.088303"
+  "last_updated": "2025-12-28T22:24:15.361690"
 }
