@@ -6,195 +6,62 @@
       "timestamp": "2025-12-28T15:22:00.000000",
       "category": "validation",
       "title": "20K validation of protected pretrained",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T18:24:11.869353"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-055",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T18:24:11.869353"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-056",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T18:24:11.869353"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-057",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:08:13.950556"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-058",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:08:13.950556"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-059",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:08:13.950556"
-      }
-    },
-    {
-      "id": "IDEA-060",
-      "source": "claude",
-      "timestamp": "2025-12-28T17:15:00.000000",
-      "category": "exit_strategy",
-      "title": "5K quick test: wider TP (+25%)",
-      "status": "completed",
-      "result": {
-        "trades": 36,
-        "win_rate": 41.7,
-        "pnl_pct": -0.86,
-        "per_trade_pnl": -1.2
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-061",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:31:55.704885"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-062",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:31:55.704885"
-      }
-    },
-    {
-      "id": "IDEA-063",
-      "source": "claude",
-      "timestamp": "2025-12-28T17:42:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: even wider TP (+30%)",
-      "status": "completed",
-      "result": {
-        "trades": 56,
-        "win_rate": 42.9,
-        "pnl_pct": -1.01,
-        "per_trade_pnl": -0.9
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-064",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:53:37.752344"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-065",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:53:37.752344"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-066",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:53:37.752344"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-067",
       "source": "claude",
-      "status": "in_progress",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T20:53:37.752344"
-      }
-    },
-    {
-      "id": "IDEA-068",
-      "source": "claude",
-      "timestamp": "2025-12-28T18:12:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: very wide TP (+40%)",
-      "description": "Per-trade P&L improved +25%->+30%, try +40%",
-      "hypothesis": "Trend shows wider TP = better per-trade P&L",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_TAKE_PROFIT_PCT": "40"
-      },
-      "last_result": {
-        "exp_id": "EXP-0029",
-        "per_trade_pnl": -2.5733333333333333,
-        "win_rate": 11.1
-      }
-    },
-    {
-      "id": "IDEA-069",
-      "source": "claude",
-      "timestamp": "2025-12-28T18:12:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: wide TP + tighter stop (-6%/+30%)",
-      "description": "Combine proven +30% TP with tighter -6% stop",
-      "hypothesis": "May improve per-trade P&L with better R:R",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "6",
-        "HARD_TAKE_PROFIT_PCT": "30"
-      },
-      "last_result": {
-        "exp_id": "EXP-0030",
-        "per_trade_pnl": -0.628125,
-        "win_rate": 46.9
-      }
-    },
-    {
-      "id": "IDEA-070",
-      "source": "claude",
-      "timestamp": "2025-12-28T18:12:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: asymmetric 1:5 ratio (-6%/+30%)",
-      "description": "Test 5:1 reward/risk with pretrained filter",
-      "hypothesis": "High R:R with quality entries may achieve profit",
-      "priority": "high",
-      "status": "already_tested",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "6",
-        "HARD_TAKE_PROFIT_PCT": "30"
-      }
+      "status": "already_tested"
     },
     {
       "id": "IDEA-071",
@@ -211,8 +78,8 @@
         "HARD_TAKE_PROFIT_PCT": "50"
       },
       "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T19:05:51.088303"
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T09:51:23.736188"
       }
     },
     {
@@ -232,7 +99,7 @@
       },
       "lock": {
         "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T22:24:15.361690"
+        "locked_at": "2025-12-29T09:51:23.736188"
       }
     },
     {
@@ -251,8 +118,8 @@
         "HARD_TAKE_PROFIT_PCT": "30"
       },
       "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T19:35:55.946353"
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-29T09:51:23.736188"
       }
     },
     {
@@ -272,7 +139,7 @@
       },
       "lock": {
         "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T22:46:13.207443"
+        "locked_at": "2025-12-29T09:51:23.736188"
       }
     },
     {
@@ -284,15 +151,11 @@
       "description": "Very high R:R ratio test",
       "hypothesis": "Extreme R:R may compensate for lower win rate",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "pending",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "4",
         "HARD_TAKE_PROFIT_PCT": "32"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T22:46:13.207443"
       }
     },
     {
@@ -304,16 +167,12 @@
       "description": "Validate IDEA-069 winning config over 20K cycles",
       "hypothesis": "46.9% WR with 5:1 R:R should remain favorable",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "6",
         "HARD_TAKE_PROFIT_PCT": "30",
         "TT_MAX_CYCLES": "20000"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T22:46:13.207443"
       }
     },
     {
@@ -325,57 +184,11 @@
       "description": "Tighter on both sides",
       "hypothesis": "May have higher win rate with smaller swings",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "pending",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "25"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-28T22:46:13.207443"
-      }
-    },
-    {
-      "id": "IDEA-078",
-      "source": "claude",
-      "timestamp": "2025-12-28T20:03:00.000000",
-      "category": "exit_strategy",
-      "title": "5K: ultra-tight stop (-4%/+30%) = 7.5:1",
-      "description": "Continue tighter stop trend from -5% success",
-      "hypothesis": "Trend: -6%:-$0.63, -5%:-$0.23, -4%:profit?",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "4",
-        "HARD_TAKE_PROFIT_PCT": "30"
-      },
-      "last_result": {
-        "exp_id": "EXP-0031",
-        "per_trade_pnl": null,
-        "win_rate": 44.1
-      }
-    },
-    {
-      "id": "IDEA-079",
-      "source": "claude",
-      "timestamp": "2025-12-28T20:03:00.000000",
-      "category": "exit_strategy",
-      "title": "5K: extreme tight stop (-3%/+30%) = 10:1",
-      "description": "Push stop even tighter",
-      "hypothesis": "High R:R with very tight stops",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "3",
-        "HARD_TAKE_PROFIT_PCT": "30"
-      },
-      "last_result": {
-        "exp_id": "EXP-0032",
-        "per_trade_pnl": -10.006874999999999,
-        "win_rate": 46.8
       }
     },
     {
@@ -387,62 +200,79 @@
       "description": "Validate IDEA-073 best config over 20K",
       "hypothesis": "43.6% WR with 6:1 R:R at -$0.23/trade",
       "priority": "high",
-      "status": "in_progress",
+      "status": "pending",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "30",
         "TT_MAX_CYCLES": "20000"
-      },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T20:58:06.464465"
       }
     },
     {
-      "id": "IDEA-081",
+      "id": "IDEA-83",
       "source": "claude",
-      "timestamp": "2025-12-28T20:03:00.000000",
+      "timestamp": "2025-12-29T09:51:04.912610",
       "category": "exit_strategy",
-      "title": "5K: -4%/+25% = 6.25:1 R:R",
-      "description": "Tighter stop with tighter TP",
-      "hypothesis": "May have higher hit rate with smaller targets",
-      "priority": "medium",
-      "status": "rejected",
+      "title": "5K: -6%/+35% wider TP from best config",
+      "description": "IDEA-069 (-6%/+30%) was best at -$0.63/trade. Try wider TP.",
+      "hypothesis": "Wider TP may push to profitability",
+      "priority": "high",
+      "status": "pending",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "4",
-        "HARD_TAKE_PROFIT_PCT": "25"
-      },
-      "last_result": {
-        "exp_id": "EXP-0033",
-        "per_trade_pnl": -1.0429125138427464,
-        "win_rate": 35.5
+        "HARD_STOP_LOSS_PCT": "6",
+        "HARD_TAKE_PROFIT_PCT": "35"
       }
     },
     {
-      "id": "IDEA-082",
+      "id": "IDEA-84",
       "source": "claude",
-      "timestamp": "2025-12-28T22:35:00.000000",
-      "category": "validation",
-      "title": "20K validation: -4%/+30% PROFITABLE CONFIG",
-      "description": "Validate the ONLY profitable configuration over 20K cycles",
-      "hypothesis": "IDEA-078 showed +$0.27/trade profit at 5K - validate at scale",
-      "priority": "critical",
-      "status": "rejected",
+      "timestamp": "2025-12-29T09:51:04.912619",
+      "category": "exit_strategy",
+      "title": "5K: -7%/+30% looser stop from best config",
+      "description": "Give trades more room with slightly wider stop",
+      "hypothesis": "May reduce premature stop-outs while keeping good R:R",
+      "priority": "high",
+      "status": "pending",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "4",
-        "HARD_TAKE_PROFIT_PCT": "30",
-        "TT_MAX_CYCLES": "20000"
-      },
-      "last_result": {
-        "exp_id": "EXP-0034",
-        "per_trade_pnl": -1.703820224719101,
-        "win_rate": 41.6
+        "HARD_STOP_LOSS_PCT": "7",
+        "HARD_TAKE_PROFIT_PCT": "30"
+      }
+    },
+    {
+      "id": "IDEA-85",
+      "source": "claude",
+      "timestamp": "2025-12-29T09:51:04.912622",
+      "category": "exit_strategy",
+      "title": "5K: -6%/+28% tighter TP from best",
+      "description": "Test slightly tighter TP for higher hit rate",
+      "hypothesis": "Smaller target may increase win rate enough",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "6",
+        "HARD_TAKE_PROFIT_PCT": "28"
+      }
+    },
+    {
+      "id": "IDEA-86",
+      "source": "claude",
+      "timestamp": "2025-12-29T09:51:04.912625",
+      "category": "exit_strategy",
+      "title": "5K: -5.5%/+30% split difference stop",
+      "description": "Between -5% (worse) and -6% (best) stops",
+      "hypothesis": "Fine-tune the stop loss level",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "5.5",
+        "HARD_TAKE_PROFIT_PCT": "30"
       }
     }
   ],
-  "next_id": 83,
-  "last_updated": "2025-12-29T00:06:47.972239"
+  "next_id": 87,
+  "last_updated": "2025-12-29T09:51:23.736188"
 }
