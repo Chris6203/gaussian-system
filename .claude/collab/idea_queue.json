@@ -63,36 +63,18 @@
       "timestamp": "2025-12-28T17:15:00.000000",
       "category": "exit_strategy",
       "title": "5K quick test: wider TP (+25%)",
-      "description": "Quick test with pretrained and much wider take profit",
-      "hypothesis": "Selective entries may benefit from letting winners run even longer",
-      "priority": "high",
       "status": "completed",
       "result": {
         "trades": 36,
         "win_rate": 41.7,
         "pnl_pct": -0.86,
         "per_trade_pnl": -1.2
-      },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T17:16:54.978655"
       }
     },
     {
       "id": "IDEA-061",
       "source": "claude",
-      "timestamp": "2025-12-28T17:15:00.000000",
-      "category": "exit_strategy",
-      "title": "5K quick test: tighter stop + wider TP (-5%/+25%)",
-      "description": "Asymmetric risk/reward with pretrained filtering",
-      "hypothesis": "5:1 reward/risk ratio should improve P&L with quality entries",
-      "priority": "high",
       "status": "in_progress",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "25"
-      },
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T20:31:55.704885"
@@ -101,17 +83,7 @@
     {
       "id": "IDEA-062",
       "source": "claude",
-      "timestamp": "2025-12-28T17:15:00.000000",
-      "category": "exit_strategy",
-      "title": "5K quick test: max 20 min hold",
-      "description": "Very fast exits to avoid theta decay",
-      "hypothesis": "Very short holds may improve options trading with quality entries",
-      "priority": "medium",
       "status": "in_progress",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "TT_MAX_HOLD_MINUTES": "20"
-      },
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T20:31:55.704885"
@@ -123,33 +95,18 @@
       "timestamp": "2025-12-28T17:42:00.000000",
       "category": "exit_strategy",
       "title": "5K test: even wider TP (+30%)",
-      "description": "Based on IDEA-060 success (41.7% win rate), test even wider TP",
-      "hypothesis": "With 41.7% WR at +25% TP, wider TP may turn per-trade P&L positive",
-      "priority": "high",
-      "status": "in_progress",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_TAKE_PROFIT_PCT": "30"
-      },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T17:46:48.355413"
+      "status": "completed",
+      "result": {
+        "trades": 56,
+        "win_rate": 42.9,
+        "pnl_pct": -1.01,
+        "per_trade_pnl": -0.9
       }
     },
     {
       "id": "IDEA-064",
       "source": "claude",
-      "timestamp": "2025-12-28T17:42:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: wider TP (+35%)",
-      "description": "Push TP even higher based on IDEA-060 success",
-      "hypothesis": "With pretrained selectivity, can afford to wait for bigger winners",
-      "priority": "high",
       "status": "in_progress",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_TAKE_PROFIT_PCT": "35"
-      },
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T20:53:37.752344"
@@ -158,18 +115,7 @@
     {
       "id": "IDEA-065",
       "source": "claude",
-      "timestamp": "2025-12-28T17:42:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: looser stop + wider TP (-10%/+30%)",
-      "description": "Give trades more room with 3:1 reward/risk",
-      "hypothesis": "May reduce stopped-out winners while keeping good R:R",
-      "priority": "medium",
       "status": "in_progress",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "10",
-        "HARD_TAKE_PROFIT_PCT": "30"
-      },
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T20:53:37.752344"
@@ -178,18 +124,7 @@
     {
       "id": "IDEA-066",
       "source": "claude",
-      "timestamp": "2025-12-28T17:42:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: longer hold + wider TP (60 min / +25%)",
-      "description": "Combine longer hold time with proven wider TP",
-      "hypothesis": "60 min hold may give more time for winners to hit +25% TP",
-      "priority": "medium",
       "status": "in_progress",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "TT_MAX_HOLD_MINUTES": "60",
-        "HARD_TAKE_PROFIT_PCT": "25"
-      },
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T20:53:37.752344"
@@ -198,24 +133,95 @@
     {
       "id": "IDEA-067",
       "source": "claude",
-      "timestamp": "2025-12-28T17:42:00.000000",
-      "category": "validation",
-      "title": "20K validation: wider TP (+25%)",
-      "description": "Validate IDEA-060 results over 20K cycles",
-      "hypothesis": "If 41.7% win rate holds over 20K, this is a promising config",
-      "priority": "high",
       "status": "in_progress",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_TAKE_PROFIT_PCT": "25",
-        "TT_MAX_CYCLES": "20000"
-      },
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T20:53:37.752344"
       }
+    },
+    {
+      "id": "IDEA-068",
+      "source": "claude",
+      "timestamp": "2025-12-28T18:12:00.000000",
+      "category": "exit_strategy",
+      "title": "5K test: very wide TP (+40%)",
+      "description": "Per-trade P&L improved +25%->+30%, try +40%",
+      "hypothesis": "Trend shows wider TP = better per-trade P&L",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_TAKE_PROFIT_PCT": "40"
+      },
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T18:16:03.836722"
+      }
+    },
+    {
+      "id": "IDEA-069",
+      "source": "claude",
+      "timestamp": "2025-12-28T18:12:00.000000",
+      "category": "exit_strategy",
+      "title": "5K test: wide TP + tighter stop (-6%/+30%)",
+      "description": "Combine proven +30% TP with tighter -6% stop",
+      "hypothesis": "May improve per-trade P&L with better R:R",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "6",
+        "HARD_TAKE_PROFIT_PCT": "30"
+      }
+    },
+    {
+      "id": "IDEA-070",
+      "source": "claude",
+      "timestamp": "2025-12-28T18:12:00.000000",
+      "category": "exit_strategy",
+      "title": "5K test: asymmetric 1:5 ratio (-6%/+30%)",
+      "description": "Test 5:1 reward/risk with pretrained filter",
+      "hypothesis": "High R:R with quality entries may achieve profit",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "6",
+        "HARD_TAKE_PROFIT_PCT": "30"
+      }
+    },
+    {
+      "id": "IDEA-071",
+      "source": "claude",
+      "timestamp": "2025-12-28T18:12:00.000000",
+      "category": "exit_strategy",
+      "title": "5K test: ultra-wide TP (+50%)",
+      "description": "Push TP to extreme to find optimal point",
+      "hypothesis": "Very wide TP may capture larger moves",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_TAKE_PROFIT_PCT": "50"
+      }
+    },
+    {
+      "id": "IDEA-072",
+      "source": "claude",
+      "timestamp": "2025-12-28T18:12:00.000000",
+      "category": "exit_strategy",
+      "title": "5K test: moderate TP + loose stop (-12%/+20%)",
+      "description": "Give trades room with wider stop loss",
+      "hypothesis": "May reduce premature stop-outs",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "12",
+        "HARD_TAKE_PROFIT_PCT": "20"
+      }
     }
   ],
-  "next_id": 68,
-  "last_updated": "2025-12-28T20:53:37.752344"
+  "next_id": 73,
+  "last_updated": "2025-12-28T18:16:03.836722"
 }
