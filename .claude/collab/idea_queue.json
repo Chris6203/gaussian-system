@@ -234,8 +234,93 @@
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T22:24:15.361690"
       }
+    },
+    {
+      "id": "IDEA-073",
+      "source": "claude",
+      "timestamp": "2025-12-28T19:35:00.000000",
+      "category": "exit_strategy",
+      "title": "5K: tighter stop (-5%/+30%) = 6:1 R:R",
+      "description": "Even tighter stop on winning config",
+      "hypothesis": "Smaller losses with 46.9% win rate may turn profitable",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "5",
+        "HARD_TAKE_PROFIT_PCT": "30"
+      },
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T19:35:55.946353"
+      }
+    },
+    {
+      "id": "IDEA-074",
+      "source": "claude",
+      "timestamp": "2025-12-28T19:35:00.000000",
+      "category": "exit_strategy",
+      "title": "5K: -7%/+35% = 5:1 R:R wider",
+      "description": "Slightly wider both sides from winning config",
+      "hypothesis": "May improve win rate while maintaining R:R",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "7",
+        "HARD_TAKE_PROFIT_PCT": "35"
+      }
+    },
+    {
+      "id": "IDEA-075",
+      "source": "claude",
+      "timestamp": "2025-12-28T19:35:00.000000",
+      "category": "exit_strategy",
+      "title": "5K: very tight stop (-4%/+32%) = 8:1",
+      "description": "Very high R:R ratio test",
+      "hypothesis": "Extreme R:R may compensate for lower win rate",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "4",
+        "HARD_TAKE_PROFIT_PCT": "32"
+      }
+    },
+    {
+      "id": "IDEA-076",
+      "source": "claude",
+      "timestamp": "2025-12-28T19:35:00.000000",
+      "category": "validation",
+      "title": "20K validation: -6%/+30% best config",
+      "description": "Validate IDEA-069 winning config over 20K cycles",
+      "hypothesis": "46.9% WR with 5:1 R:R should remain favorable",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "6",
+        "HARD_TAKE_PROFIT_PCT": "30",
+        "TT_MAX_CYCLES": "20000"
+      }
+    },
+    {
+      "id": "IDEA-077",
+      "source": "claude",
+      "timestamp": "2025-12-28T19:35:00.000000",
+      "category": "exit_strategy",
+      "title": "5K: -5%/+25% = 5:1 R:R tighter",
+      "description": "Tighter on both sides",
+      "hypothesis": "May have higher win rate with smaller swings",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "5",
+        "HARD_TAKE_PROFIT_PCT": "25"
+      }
     }
   ],
-  "next_id": 73,
-  "last_updated": "2025-12-28T22:24:15.361690"
+  "next_id": 78,
+  "last_updated": "2025-12-28T19:35:55.946353"
 }
