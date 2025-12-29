@@ -2140,6 +2140,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0033: 5K: -4%/+25% = 6.25:1 R:R (2025-12-29 00:38)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 35.5% |
+| P&L | -18.83% |
+| Per-Trade P&L | $-1.04 |
+| Trades | 903 |
+| Run Dir | `models/EXP-0033_IDEA-081` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: May have higher hit rate with smaller targets
+**Result**: FAIL
+
+---
+
+
 ### EXP-0032: 5K: extreme tight stop (-3%/+30%) = 10:1 (2025-12-28 20:57)
 
 | Metric | Quick Test (5K) |

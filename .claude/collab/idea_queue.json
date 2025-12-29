@@ -408,18 +408,19 @@
       "description": "Tighter stop with tighter TP",
       "hypothesis": "May have higher hit rate with smaller targets",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "4",
         "HARD_TAKE_PROFIT_PCT": "25"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-29T00:17:52.982412"
+      "last_result": {
+        "exp_id": "EXP-0033",
+        "per_trade_pnl": -1.0429125138427464,
+        "win_rate": 35.5
       }
     }
   ],
   "next_id": 82,
-  "last_updated": "2025-12-29T00:17:52.982412"
+  "last_updated": "2025-12-29T00:38:38.247450"
 }
