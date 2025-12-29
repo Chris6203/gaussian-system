@@ -74,13 +74,17 @@
       "description": "Use pretrained model with wider take profit to capture more upside",
       "hypothesis": "With selective entries, let winners run longer",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_TAKE_PROFIT_PCT": "20"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T20:08:13.950556"
+      }
     },
     {
       "id": "IDEA-058",
@@ -91,13 +95,17 @@
       "description": "Reduce max hold time from 45 to 30 minutes",
       "hypothesis": "Faster exits may reduce theta decay losses",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "TT_MAX_HOLD_MINUTES": "30"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T20:08:13.950556"
+      }
     },
     {
       "id": "IDEA-059",
@@ -108,16 +116,20 @@
       "description": "Balanced risk/reward ratio with pretrained filtering",
       "hypothesis": "3:1 reward/risk ratio with quality entries should improve P&L",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "files_to_modify": [],
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "6",
         "HARD_TAKE_PROFIT_PCT": "18"
       },
-      "estimated_complexity": "low"
+      "estimated_complexity": "low",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T20:08:13.950556"
+      }
     }
   ],
   "next_id": 60,
-  "last_updated": "2025-12-28T17:10:00.000000"
+  "last_updated": "2025-12-28T20:08:13.950556"
 }
