@@ -2140,6 +2140,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0031: 5K: ultra-tight stop (-4%/+30%) = 7.5:1 (2025-12-28 20:31)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 44.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 34 |
+| Run Dir | `models/EXP-0031_IDEA-078` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Trend: -6%:-$0.63, -5%:-$0.23, -4%:profit?
+**Result**: ERROR
+
+---
+
+
 ### EXP-0030: 5K test: wide TP + tighter stop (-6%/+30%) (2025-12-28 19:04)
 
 | Metric | Quick Test (5K) |

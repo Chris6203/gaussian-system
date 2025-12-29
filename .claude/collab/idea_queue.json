@@ -345,15 +345,16 @@
       "description": "Continue tighter stop trend from -5% success",
       "hypothesis": "Trend: -6%:-$0.63, -5%:-$0.23, -4%:profit?",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "4",
         "HARD_TAKE_PROFIT_PCT": "30"
       },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T20:07:00.272906"
+      "last_result": {
+        "exp_id": "EXP-0031",
+        "per_trade_pnl": null,
+        "win_rate": 44.1
       }
     },
     {
@@ -407,5 +408,5 @@
     }
   ],
   "next_id": 82,
-  "last_updated": "2025-12-28T20:07:00.272906"
+  "last_updated": "2025-12-28T20:31:16.295219"
 }
