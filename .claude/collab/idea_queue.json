@@ -419,8 +419,29 @@
         "per_trade_pnl": -1.0429125138427464,
         "win_rate": 35.5
       }
+    },
+    {
+      "id": "IDEA-082",
+      "source": "claude",
+      "timestamp": "2025-12-28T22:35:00.000000",
+      "category": "validation",
+      "title": "20K validation: -4%/+30% PROFITABLE CONFIG",
+      "description": "Validate the ONLY profitable configuration over 20K cycles",
+      "hypothesis": "IDEA-078 showed +$0.27/trade profit at 5K - validate at scale",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "4",
+        "HARD_TAKE_PROFIT_PCT": "30",
+        "TT_MAX_CYCLES": "20000"
+      },
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T22:36:31.191869"
+      }
     }
   ],
-  "next_id": 82,
-  "last_updated": "2025-12-29T00:38:38.247450"
+  "next_id": 83,
+  "last_updated": "2025-12-28T22:36:31.191869"
 }
