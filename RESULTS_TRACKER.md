@@ -2140,6 +2140,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0039: 5K: very tight stop (-4%/+32%) = 8:1 (2025-12-29 11:46)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 52.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 388 |
+| Run Dir | `models/EXP-0039_IDEA-075` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Extreme R:R may compensate for lower win rate
+**Result**: ERROR
+
+---
+
+### EXP-0041: 5K: -5%/+25% = 5:1 R:R tighter (2025-12-29 11:46)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 44.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 272 |
+| Run Dir | `models/EXP-0041_IDEA-077` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: May have higher win rate with smaller swings
+**Result**: ERROR
+
+---
+
+### EXP-0040: 20K validation: -6%/+30% best config (2025-12-29 11:46)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.4% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 4129 |
+| Run Dir | `models/EXP-0040_IDEA-076` |
+
+**Source**: CLAUDE
+**Category**: validation
+**Hypothesis**: 46.9% WR with 5:1 R:R should remain favorable
+**Result**: ERROR
+
+---
+
+### EXP-0042: 20K validation: -5%/+30% best config (2025-12-29 11:46)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 45.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 3077 |
+| Run Dir | `models/EXP-0042_IDEA-080` |
+
+**Source**: CLAUDE
+**Category**: validation
+**Hypothesis**: 43.6% WR with 6:1 R:R at -$0.23/trade
+**Result**: ERROR
+
+---
+
+
 ### EXP-0038: 5K: -7%/+35% = 5:1 R:R wider (2025-12-29 10:15)
 
 | Metric | Quick Test (5K) |
