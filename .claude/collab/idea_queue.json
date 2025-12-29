@@ -189,7 +189,7 @@
       "description": "Test 5:1 reward/risk with pretrained filter",
       "hypothesis": "High R:R with quality entries may achieve profit",
       "priority": "high",
-      "status": "pending",
+      "status": "already_tested",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "6",
@@ -205,10 +205,14 @@
       "description": "Push TP to extreme to find optimal point",
       "hypothesis": "Very wide TP may capture larger moves",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_TAKE_PROFIT_PCT": "50"
+      },
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T19:05:51.088303"
       }
     },
     {
@@ -229,5 +233,5 @@
     }
   ],
   "next_id": 73,
-  "last_updated": "2025-12-28T19:04:48.953904"
+  "last_updated": "2025-12-28T19:05:51.088303"
 }
