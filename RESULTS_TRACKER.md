@@ -2140,6 +2140,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0043: 5K: -6%/+35% wider TP from best config (2025-12-29 12:12)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.4% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1153 |
+| Run Dir | `models/EXP-0043_IDEA-83` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Wider TP may push to profitability
+**Result**: ERROR
+
+---
+
+### EXP-0044: 5K: -7%/+30% looser stop from best config (2025-12-29 12:12)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.9% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1703 |
+| Run Dir | `models/EXP-0044_IDEA-84` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: May reduce premature stop-outs while keeping good R:R
+**Result**: ERROR
+
+---
+
+### EXP-0046: 5K: -5.5%/+30% split difference stop (2025-12-29 12:12)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.8% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1245 |
+| Run Dir | `models/EXP-0046_IDEA-86` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Fine-tune the stop loss level
+**Result**: ERROR
+
+---
+
+### EXP-0045: 5K: -6%/+28% tighter TP from best (2025-12-29 12:12)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 41.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1293 |
+| Run Dir | `models/EXP-0045_IDEA-85` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Smaller target may increase win rate enough
+**Result**: ERROR
+
+---
+
+
 ### EXP-0039: 5K: very tight stop (-4%/+32%) = 8:1 (2025-12-29 11:46)
 
 | Metric | Quick Test (5K) |
