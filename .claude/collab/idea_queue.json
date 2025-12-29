@@ -72,14 +72,15 @@
       "description": "Push TP to extreme to find optimal point",
       "hypothesis": "Very wide TP may capture larger moves",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_TAKE_PROFIT_PCT": "50"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-29T09:51:23.736188"
+      "last_result": {
+        "exp_id": "EXP-0035",
+        "per_trade_pnl": null,
+        "win_rate": 37.5
       }
     },
     {
@@ -91,15 +92,16 @@
       "description": "Give trades room with wider stop loss",
       "hypothesis": "May reduce premature stop-outs",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "12",
         "HARD_TAKE_PROFIT_PCT": "20"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-29T09:51:23.736188"
+      "last_result": {
+        "exp_id": "EXP-0036",
+        "per_trade_pnl": null,
+        "win_rate": 38.1
       }
     },
     {
@@ -111,15 +113,16 @@
       "description": "Even tighter stop on winning config",
       "hypothesis": "Smaller losses with 46.9% win rate may turn profitable",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "30"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-29T09:51:23.736188"
+      "last_result": {
+        "exp_id": "EXP-0037",
+        "per_trade_pnl": null,
+        "win_rate": 35.6
       }
     },
     {
@@ -131,15 +134,16 @@
       "description": "Slightly wider both sides from winning config",
       "hypothesis": "May improve win rate while maintaining R:R",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "7",
         "HARD_TAKE_PROFIT_PCT": "35"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2025-12-29T09:51:23.736188"
+      "last_result": {
+        "exp_id": "EXP-0038",
+        "per_trade_pnl": null,
+        "win_rate": 36.1
       }
     },
     {
@@ -274,5 +278,5 @@
     }
   ],
   "next_id": 87,
-  "last_updated": "2025-12-29T09:51:23.736188"
+  "last_updated": "2025-12-29T10:15:16.183523"
 }

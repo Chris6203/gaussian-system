@@ -2140,6 +2140,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0038: 5K: -7%/+35% = 5:1 R:R wider (2025-12-29 10:15)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1246 |
+| Run Dir | `models/EXP-0038_IDEA-074` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: May improve win rate while maintaining R:R
+**Result**: ERROR
+
+---
+
+### EXP-0035: 5K test: ultra-wide TP (+50%) (2025-12-29 10:15)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1120 |
+| Run Dir | `models/EXP-0035_IDEA-071` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Very wide TP may capture larger moves
+**Result**: ERROR
+
+---
+
+### EXP-0036: 5K test: moderate TP + loose stop (-12%/+20%) (2025-12-29 10:15)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1203 |
+| Run Dir | `models/EXP-0036_IDEA-072` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: May reduce premature stop-outs
+**Result**: ERROR
+
+---
+
+### EXP-0037: 5K: tighter stop (-5%/+30%) = 6:1 R:R (2025-12-29 10:15)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 35.6% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1227 |
+| Run Dir | `models/EXP-0037_IDEA-073` |
+
+**Source**: CLAUDE
+**Category**: exit_strategy
+**Hypothesis**: Smaller losses with 46.9% win rate may turn profitable
+**Result**: ERROR
+
+---
+
+
 ### EXP-0034: 20K validation: -4%/+30% PROFITABLE CONFIG (2025-12-29 00:06)
 
 | Metric | Quick Test (5K) |
@@ -2302,7 +2371,6 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 ---
 
 
-<<<<<<< Updated upstream
 ### EXP-0025: v5 fix + wider take profit (+20%) (2025-12-28 16:48)
 
 | Metric | Quick Test (5K) |
@@ -2337,8 +2405,6 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ---
 
-
-<<<<<<< Updated upstream
 ### EXP-0023: v3 fix + wider take profit (+20%) (2025-12-28 16:10)
 
 | Metric | Quick Test (5K) |
@@ -2356,7 +2422,7 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ---
 
-### EXP-0022: v3 fix + tighter stops (-5%/+15%) (2025-12-28 16:10)
+### EXP-0022a: v3 fix + tighter stops (-5%/+15%) (2025-12-28 16:10)
 
 | Metric | Quick Test (5K) |
 |--------|------------|
@@ -2370,10 +2436,10 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 **Category**: exit_strategy
 **Hypothesis**: Quality-filtered trades with tighter stops improve per-trade P&L
 **Result**: ERROR
-=======
-=======
->>>>>>> Stashed changes
-### EXP-0022: RL threshold loading fix v3 (2025-12-28 13:11)
+
+---
+
+### EXP-0022b: RL threshold loading fix v3 (2025-12-28 13:11)
 
 | Metric | Quick Test (5K) |
 |--------|------------|
@@ -2387,10 +2453,6 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 **Category**: baseline
 **Hypothesis**: With rl_threshold.pth actually LOADED, trade rate drops to 1-2%
 **Result**: FAIL
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 ---
 
@@ -2781,5 +2843,74 @@ This section is automatically updated by the Claude-Codex continuous optimizer.
 ### Automated Experiments Log
 
 *Experiments will be logged here automatically as they complete.*
+
+---
+
+## Phase 22: Exit Reason Analysis (2025-12-29)
+
+### Analysis Tool Created
+
+`tools/analyze_exits.py` - Comprehensive exit reason analyzer that:
+- Analyzes P&L distribution (buckets)
+- Calculates win/loss asymmetry
+- Infers exit reasons from SL/TP/hold time
+- Identifies hold time patterns
+- Provides actionable recommendations
+
+### Key Findings
+
+| Metric | Value | Issue |
+|--------|-------|-------|
+| Win Rate | 37.6% | Below 48.6% break-even |
+| Avg Win | +$3.60 | OK |
+| Avg Loss | -$3.41 | OK (similar to wins) |
+| Win/Loss Ratio | 1.06:1 | Symmetric - need higher win rate |
+| Loser Hold Time | 287 min | **2x longer than winners (138 min)** |
+| Time Exits | ~87% | Most exits are NOT at SL/TP |
+
+### Critical Insight
+
+**The problem is NOT win/loss asymmetry.** With 1.06:1 ratio, we need 48.6% win rate.
+We're getting 37.6%. The extra 10% gap comes from:
+
+1. **Losers held too long** (287min vs 138min for winners)
+2. **Time exits dominate** - trades exit mid-range, not at targets
+3. **TP unreachable** - 12% target rarely hit within hold time
+
+### Hold Time → Win Rate Relationship
+
+| Hold Time | Win Rate | Avg P&L | Implication |
+|-----------|----------|---------|-------------|
+| 15-30 min | 38.5% | -$0.71 | Near break-even |
+| 30-45 min | 40.3% | -$0.55 | **Best window** |
+| 2-4 hours | 25.0% | -$4.99 | Too long |
+| 4+ hours | 21.9% | -$1.96 | Much too long |
+
+### Proposed Controlled Experiments
+
+**Path A: Exit Tuning (One Change)**
+
+| Option | Change | Expected Impact |
+|--------|--------|-----------------|
+| A1 | TP: 12% → 10% | More reachable target |
+| A2 | max_hold: 20min → 30min | Match best win rate window |
+
+**Path B: Signal Quality (One Change)**
+
+| Option | Change | Expected Impact |
+|--------|--------|-----------------|
+| B1 | min_confidence: 0.55 → 0.65 | Fewer but higher quality |
+| B2 | HMM threshold: 0.70 → 0.75 | Stronger trend requirement |
+
+### Fixes Applied
+
+1. **Added exit_reason to database schema** - Future trades will track exact exit reason
+2. **Fixed experiment runner regex** - Now handles `$+` format for positive P&L
+3. **Resolved git conflicts** - RESULTS_TRACKER.md cleaned up
+
+### Recommendation
+
+Start with **A1 (TP: 10%)** as single controlled change against Phase 16 baseline.
+Measure if per-trade P&L improves without degrading win rate.
 
 ---
