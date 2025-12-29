@@ -335,8 +335,77 @@
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T22:46:13.207443"
       }
+    },
+    {
+      "id": "IDEA-078",
+      "source": "claude",
+      "timestamp": "2025-12-28T20:03:00.000000",
+      "category": "exit_strategy",
+      "title": "5K: ultra-tight stop (-4%/+30%) = 7.5:1",
+      "description": "Continue tighter stop trend from -5% success",
+      "hypothesis": "Trend: -6%:-$0.63, -5%:-$0.23, -4%:profit?",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "4",
+        "HARD_TAKE_PROFIT_PCT": "30"
+      },
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T20:07:00.272906"
+      }
+    },
+    {
+      "id": "IDEA-079",
+      "source": "claude",
+      "timestamp": "2025-12-28T20:03:00.000000",
+      "category": "exit_strategy",
+      "title": "5K: extreme tight stop (-3%/+30%) = 10:1",
+      "description": "Push stop even tighter",
+      "hypothesis": "High R:R with very tight stops",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "3",
+        "HARD_TAKE_PROFIT_PCT": "30"
+      }
+    },
+    {
+      "id": "IDEA-080",
+      "source": "claude",
+      "timestamp": "2025-12-28T20:03:00.000000",
+      "category": "validation",
+      "title": "20K validation: -5%/+30% best config",
+      "description": "Validate IDEA-073 best config over 20K",
+      "hypothesis": "43.6% WR with 6:1 R:R at -$0.23/trade",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "5",
+        "HARD_TAKE_PROFIT_PCT": "30",
+        "TT_MAX_CYCLES": "20000"
+      }
+    },
+    {
+      "id": "IDEA-081",
+      "source": "claude",
+      "timestamp": "2025-12-28T20:03:00.000000",
+      "category": "exit_strategy",
+      "title": "5K: -4%/+25% = 6.25:1 R:R",
+      "description": "Tighter stop with tighter TP",
+      "hypothesis": "May have higher hit rate with smaller targets",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "4",
+        "HARD_TAKE_PROFIT_PCT": "25"
+      }
     }
   ],
-  "next_id": 78,
-  "last_updated": "2025-12-28T22:46:13.207443"
+  "next_id": 82,
+  "last_updated": "2025-12-28T20:07:00.272906"
 }
