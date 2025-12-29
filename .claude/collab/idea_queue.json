@@ -16,8 +16,6 @@
         "PRETRAINED_VERSION": "v8_20k_validation",
         "TT_MAX_CYCLES": "20000"
       },
-      "estimated_complexity": "low",
-      "validation_test": true,
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T18:24:11.869353"
@@ -41,8 +39,6 @@
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
-      "estimated_complexity": "low",
-      "validation_test": true,
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T18:24:11.869353"
@@ -64,13 +60,64 @@
         "PRETRAINED_VERSION": "v8_lower_gate",
         "TRAIN_MIN_CONF": "0.15"
       },
-      "estimated_complexity": "low",
       "lock": {
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2025-12-28T18:24:11.869353"
       }
+    },
+    {
+      "id": "IDEA-057",
+      "source": "claude",
+      "timestamp": "2025-12-28T17:10:00.000000",
+      "category": "exit_strategy",
+      "title": "Pretrained + wider take profit (+20%)",
+      "description": "Use pretrained model with wider take profit to capture more upside",
+      "hypothesis": "With selective entries, let winners run longer",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_TAKE_PROFIT_PCT": "20"
+      },
+      "estimated_complexity": "low"
+    },
+    {
+      "id": "IDEA-058",
+      "source": "claude",
+      "timestamp": "2025-12-28T17:10:00.000000",
+      "category": "exit_strategy",
+      "title": "Pretrained + faster exits (max 30 min hold)",
+      "description": "Reduce max hold time from 45 to 30 minutes",
+      "hypothesis": "Faster exits may reduce theta decay losses",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "TT_MAX_HOLD_MINUTES": "30"
+      },
+      "estimated_complexity": "low"
+    },
+    {
+      "id": "IDEA-059",
+      "source": "claude",
+      "timestamp": "2025-12-28T17:10:00.000000",
+      "category": "exit_strategy",
+      "title": "Pretrained + balanced exits (-6%/+18%)",
+      "description": "Balanced risk/reward ratio with pretrained filtering",
+      "hypothesis": "3:1 reward/risk ratio with quality entries should improve P&L",
+      "priority": "high",
+      "status": "pending",
+      "files_to_modify": [],
+      "env_vars": {
+        "LOAD_PRETRAINED": "1",
+        "HARD_STOP_LOSS_PCT": "6",
+        "HARD_TAKE_PROFIT_PCT": "18"
+      },
+      "estimated_complexity": "low"
     }
   ],
-  "next_id": 57,
-  "last_updated": "2025-12-28T18:24:11.869353"
+  "next_id": 60,
+  "last_updated": "2025-12-28T17:10:00.000000"
 }
