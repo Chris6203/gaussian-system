@@ -429,19 +429,20 @@
       "description": "Validate the ONLY profitable configuration over 20K cycles",
       "hypothesis": "IDEA-078 showed +$0.27/trade profit at 5K - validate at scale",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "4",
         "HARD_TAKE_PROFIT_PCT": "30",
         "TT_MAX_CYCLES": "20000"
       },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T22:36:31.191869"
+      "last_result": {
+        "exp_id": "EXP-0034",
+        "per_trade_pnl": -1.703820224719101,
+        "win_rate": 41.6
       }
     }
   ],
   "next_id": 83,
-  "last_updated": "2025-12-28T22:36:31.191869"
+  "last_updated": "2025-12-29T00:06:47.972239"
 }

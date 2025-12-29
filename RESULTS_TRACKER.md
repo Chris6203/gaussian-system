@@ -2140,6 +2140,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0034: 20K validation: -4%/+30% PROFITABLE CONFIG (2025-12-29 00:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 41.6% |
+| P&L | -3.03% |
+| Per-Trade P&L | $-1.70 |
+| Trades | 89 |
+| Run Dir | `models/EXP-0034_IDEA-082` |
+
+**Source**: CLAUDE
+**Category**: validation
+**Hypothesis**: IDEA-078 showed +$0.27/trade profit at 5K - validate at scale
+**Result**: FAIL
+
+---
+
+
 ### EXP-0033: 5K: -4%/+25% = 6.25:1 R:R (2025-12-29 00:38)
 
 | Metric | Quick Test (5K) |
