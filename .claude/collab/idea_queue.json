@@ -7,37 +7,55 @@
       "category": "validation",
       "title": "20K validation of protected pretrained",
       "status": "in_progress",
-      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T18:24:11.869353"}
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T18:24:11.869353"
+      }
     },
     {
       "id": "IDEA-055",
       "source": "claude",
       "status": "in_progress",
-      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T18:24:11.869353"}
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T18:24:11.869353"
+      }
     },
     {
       "id": "IDEA-056",
       "source": "claude",
       "status": "in_progress",
-      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T18:24:11.869353"}
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T18:24:11.869353"
+      }
     },
     {
       "id": "IDEA-057",
       "source": "claude",
       "status": "in_progress",
-      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T20:08:13.950556"}
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T20:08:13.950556"
+      }
     },
     {
       "id": "IDEA-058",
       "source": "claude",
       "status": "in_progress",
-      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T20:08:13.950556"}
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T20:08:13.950556"
+      }
     },
     {
       "id": "IDEA-059",
       "source": "claude",
       "status": "in_progress",
-      "lock": {"machine_id": "lrn-ai-serv1", "locked_at": "2025-12-28T20:08:13.950556"}
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2025-12-28T20:08:13.950556"
+      }
     },
     {
       "id": "IDEA-060",
@@ -48,10 +66,14 @@
       "description": "Quick test with pretrained and much wider take profit",
       "hypothesis": "Selective entries may benefit from letting winners run even longer",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_TAKE_PROFIT_PCT": "25"
+      },
+      "lock": {
+        "machine_id": "win-desktop",
+        "locked_at": "2025-12-28T17:16:54.978655"
       }
     },
     {
@@ -87,5 +109,5 @@
     }
   ],
   "next_id": 63,
-  "last_updated": "2025-12-28T17:15:00.000000"
+  "last_updated": "2025-12-28T17:16:54.978655"
 }
