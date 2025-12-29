@@ -366,15 +366,16 @@
       "description": "Push stop even tighter",
       "hypothesis": "High R:R with very tight stops",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_PRETRAINED": "1",
         "HARD_STOP_LOSS_PCT": "3",
         "HARD_TAKE_PROFIT_PCT": "30"
       },
-      "lock": {
-        "machine_id": "win-desktop",
-        "locked_at": "2025-12-28T20:32:18.547330"
+      "last_result": {
+        "exp_id": "EXP-0032",
+        "per_trade_pnl": -10.006874999999999,
+        "win_rate": 46.8
       }
     },
     {
@@ -412,5 +413,5 @@
     }
   ],
   "next_id": 82,
-  "last_updated": "2025-12-28T20:32:18.547330"
+  "last_updated": "2025-12-28T20:57:04.323277"
 }
