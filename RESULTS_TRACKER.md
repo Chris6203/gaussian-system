@@ -6,11 +6,59 @@ Track configuration changes and their impact on performance.
 
 | Run | Date | Entry Controller | Win Rate | P&L | Trades | Cycles | Notes |
 |-----|------|------------------|----------|-----|--------|--------|-------|
-| **dec_validation_v2** | 2025-12-24 | pretrained | **59.8%** | **+$20,670 (+413%)** | 61 | 2,995 | **CURRENT BEST** - Pretrained on 3mo, tested Dec 2025 |
+| **v3_10k_validation** | 2025-12-30 | V3 multi-horizon | 34.5% | **+$66,362 (+1327%)** | 1,552 | 10,000 | **NEW BEST** - V3 Multi-Horizon Predictor |
+| transformer_10k_validation | 2025-12-30 | transformer encoder | 34.5% | +$40,075 (+801%) | 2,260 | 10,000 | Transformer encoder test |
+| dec_validation_v2 | 2025-12-24 | pretrained | 59.8% | +$20,670 (+413%) | 61 | 2,995 | Previous best - Pretrained on 3mo |
 | run_20251220_073149 | 2025-12-20 | bandit (default) | 40.9% | +$4,264 (+85%) | 7,407 | 23,751 | Previous best - Long run baseline |
 | run_20251220_120723 | 2025-12-20 | bandit | 36.6% | +$2,129 (+42.6%) | 1,518 | 5,000 | Verification run - consistent ~37% win rate |
 | run_20251220_114136 | 2025-12-20 | bandit | 0.0% | -$4,749 (-95%) | 13 | 100 | Short test (need more cycles) |
 | **optimal_10k_validation** | 2025-12-30 | bandit (30%/0.13%) | 29.9% | **-$90 (-1.8%)** | 87 | 10,000 | **Phase 27 BEST** - Optimal threshold tuning |
+
+---
+
+## Phase 28: Architecture Improvements (2025-12-30) - **NEW BEST!**
+
+### Goal
+Test unused modular components: V3 Multi-Horizon Predictor and Transformer encoder.
+
+### Key Discovery
+The V3 Multi-Horizon Predictor was already implemented but **never wired up** to the factory function!
+
+### Changes Made
+- Added `v3_multi_horizon` to `create_predictor()` factory in `bot_modules/neural_networks.py`
+- Can now use `PREDICTOR_ARCH=v3_multi_horizon` env var
+
+### Test Results (10K Cycles)
+
+| Architecture | P&L | Win Rate | Trades | Per-Trade P&L |
+|--------------|-----|----------|--------|---------------|
+| **V3 Multi-Horizon** | **+1327%** 🥇 | 34.5% | 1,552 | **+$42.76** |
+| **Transformer** | **+801%** 🥈 | 34.5% | 2,260 | **+$17.73** |
+| Phase 27 Baseline | -1.8% | 29.9% | 87 | -$1.04 |
+
+### Why V3 Works Better
+
+1. **Multi-Horizon Predictions**: Predicts at 5m, 15m, 30m, 45m horizons
+2. **Solves Horizon Misalignment**: No longer predicting 15min but holding 45min
+3. **Backward Compatible**: Default outputs mapped to 15m for existing code
+4. **Same Architecture**: Uses same TCN/Bayesian heads, just more output heads
+
+### Configuration
+
+```bash
+# Use V3 Multi-Horizon Predictor (NEW BEST)
+PREDICTOR_ARCH=v3_multi_horizon python scripts/train_time_travel.py
+
+# Use Transformer Encoder (also improved)
+TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+
+# Combine both (untested)
+PREDICTOR_ARCH=v3_multi_horizon TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+```
+
+### Recommendation
+
+**V3 Multi-Horizon is now the recommended predictor architecture.**
 
 ---
 

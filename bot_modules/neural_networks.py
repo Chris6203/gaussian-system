@@ -946,18 +946,29 @@ def create_predictor(
 ) -> nn.Module:
     """
     Factory function to create predictor based on architecture config.
-    
+
     Args:
-        arch: "v1_original" or "v2_slim_bayesian"
+        arch: "v1_original", "v2_slim_bayesian", or "v3_multi_horizon"
         feature_dim: Input feature dimension
         sequence_length: Temporal sequence length
         use_gaussian_kernels: Enable RBF kernel features
         use_mamba: Use TCN (True) or LSTM (False)
-        
+
     Returns:
         Predictor model instance
     """
-    if arch == "v2_slim_bayesian":
+    # Allow env var override for easy testing
+    arch = os.environ.get('PREDICTOR_ARCH', arch)
+
+    if arch == "v3_multi_horizon":
+        logger.info(f"Creating V3 Multi-Horizon Predictor (horizons: 5m, 15m, 30m, 45m)")
+        return UnifiedOptionsPredictorV3(
+            feature_dim=feature_dim,
+            sequence_length=sequence_length,
+            use_gaussian_kernels=use_gaussian_kernels,
+            use_mamba=use_mamba,
+        )
+    elif arch == "v2_slim_bayesian":
         return UnifiedOptionsPredictorV2(
             feature_dim=feature_dim,
             sequence_length=sequence_length,
