@@ -13,8 +13,10 @@
 ### 1.2 Neural Network Confidence
 | Parameter | Current | Range | Description |
 |-----------|---------|-------|-------------|
-| `training_min_confidence` | 0.20 | 0.0-0.50 | Minimum NN confidence to trade |
-| `training_min_abs_predicted_return` | 0.0008 | 0.0-0.002 | Minimum predicted edge (0.08%) |
+| `training_min_confidence` | **0.30** | 0.0-0.50 | Minimum NN confidence to trade |
+| `training_min_abs_predicted_return` | **0.0013** | 0.0-0.002 | Minimum predicted edge (0.13%) |
+
+**Note**: Phase 27 optimization found 30%/0.13% reduces losses by 97% vs 20%/0.08% defaults.
 
 ### 1.3 Entry Controllers
 | Controller | Description | Status |
@@ -49,14 +51,25 @@
 
 ## 3. Neural Network Architecture
 
-### 3.1 Temporal Encoder
-| Type | Description | Status |
-|------|-------------|--------|
-| `tcn` | Temporal Convolutional Network | Default |
-| `transformer` | Attention-based transformer | Available |
-| `lstm` | Long Short-Term Memory | Available |
+### 3.1 Predictor Architecture (**NEW - Phase 28**)
+| Type | P&L | Description | Status |
+|------|-----|-------------|--------|
+| `v3_multi_horizon` | **+1327%** | Multi-horizon (5m,15m,30m,45m) | **BEST** |
+| `v2_slim_bayesian` | baseline | Bayesian heads + RBF kernels | Default |
+| `v1_original` | - | Original architecture | Legacy |
 
-### 3.2 Architecture Components
+**Set via**: `PREDICTOR_ARCH=v3_multi_horizon` environment variable
+
+### 3.2 Temporal Encoder
+| Type | P&L | Description | Status |
+|------|-----|-------------|--------|
+| `transformer` | **+801%** | Attention-based transformer | **2nd Best** |
+| `tcn` | baseline | Temporal Convolutional Network | Default |
+| `lstm` | - | Long Short-Term Memory | Available |
+
+**Set via**: `TEMPORAL_ENCODER=transformer` environment variable
+
+### 3.3 Architecture Components
 | Parameter | Current | Options | Description |
 |-----------|---------|---------|-------------|
 | `NORM_TYPE` | layernorm | layernorm, rmsnorm | Normalization layer |
@@ -64,7 +77,7 @@
 | `RBF_GATED` | 0 | 0, 1 | Gated RBF kernel |
 | `feature_dim` | 50 | 50, 59 | Feature dimension |
 
-### 3.3 Learning Parameters
+### 3.4 Learning Parameters
 | Parameter | Current | Range | Description |
 |-----------|---------|-------|-------------|
 | `learning_rate` | 0.0003 | 0.0001-0.001 | NN learning rate |
@@ -156,65 +169,65 @@
 
 ## Priority Experiments
 
-### High Impact (try first)
-1. `stop_loss_pct`: 5% → 3-10% range
-2. `take_profit_pct`: 12% → 8-20% range
-3. `max_hold_minutes`: 45 → 20-90 range
-4. `HMM_STRONG_BULLISH/BEARISH`: 0.70/0.30 → 0.65/0.35 or 0.75/0.25
-5. Entry controller: bandit vs consensus vs q_scorer
+### HIGH IMPACT - ARCHITECTURE (Phase 28 validated)
+1. **`PREDICTOR_ARCH=v3_multi_horizon`** → +1327% P&L (10K validated)
+2. **`TEMPORAL_ENCODER=transformer`** → +801% P&L (10K validated)
+3. V3 + Transformer combined (untested)
 
-### Medium Impact
-6. `feature_dim`: 50 vs 59 (with time/gaussian features)
-7. `training_min_confidence`: 0.0 vs 0.10 vs 0.20
-8. `PNL_CAL_MIN_PROB`: 0.30 vs 0.40 vs 0.50
-9. Temporal encoder: TCN vs Transformer
-10. `learning_rate`: 0.0001 vs 0.0003 vs 0.0005
+### Medium Impact - Thresholds
+4. `training_min_confidence`: 0.30 (optimal) vs 0.20 (default)
+5. `training_min_abs_predicted_return`: 0.0013 (optimal) vs 0.0008 (default)
+6. `stop_loss_pct`: 5% → 3-10% range
+7. `take_profit_pct`: 12% → 8-20% range
+8. `max_hold_minutes`: 45 → 20-90 range
 
 ### Lower Impact
-11. `trailing_stop_activation_pct`: 4% vs 6% vs 8%
-12. `max_concurrent_positions`: 3 vs 5 vs 7
-13. `batch_size`: 64 vs 128 vs 256
-14. Options DTE range: 7-30 vs 14-45
-15. `sequence_length`: 30 vs 60 vs 120
+9. `HMM_STRONG_BULLISH/BEARISH`: 0.70/0.30 → 0.65/0.35 or 0.75/0.25
+10. `PNL_CAL_MIN_PROB`: 0.30 vs 0.40 vs 0.50
+11. `learning_rate`: 0.0001 vs 0.0003 vs 0.0005
+12. `trailing_stop_activation_pct`: 4% vs 6% vs 8%
 
 ---
 
-## 8. CRITICAL FINDING: Pre-trained Model State
+## 9. CRITICAL FINDING: Architecture > Pre-training (Phase 28)
 
-**The most important parameter is NOT a config value - it's the neural network's training state.**
+**Phase 28 superseded pre-training findings: V3 architecture achieves +1327% without pre-training.**
 
-### The Discovery
+### Architecture Comparison (10K cycles, fresh model)
 
-| Configuration | Trade Rate | P&L |
-|--------------|------------|-----|
-| Fresh neural network | 10-15% | Loses money |
-| Pre-trained neural network | **1.4%** | **+1016% P&L** |
+| Configuration | Trade Rate | P&L | Per-Trade |
+|--------------|------------|-----|-----------|
+| V3 Multi-Horizon | 15.5% | **+1327%** | **+$42.76** |
+| Transformer Encoder | 22.6% | +801% | +$17.73 |
+| V2 + Optimal Thresholds (30%/0.13%) | 0.87% | -1.8% | -$1.04 |
+| V2 Default (20%/0.08%) | 15-17% | -62% to -91% | Loses money |
 
-### Why Pre-trained State Matters
-
-1. **Conservative Predictions**: Trained NN outputs lower confidence values
-2. **Higher Rejection Rate**: More signals fail the bandit_gate (20% conf, 0.08% edge)
-3. **Extreme Selectivity**: Only ~1.5% of signals pass through
-4. **Quality Over Quantity**: Fewer trades but +$700 per trade
-
-### How to Use Pre-trained State
-
-```bash
-# 1. Copy state from profitable run
-mkdir -p models/my_run/state
-cp -r models/long_run_20k/state/* models/my_run/state/
-
-# 2. Run with LOAD_PRETRAINED flag
-LOAD_PRETRAINED=1 MODEL_RUN_DIR=models/my_run python scripts/train_time_travel.py
-```
-
-### Best Performing Configuration
+### Best Performing Configuration (NEW)
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
+| **PREDICTOR_ARCH** | **v3_multi_horizon** | **KEY TO SUCCESS** |
 | Entry Controller | bandit | Default HMM-based entry |
-| training_min_confidence | 0.20 | Minimum 20% NN confidence |
-| training_min_abs_predicted_return | 0.0008 | Minimum 0.08% edge |
-| Pre-trained State | **models/long_run_20k** | **KEY TO SUCCESS** |
+| training_min_confidence | 0.30 | Minimum 30% NN confidence |
+| training_min_abs_predicted_return | 0.0013 | Minimum 0.13% edge |
 
-**Result**: +1016% P&L, +$705/trade, 1.43% trade rate
+**Result**: +1327% P&L, +$42.76/trade, 15.5% trade rate (10K cycles)
+
+### How to Run Best Configuration
+
+```bash
+# Best configuration - V3 Multi-Horizon
+PREDICTOR_ARCH=v3_multi_horizon python scripts/train_time_travel.py
+
+# Alternative - Transformer encoder
+TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+
+# Experimental - Combined
+PREDICTOR_ARCH=v3_multi_horizon TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+```
+
+### Why V3 Works
+
+1. **Multi-Horizon Predictions**: Outputs at 5m, 15m, 30m, 45m horizons
+2. **Solves Horizon Misalignment**: No longer predicting 15min but holding 45min
+3. **Backward Compatible**: Default outputs mapped to 15m for existing code

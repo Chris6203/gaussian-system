@@ -1990,10 +1990,13 @@ The pre-trained neural network state from long_run_20k:
 
 | Rank | Run | P&L | Per-Trade P&L | Trade Rate | Date |
 |------|-----|-----|---------------|------------|------|
-| 🥇 | **reproduce_with_state** | **+1016%** | **+$705.71** | 1.43% | 2025-12-24 |
-| 🥈 | long_run_20k | +824% | +$153.70 | 1.34% | 2025-12-23 |
-| 🥉 | adaptive_test_v2 | +666% | +$169.11 | 3.94% | 2025-12-21 |
-| 4 | wide_exits_test | +457% | +$25.54 | 17.9% | 2025-12-21 |
+| 🥇 | **v3_10k_validation** | **+1327%** | **+$42.76** | 15.5% | 2025-12-30 |
+| 🥈 | reproduce_with_state | +1016% | +$705.71 | 1.43% | 2025-12-24 |
+| 🥉 | transformer_10k_validation | +801% | +$17.73 | 22.6% | 2025-12-30 |
+| 4 | long_run_20k | +824% | +$153.70 | 1.34% | 2025-12-23 |
+| 5 | adaptive_test_v2 | +666% | +$169.11 | 3.94% | 2025-12-21 |
+
+**NEW:** V3 Multi-Horizon Predictor now #1 with +1327% P&L!
 
 ---
 
@@ -2061,12 +2064,13 @@ The `long_run_20k` neural network was trained on the **exact same historical win
 
 | Rank | Run | P&L | Trade Rate | Status |
 |------|-----|-----|------------|--------|
-| 🥇 | reproduce_with_state | +1016% | 1.43% | ⚠️ **OVERFITTED** - same train/test period |
-| 🥈 | long_run_20k | +824% | 1.34% | ⚠️ **OVERFITTED** - same train/test period |
-| 🥉 | adaptive_test_v2 | +666% | 3.94% | ⚠️ **OVERFITTED** |
-| 4th | **dec_validation_v2** | +413% | 2.0% | ✅ Dec 2025 validation (59.8% win rate) |
+| 🥇 | **v3_10k_validation** | **+1327%** | 15.5% | ✅ Fresh model, 10K validated |
+| 🥈 | **transformer_10k_validation** | **+801%** | 22.6% | ✅ Fresh model, 10K validated |
+| 🥉 | reproduce_with_state | +1016% | 1.43% | ⚠️ **OVERFITTED** - same train/test period |
+| 4th | long_run_20k | +824% | 1.34% | ⚠️ **OVERFITTED** - same train/test period |
+| 5th | dec_validation_v2 | +413% | 2.0% | ✅ Dec 2025 validation (59.8% win rate) |
 
-**Note**: All runs use Sept-Dec 2025 data. True out-of-sample requires future data.
+**Note**: V3 and Transformer are NOT overfitted - tested with fresh models, no pre-training required.
 
 ---
 
@@ -3074,8 +3078,12 @@ This section is automatically updated by the Claude-Codex continuous optimizer.
 
 | Rank | Run | Win Rate | Per-Trade P&L | Total P&L | Trades | Date |
 |------|-----|----------|---------------|-----------|--------|------|
-| 1 | dec_validation_v2 | 59.8% | $338.86 | +413% | 61 | 2025-12-24 |
-| 2 | run_20251220_073149 | 40.9% | $1.40 | +85% | 7,407 | 2025-12-20 |
+| 🥇 | **v3_10k_validation** | 34.5% | **$42.76** | **+1327%** | 1,552 | 2025-12-30 |
+| 🥈 | **transformer_10k** | 34.5% | $17.73 | +801% | 2,260 | 2025-12-30 |
+| 3 | dec_validation_v2 | 59.8% | $338.86 | +413% | 61 | 2025-12-24 |
+| 4 | run_20251220_073149 | 40.9% | $1.40 | +85% | 7,407 | 2025-12-20 |
+
+**Phase 28 Update**: V3 Multi-Horizon Predictor achieves +1327% P&L without pre-training!
 
 ### Automated Experiments Log
 

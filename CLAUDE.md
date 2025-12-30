@@ -6,22 +6,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Gaussian Options Trading Bot** - an algorithmic SPY options trading system combining:
 - Bayesian neural networks with Gaussian kernel processors for price/volatility prediction
+- **V3 Multi-Horizon Predictor** (5m, 15m, 30m, 45m predictions) - **NEW BEST: +1327% P&L**
 - Multi-dimensional HMM (3×3×3 = 27 states) for market regime detection
 - Multiple entry controllers: bandit (default), RL (PPO), Q-Scorer, consensus
 - Paper trading and live execution via Tradier API
 
-The system uses a modular V2 architecture with clear separation between prediction, decision-making, and execution layers.
+The system uses a modular architecture with swappable predictors and temporal encoders.
 
 ## Common Commands
 
 ### Training & Simulation
 
 ```bash
-# Time-travel training (historical replay - PRIMARY training method)
+# BEST CONFIGURATION - V3 Multi-Horizon Predictor (+1327% P&L in 10K test)
+PREDICTOR_ARCH=v3_multi_horizon python scripts/train_time_travel.py
+
+# Alternative - Transformer encoder (+801% P&L in 10K test)
+TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+
+# Combined (experimental)
+PREDICTOR_ARCH=v3_multi_horizon TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+
+# Standard time-travel training (default V2 predictor)
 python scripts/train_time_travel.py
 
-# With environment overrides (Windows)
-set MODEL_RUN_DIR=models/my_test && set TT_MAX_CYCLES=5000 && set PAPER_TRADING=True && python scripts/train_time_travel.py
+# With environment overrides
+MODEL_RUN_DIR=models/my_test TT_MAX_CYCLES=5000 PAPER_TRADING=True python scripts/train_time_travel.py
 
 # Train predictor (Phase 1: supervised)
 python scripts/train_predictor.py --output models/predictor_v2.pt --arch v2_slim_bayesian
