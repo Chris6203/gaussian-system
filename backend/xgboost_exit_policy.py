@@ -85,6 +85,15 @@ class XGBoostExitConfig:
     min_hold_minutes_for_exit: float = 10.0  # Don't consider exit before 10 min
     min_hold_for_profit_exit: float = 5.0  # Min hold even for profits
 
+    # FASTER LOSS CUTTING (Phase 26 improvement)
+    # Analysis showed losers held 8x longer than winners (240min vs 30min)
+    # These rules ensure losing trades are cut faster
+    fast_loss_cut_enabled: bool = True
+    fast_loss_cut_minutes: float = 30.0  # If losing + held > 30 min, consider exiting
+    fast_loss_threshold_pct: float = -2.0  # If down 2%+ after 30min, exit
+    deep_loss_cut_minutes: float = 15.0  # If down 5%+, cut even faster
+    deep_loss_threshold_pct: float = -5.0
+
 
 def _load_exit_config_from_file() -> Dict:
     """Load exit config from config.json file."""
@@ -130,6 +139,23 @@ class XGBoostExitPolicy:
                 self.config.min_hold_for_profit_exit = float(file_cfg['min_hold_for_profit_exit'])
             logger.info(f"[XGBOOST] Loaded exit config from config.json")
             logger.info(f"   • Min profit for exit: {self.config.min_profit_for_exit:.1f}%")
+
+        # Environment variable overrides for Phase 26 fast loss cutting
+        if os.environ.get('FAST_LOSS_CUT_ENABLED'):
+            self.config.fast_loss_cut_enabled = os.environ.get('FAST_LOSS_CUT_ENABLED', '1') == '1'
+        if os.environ.get('FAST_LOSS_CUT_MINUTES'):
+            self.config.fast_loss_cut_minutes = float(os.environ['FAST_LOSS_CUT_MINUTES'])
+        if os.environ.get('FAST_LOSS_THRESHOLD_PCT'):
+            self.config.fast_loss_threshold_pct = float(os.environ['FAST_LOSS_THRESHOLD_PCT'])
+        if os.environ.get('DEEP_LOSS_CUT_MINUTES'):
+            self.config.deep_loss_cut_minutes = float(os.environ['DEEP_LOSS_CUT_MINUTES'])
+        if os.environ.get('DEEP_LOSS_THRESHOLD_PCT'):
+            self.config.deep_loss_threshold_pct = float(os.environ['DEEP_LOSS_THRESHOLD_PCT'])
+
+        if self.config.fast_loss_cut_enabled:
+            logger.info(f"[XGBOOST] Fast loss cutting ENABLED")
+            logger.info(f"   • Standard cut: {self.config.fast_loss_threshold_pct:.1f}% after {self.config.fast_loss_cut_minutes:.0f}m")
+            logger.info(f"   • Deep cut: {self.config.deep_loss_threshold_pct:.1f}% after {self.config.deep_loss_cut_minutes:.0f}m")
 
         # Experience storage
         self.experiences: List[ExitExperience] = []
@@ -204,31 +230,42 @@ class XGBoostExitPolicy:
                          high_water_mark: float) -> Tuple[bool, float, str]:
         """Fallback simple rules when ML not ready"""
         cfg = self.config
-        
+
         # Take profit
         if pnl_pct >= cfg.fallback_take_profit:
             return True, 0.95, f'💰 TAKE PROFIT (rule): +{pnl_pct:.1f}%'
-        
+
         # Stop loss
         if pnl_pct <= cfg.fallback_stop_loss:
             return True, 0.99, f'🛑 STOP LOSS (rule): {pnl_pct:.1f}%'
-        
+
+        # === FASTER LOSS CUTTING (Phase 26 improvement) ===
+        # Analysis showed losers held 8x longer than winners (240min vs 30min)
+        if cfg.fast_loss_cut_enabled:
+            # Deep loss cut: If down 5%+ for 15+ minutes, cut immediately
+            if pnl_pct <= cfg.deep_loss_threshold_pct and time_held_minutes >= cfg.deep_loss_cut_minutes:
+                return True, 0.92, f'🔪 FAST CUT (deep): {pnl_pct:.1f}% after {time_held_minutes:.0f}m'
+
+            # Standard loss cut: If down 2%+ for 30+ minutes, cut
+            if pnl_pct <= cfg.fast_loss_threshold_pct and time_held_minutes >= cfg.fast_loss_cut_minutes:
+                return True, 0.88, f'🔪 FAST CUT: {pnl_pct:.1f}% after {time_held_minutes:.0f}m'
+
         # Trailing stop (if was +5%, don't let it go below +2%)
         if high_water_mark >= 5.0 and pnl_pct < 2.0:
             return True, 0.85, f'📉 TRAIL STOP (rule): was +{high_water_mark:.1f}%, now +{pnl_pct:.1f}%'
-        
+
         # Time exit
         if time_held_minutes >= cfg.fallback_max_hold_minutes:
             return True, 0.80, f'⏰ TIME EXIT (rule): {time_held_minutes:.0f}m'
-        
+
         # Near expiry
         if days_to_expiry < 1:
             return True, 0.90, f'📅 EXPIRY EXIT (rule): {days_to_expiry} days'
-        
+
         # Quick scalp
         if time_held_minutes <= 5 and pnl_pct >= 3.0:
             return True, 0.85, f'⚡ SCALP (rule): +{pnl_pct:.1f}% in {time_held_minutes:.0f}m'
-        
+
         return False, 0.3, f'✋ HOLD (rule): P&L {pnl_pct:+.1f}%'
     
     def should_exit(self,
@@ -311,6 +348,35 @@ class XGBoostExitPolicy:
                 'method': 'hard_rule',
                 'pnl_pct': current_pnl_pct,
             }
+
+        # === FAST LOSS CUTTING (Phase 26 - HARD RULE, OVERRIDES XGBOOST) ===
+        # Analysis showed losers held 8x longer than winners - cut losses faster
+        cfg = self.config
+        if cfg.fast_loss_cut_enabled and current_pnl_pct < 0:
+            # Deep loss cut: If down 5%+ for 15+ minutes, cut immediately
+            if current_pnl_pct <= cfg.deep_loss_threshold_pct and time_held_minutes >= cfg.deep_loss_cut_minutes:
+                self.stats['total_exits'] += 1
+                self.stats['rule_exits'] += 1
+                return True, 0.92, {
+                    'should_exit': True,
+                    'exit_score': 0.92,
+                    'reason': f'🔪 FAST CUT (deep): {current_pnl_pct:.1f}% after {time_held_minutes:.0f}m',
+                    'method': 'fast_loss_cut',
+                    'pnl_pct': current_pnl_pct,
+                }
+
+            # Standard loss cut: If down 2%+ for 30+ minutes, cut
+            if current_pnl_pct <= cfg.fast_loss_threshold_pct and time_held_minutes >= cfg.fast_loss_cut_minutes:
+                self.stats['total_exits'] += 1
+                self.stats['rule_exits'] += 1
+                return True, 0.88, {
+                    'should_exit': True,
+                    'exit_score': 0.88,
+                    'reason': f'🔪 FAST CUT: {current_pnl_pct:.1f}% after {time_held_minutes:.0f}m',
+                    'method': 'fast_loss_cut',
+                    'pnl_pct': current_pnl_pct,
+                }
+        # === END FAST LOSS CUTTING ===
 
         # ANTI-PREMATURE EXIT GATES: Don't let XGBoost exit too early or at tiny profits
         # Gate 1: Minimum hold time (except for losses)

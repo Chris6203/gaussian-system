@@ -795,7 +795,8 @@ class PaperTradingSystem:
                     tradier_option_symbol TEXT,
                     tradier_order_id TEXT,
                     is_real_trade INTEGER DEFAULT 0,
-                    live_blocked_reason TEXT
+                    live_blocked_reason TEXT,
+                    exit_reason TEXT
                 )
             ''')
 
@@ -2855,6 +2856,29 @@ class PaperTradingSystem:
             base_position_value = float(self.initial_balance) * float(self.position_size_pct)
             max_position_value = float(sizing_balance) * float(self.max_position_size_per_trade)
             position_value = min(base_position_value, max_position_value)
+
+            # === DRAWDOWN-BASED POSITION SCALING (Phase 26 improvement) ===
+            # Reduce position size during drawdowns to preserve capital
+            drawdown_scale_enabled = os.environ.get('DRAWDOWN_SCALE_ENABLED', '1') == '1'
+            if drawdown_scale_enabled and not self._training_unlimited_funds():
+                try:
+                    peak_balance = max(self.initial_balance + getattr(self, 'total_profit_loss', 0), self.initial_balance)
+                    current_drawdown_pct = ((peak_balance - self.current_balance) / peak_balance) * 100 if peak_balance > 0 else 0
+
+                    # Scaling thresholds (configurable via env vars)
+                    half_size_dd = float(os.environ.get('DRAWDOWN_HALF_SIZE_PCT', '10'))  # Half size at 10% drawdown
+                    quarter_size_dd = float(os.environ.get('DRAWDOWN_QUARTER_SIZE_PCT', '20'))  # Quarter size at 20% drawdown
+
+                    if current_drawdown_pct >= quarter_size_dd:
+                        position_value *= 0.25
+                        self.logger.info(f"⚠️ QUARTER SIZE: {current_drawdown_pct:.1f}% drawdown (>{quarter_size_dd}%)")
+                    elif current_drawdown_pct >= half_size_dd:
+                        position_value *= 0.50
+                        self.logger.info(f"⚠️ HALF SIZE: {current_drawdown_pct:.1f}% drawdown (>{half_size_dd}%)")
+                except Exception as e:
+                    self.logger.debug(f"Drawdown scaling skipped: {e}")
+            # === END DRAWDOWN-BASED SCALING ===
+
             quantity = max(1, int(position_value / (premium * 100)))
             self.logger.info(f"📊 Simple sizing: {quantity} contracts")
         
@@ -3751,14 +3775,14 @@ class PaperTradingSystem:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT OR REPLACE INTO trades 
-                (id, timestamp, symbol, option_type, strike_price, premium_paid, 
-                 quantity, entry_price, exit_price, exit_timestamp, status, 
-                 profit_loss, stop_loss, take_profit, ml_confidence, ml_prediction, 
+                INSERT OR REPLACE INTO trades
+                (id, timestamp, symbol, option_type, strike_price, premium_paid,
+                 quantity, entry_price, exit_price, exit_timestamp, status,
+                 profit_loss, stop_loss, take_profit, ml_confidence, ml_prediction,
                  expiration_date, created_at, projected_profit, projected_return_pct,
-                 planned_exit_time, max_hold_hours, tradier_option_symbol, 
-                 tradier_order_id, is_real_trade, live_blocked_reason)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 planned_exit_time, max_hold_hours, tradier_option_symbol,
+                 tradier_order_id, is_real_trade, live_blocked_reason, exit_reason)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 trade.id,
                 trade.timestamp.isoformat(),
@@ -3785,7 +3809,8 @@ class PaperTradingSystem:
                 getattr(trade, 'tradier_option_symbol', None),
                 getattr(trade, 'tradier_order_id', None),
                 getattr(trade, 'is_real_trade', False),
-                getattr(trade, 'live_blocked_reason', None)
+                getattr(trade, 'live_blocked_reason', None),
+                getattr(trade, 'exit_reason', None)
             ))
             conn.commit()
 

@@ -1005,10 +1005,10 @@ try:
     # Training quality gates (prevent trading noise that can't beat spread/fees)
     bot_config.config.setdefault("architecture", {}).setdefault("entry_policy", {})
     entry_cfg = bot_config.config["architecture"]["entry_policy"]
-    # Defaults tuned to ensure we actually generate trades/experiences.
-    # If these are too strict, bandit mode will skip nearly everything and RL never learns.
-    entry_cfg.setdefault("training_min_confidence", 0.15)              # 15%
-    entry_cfg.setdefault("training_min_abs_predicted_return", 0.0005)  # 0.05% underlying move
+    # Defaults tuned for optimal selectivity (Phase 26 optimization: -1.8% vs -62% baseline)
+    # Higher thresholds = fewer trades = less losses. Sweet spot: 30% conf, 0.13% edge
+    entry_cfg.setdefault("training_min_confidence", 0.30)              # 30% (was 15%)
+    entry_cfg.setdefault("training_min_abs_predicted_return", 0.0013)  # 0.13% (was 0.05%)
 
     # Allow env overrides (fast iteration without editing config.json)
     try:
@@ -2914,6 +2914,15 @@ for idx, sim_time in enumerate(common_times):
                 elif unified_rl.is_bandit_mode:
                     # Just follow the signal's action in training mode
                     if action in ['BUY_CALLS', 'BUY_PUTS']:
+                        # === SIGNAL INVERSION TEST (Phase 26) ===
+                        # If win rate is ~37%, inverting should give ~63%
+                        INVERT_SIGNALS = os.environ.get('INVERT_SIGNALS', '0') == '1'
+                        if INVERT_SIGNALS:
+                            original_action = action
+                            action = 'BUY_PUTS' if action == 'BUY_CALLS' else 'BUY_CALLS'
+                            print(f"   [INVERTED] {original_action} → {action}")
+                        # === END SIGNAL INVERSION ===
+
                         # HMM-PURE MODE: Ignore neural predictions, use only HMM regime
                         hmm_pure = os.environ.get('HMM_PURE_MODE', '0') == '1'
                         hmm_decision_made = False
@@ -2947,9 +2956,10 @@ for idx, sim_time in enumerate(common_times):
                                 hmm_decision_made = True
 
                         # QUALITY GATES - load from config (skipped in HMM-pure mode or SKIP_QUALITY_GATES=1)
+                        # Phase 26 optimization: Higher thresholds dramatically reduce losses
                         skip_gates = os.environ.get('SKIP_QUALITY_GATES', '0') == '1'
-                        train_min_conf = 0.0 if skip_gates else 0.20  # Skip gates for reproduction testing
-                        train_min_abs_ret = 0.0 if skip_gates else 0.0008  # Skip gates for reproduction testing
+                        train_min_conf = 0.0 if skip_gates else 0.30  # 30% conf (Phase 26: -1.8% vs -62%)
+                        train_min_abs_ret = 0.0 if skip_gates else 0.0013  # 0.13% edge (Phase 26 optimal)
                         if not hmm_decision_made:
                             try:
                                 if bot_config and hasattr(bot_config, "config") and not skip_gates:
