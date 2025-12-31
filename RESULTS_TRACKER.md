@@ -20,6 +20,56 @@ Track configuration changes and their impact on performance.
 
 ---
 
+## Phase 29: Variance Analysis (2025-12-30) - **CRITICAL FINDING**
+
+### Goal
+Verify reproducibility of Phase 28's +1409% P&L result with 5% stop loss.
+
+### Test Runs
+| Test | Configuration | Cycles | P&L | Win Rate | Notes |
+|------|--------------|--------|-----|----------|-------|
+| v3_tight_stoploss | V3 + 5% stop | 10,000 | **+1409%** | 38.4% | Original |
+| v3_tight_stop_v2 | V3 + 5% stop | ~1,000 | **-91%** | ~35% | Verification (FAILED) |
+
+### Critical Finding: HIGH VARIANCE
+
+**The +1409% result is NOT reproducible.** Same configuration, same code, same date range, completely different outcome.
+
+### Exit Analysis
+
+Every single exit in the failing test was "RL Time Exit" with losses:
+```
+Reason: RL Time Exit (🔪 FAST CUT: -2.4% after 30m)
+Reason: RL Time Exit (🔪 FAST CUT: -3.1% after 30m)
+Reason: RL Time Exit (🔪 FAST CUT: -2.7% after 30m)
+...
+```
+
+**Key insight:** Trades are NOT hitting the 5% stop loss - they're timing out at 30 minutes with 2-5% losses. This means the stop loss setting has minimal impact.
+
+### Root Cause Analysis
+
+1. **Direction prediction is ~50% accurate** (no edge over random)
+2. **Trades time out before hitting stop loss** (30 min hold < 5% move)
+3. **Random seed variation** leads to completely different trade sequences
+4. **Neural network warmup** affects early trades differently each run
+
+### Implications
+
+- **Single test results are unreliable** - need multiple runs with different seeds
+- **Stop loss tuning has minimal effect** - most trades exit on time limit
+- **Win rate improvements don't translate to P&L** - proven in Phase 28
+- **The "successful" tests may be statistical flukes**
+
+### Recommendation
+
+Before claiming a configuration is "best":
+1. Run at least 3 independent tests with different seeds
+2. Use 20K+ cycles to reduce variance
+3. Report variance range, not just best result
+
+---
+
 ## Phase 28: Architecture Improvements (2025-12-30) - **NEW BEST!**
 
 ### Goal
