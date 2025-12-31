@@ -6,8 +6,10 @@ Track configuration changes and their impact on performance.
 
 | Run | Date | Entry Controller | Win Rate | P&L | Trades | Cycles | Notes |
 |-----|------|------------------|----------|-----|--------|--------|-------|
-| **v3_20k_validation** | 2025-12-30 | V3 multi-horizon | 38.9% | **+$63,833 (+1277%)** | 4,970 | 20,000 | **20K VALIDATED** ✅ |
-| **v3_10k_validation** | 2025-12-30 | V3 multi-horizon | 34.5% | +$66,362 (+1327%) | 1,552 | 10,000 | V3 Multi-Horizon Predictor |
+| **v3_tight_stoploss** | 2025-12-30 | V3 + 5% stop | 38.4% | **+$70,472 (+1409%)** | 2,456 | 10,000 | **NEW BEST** - Tight stop loss |
+| v3_5min_horizon | 2025-12-30 | V3 + 5m horizon | **39.9%** | +$60,052 (+1201%) | 2,949 | 10,000 | **Best win rate** |
+| **v3_20k_validation** | 2025-12-30 | V3 multi-horizon | 38.9% | +$63,833 (+1277%) | 4,970 | 20,000 | 20K VALIDATED ✅ |
+| v3_10k_validation | 2025-12-30 | V3 multi-horizon | 34.5% | +$66,362 (+1327%) | 1,552 | 10,000 | V3 Multi-Horizon Predictor |
 | v3_transformer_combined | 2025-12-30 | V3 + transformer | 36.8% | +$66,318 (+1326%) | 2,194 | 10,000 | No benefit over V3 alone |
 | transformer_10k_validation | 2025-12-30 | transformer encoder | 34.5% | +$40,075 (+801%) | 2,260 | 10,000 | Transformer encoder test |
 | dec_validation_v2 | 2025-12-24 | pretrained | 59.8% | +$20,670 (+413%) | 61 | 2,995 | Previous best - Pretrained on 3mo |
