@@ -23,6 +23,70 @@ Track configuration changes and their impact on performance.
 
 ---
 
+## Phase 30: Win Rate Optimization (2025-12-31)
+
+### Goal
+Improve win rate from baseline 36.4% while maintaining profitability.
+
+### Test Results (5K cycles each)
+
+| Configuration | P&L | Win Rate | Trades | Notes |
+|---------------|-----|----------|--------|-------|
+| **Short Hold (20min)** | **+1872%** | 36.8% | 1,439 | **Best P&L** |
+| Tight TP (8%) | +1507% | 38.8% | 980 | +2.4% win rate |
+| Short+TP combo | +1504% | 37.8% | 1,534 | Combined |
+| Tighter SL (4%) | +1480% | 34.6% | 1,176 | Hurts win rate |
+| High Conf (35%) | +1400% | 38.8% | 1,145 | +2.4% win rate |
+| 5min Horizon | +1231% | 36.6% | 1,373 | Baseline |
+| *Baseline mean* | *+971%* | *36.4%* | *955* | V3 + 5% stop |
+| **Early TP (6%)** | +905% | **39.6%** | 1,459 | **Best Win Rate** |
+
+### Key Findings
+
+1. **Early TP (6%)** achieved best win rate (39.6%) but lower P&L
+2. **Short Hold (20min)** achieved best P&L (+1872%)
+3. **Tight TP (8%)** and **High Conf (35%)** both improved win rate to 38.8%
+4. Tighter stop loss (4%) HURTS win rate (34.6%)
+
+### Trade-off Analysis
+
+| Metric | Baseline | Early TP (6%) | Short Hold |
+|--------|----------|---------------|------------|
+| Win Rate | 36.4% | 39.6% (+3.2%) | 36.8% |
+| P&L | +971% | +905% (-7%) | +1872% (+93%) |
+
+Early profit taking improves win rate at modest P&L cost.
+
+### Failed Combinations
+
+| Configuration | P&L | Win Rate | Notes |
+|---------------|-----|----------|-------|
+| Early TP + Short Hold | **-94%** | 35.5% | Too aggressive! |
+| Combined (5%SL + 8%TP + 35%Conf) | +324% | 36.8% | Too restrictive (137 trades) |
+
+**Lesson:** Don't combine multiple aggressive optimizations.
+
+### Recommendations
+
+**For Best Win Rate (39.6%):**
+```bash
+PREDICTOR_ARCH=v3_multi_horizon TT_STOP_LOSS_PCT=5 TT_TAKE_PROFIT_PCT=6
+```
+
+**For Best P&L (+1872%):**
+```bash
+PREDICTOR_ARCH=v3_multi_horizon TT_STOP_LOSS_PCT=5 TT_MAX_HOLD_MINUTES=20
+```
+
+**For Balance (38.8% win rate, +1400-1500% P&L):**
+```bash
+PREDICTOR_ARCH=v3_multi_horizon TT_STOP_LOSS_PCT=5 TT_TAKE_PROFIT_PCT=8
+# OR
+PREDICTOR_ARCH=v3_multi_horizon TT_STOP_LOSS_PCT=5 MIN_CONFIDENCE_TO_TRADE=0.35
+```
+
+---
+
 ## Phase 29: Variance Analysis (2025-12-30) - **VALIDATED**
 
 ### Goal
