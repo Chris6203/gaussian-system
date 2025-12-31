@@ -23,6 +23,79 @@ Track configuration changes and their impact on performance.
 
 ---
 
+## Phase 31: RSI+MACD Confirmation Filter (2025-12-31)
+
+### Goal
+Achieve 60% win rate target using technical indicator confirmation filters.
+
+### Implementation
+Added RSI+MACD confirmation filter to `scripts/train_time_travel.py`:
+- **RSI Mean Reversion**: Trade when RSI at extremes (oversold for calls, overbought for puts)
+- **MACD Confirmation**: Require MACD alignment with trade direction
+- **Volume Confirmation**: Optional volume spike filter
+- **Momentum Mode**: Optional trend-following mode (RSI>50 for calls, RSI<50 for puts)
+
+### Environment Variables
+```bash
+RSI_MACD_FILTER=1           # Enable RSI+MACD filter
+RSI_OVERSOLD=30             # Calls: RSI must be below this
+RSI_OVERBOUGHT=70           # Puts: RSI must be above this
+MACD_CONFIRM=1              # Require MACD alignment
+RSI_MOMENTUM_MODE=0         # 0=mean reversion (default), 1=momentum
+VOLUME_CONFIRM=0            # Volume filter
+VOLUME_THRESHOLD=1.2        # 1.2 = 20% above average
+```
+
+### Test Results (5K cycles each)
+
+| Configuration | P&L | Win Rate | Trades | Notes |
+|---------------|-----|----------|--------|-------|
+| Baseline (no filter) | +48.88% | 37.1% | 1,310 | Control |
+| RSI+MACD strict (40/60) | +104.75% | 36.6% | 1,213 | No improvement |
+| RSI-only (40/60) | +88.56% | 31.1% | 248 | Hurts win rate |
+| **RSI loose (30/70) + MACD** | +62.08% | **40.1%** | 313 | **Best win rate** |
+| RSI extreme (25/75) + MACD | +75.80% | 37.4% | 573 | Too restrictive |
+| Momentum mode (RSI>50) | +59.17% | 35.0% | 420 | Hurts win rate |
+| RSI+MACD+Volume (1.5x) | +51.74% | 37.5% | 617 | Volume doesn't help |
+| RSI moderate (35/65) | **-37.02%** | 39.4% | 617 | High WR but LOSES money! |
+
+### Key Findings
+
+1. **Best Win Rate**: RSI 30/70 + MACD achieved **40.1% win rate** (+3% vs baseline)
+2. **Win Rate ≠ Profitability**: RSI 35/65 got 39.4% win rate but LOST 37%!
+3. **Extreme RSI levels work best**: 30/70 outperformed 40/60 and 35/65
+4. **Momentum mode hurts**: Trading with trend (35.0%) worse than mean reversion (40.1%)
+5. **Volume filter doesn't help**: 37.5% vs 40.1% without volume filter
+6. **60% win rate not achievable**: Maximum achieved was 40.1%
+
+### Why 60% Win Rate Is Unachievable
+
+| Factor | Impact |
+|--------|--------|
+| Direction prediction accuracy | ~50% (neural network limit) |
+| Theta decay | Reduces effective win rate |
+| Options pricing efficiency | Markets are efficient |
+| Short holding period | Noise > signal |
+
+To achieve 60% win rate would require:
+1. **Better direction prediction** (fundamental model improvement)
+2. **Different asset class** (not 0-DTE options)
+3. **Different strategy** (selling options instead of buying)
+4. **Longer holding periods** (less noise, but more theta risk)
+
+### Recommended Configuration
+For best win rate (40.1%):
+```bash
+RSI_MACD_FILTER=1 RSI_OVERSOLD=30 RSI_OVERBOUGHT=70 MACD_CONFIRM=1
+```
+
+For best P&L (+104.75% with 36.6% win rate):
+```bash
+RSI_MACD_FILTER=1 RSI_OVERSOLD=40 RSI_OVERBOUGHT=60 MACD_CONFIRM=1
+```
+
+---
+
 ## Phase 30: Win Rate Optimization (2025-12-31)
 
 ### Goal
