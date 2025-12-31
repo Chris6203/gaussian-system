@@ -2974,7 +2974,21 @@ for idx, sim_time in enumerate(common_times):
                             edge_ok = (predicted_return >= train_min_abs_ret) if is_call else (predicted_return <= -train_min_abs_ret)
                             conf_ok = confidence >= train_min_conf
 
-                            if conf_ok and edge_ok:
+                            # MARKET OPEN FILTER: Big wins happen at market open (09:31)
+                            # Set MARKET_OPEN_MINUTES=30 to only trade in first 30 min after open
+                            market_open_minutes = int(os.environ.get('MARKET_OPEN_MINUTES', '0'))
+                            time_ok = True
+                            if market_open_minutes > 0:
+                                try:
+                                    market_open_time = sim_time.replace(hour=9, minute=30, second=0, microsecond=0)
+                                    mins_since_open = (sim_time - market_open_time).total_seconds() / 60
+                                    time_ok = 0 <= mins_since_open <= market_open_minutes
+                                    if not time_ok:
+                                        pass  # Will be logged below
+                                except Exception:
+                                    time_ok = True  # Default to allowing if time calc fails
+
+                            if conf_ok and edge_ok and time_ok:
                                 should_trade = True
                                 composite_score = confidence
                                 rl_details = {'reason': f'bandit_follow_signal ({action})', 'mode': 'bandit'}
@@ -2991,6 +3005,8 @@ for idx, sim_time in enumerate(common_times):
                                     why.append(f"conf<{train_min_conf:.0%}")
                                 if not edge_ok:
                                     why.append(f"|ret|<{train_min_abs_ret*100:.2f}%")
+                                if not time_ok:
+                                    why.append(f"outside market open ({market_open_minutes}m)")
                                 rl_details = {'reason': f"bandit_gate ({', '.join(why)})", 'mode': 'bandit'}
                                 print(f"   [UNIFIED BANDIT] Skipping: {', '.join(why)} (conf={confidence:.1%}, edge={predicted_return:+.2%})")
                                 try:
