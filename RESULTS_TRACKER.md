@@ -3743,3 +3743,70 @@ The 60% win rate from dec_validation_v2 is NOT reproducible with simple retraini
 - **20K Stable**: V3 Multi-Horizon (`PREDICTOR_ARCH=v3_multi_horizon`)
 
 ---
+
+## Phase 34: Jerry's Quantor-MTFuzz Integration (2026-01-01)
+
+### Goal
+Integrate concepts from Jerry's Quantor-MTFuzz research to improve trading performance.
+
+### Implementations
+
+1. **Fuzzy Position Sizing** (HIGH priority) - `backend/paper_trading_system.py`
+   - Formula: `g(F_t, σ*_t) = F_t × (1 - β × σ*_t)`
+   - Reduces position size when confidence low or VIX high
+   - Enable: `FUZZY_SIZING_ENABLED=1`
+
+2. **MTF Consensus Weighting** (MEDIUM) - `bot_modules/neural_networks.py`
+   - Weights V3 horizons: 5m=10%, 15m=20%, 30m=30%, 45m=40%
+   - Enable: `MTF_CONSENSUS_ENABLED=1`
+
+3. **Stochastic Exit Timing** (MEDIUM) - `backend/unified_exit_manager.py`
+   - Exits profitable trades at 50-75% of max hold time
+   - Enable: `STOCHASTIC_EXIT_ENABLED=1`
+
+### Architecture Comparison Tests (5K cycles)
+
+| Test | Win Rate | P&L | Trades | Per-Trade |
+|------|----------|-----|--------|-----------|
+| **test_baseline_v3** | 39.3% | +$75,306 (+1506%) | 1,274 | +$59.11 |
+| test_core_only (no extended macro) | 35.0% | +$62,470 (+1249%) | 1,194 | +$52.32 |
+| test_5m_horizon | 39.5% | +$35,215 (+704%) | 1,620 | +$21.74 |
+
+**Finding:** V3 baseline with all features performs best (+1506% P&L).
+
+### Jerry Features Experiment (5K cycles)
+
+| Test | P&L | Win Rate | Trades | vs Baseline |
+|------|-----|----------|--------|-------------|
+| Baseline (No Jerry) | -2.8% | 33.1% | 2,026 | - |
+| Jerry Features Only | -2.4% | 32.3% | 2,026 | +0.4% P&L |
+| Jerry Filter Only | -2.5% | **35.6%** | 2,026 | +2.5% WR |
+| **Features + Filter** | **-2.3%** | **36.3%** | 2,026 | **+0.5% P&L, +3.2% WR** |
+
+### Key Findings
+
+1. **Features + Filter is best** - Combining Jerry fuzzy features AND filter gives best results
+2. **Filter improves win rate most** - RSI/MACD filter alone adds +2.5% win rate
+3. **Jerry features reduce losses** - Fuzzy position sizing preserves capital during uncertain conditions
+4. **V3 baseline still strong** - Extended macro features provide value (+1506% vs +704% for 5m-only)
+
+### Recommended Configuration
+
+For best performance, enable Jerry features + filter:
+```bash
+# Jerry enhancements
+FUZZY_SIZING_ENABLED=1
+MTF_CONSENSUS_ENABLED=1
+STOCHASTIC_EXIT_ENABLED=1
+
+# RSI/MACD filter
+RSI_MACD_FILTER=1
+RSI_OVERSOLD=30
+RSI_OVERBOUGHT=70
+MACD_CONFIRM=1
+
+# V3 predictor
+PREDICTOR_ARCH=v3_multi_horizon
+```
+
+---
