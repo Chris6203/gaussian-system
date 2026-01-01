@@ -2577,6 +2577,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0047: V3 + Jerry Features + Filter (best combo) (2026-01-01 16:53)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.9% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1401 |
+| Run Dir | `models/EXP-0047_IDEA-088` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: V3 (+1506%) + Features+Filter (+3.2% WR) = best combination
+**Result**: ERROR
+
+---
+
+### EXP-0048: Enable options flow signal (2026-01-01 16:53)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.4% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1435 |
+| Run Dir | `models/EXP-0048_IDEA-089` |
+
+**Source**: CLAUDE
+**Category**: feature
+**Hypothesis**: Put/call ratio provides additional directional confirmation
+**Result**: ERROR
+
+---
+
+
 ### EXP-0043: 5K: -6%/+35% wider TP from best config (2025-12-29 12:12)
 
 | Metric | Quick Test (5K) |

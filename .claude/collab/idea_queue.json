@@ -34,16 +34,17 @@
       "description": "Test V3 predictor with Jerry NN features and filter only",
       "hypothesis": "V3 (+1506%) + Features+Filter (+3.2% WR) = best combination",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "JERRY_FEATURES": "1",
         "JERRY_FILTER": "1",
         "RSI_MACD_FILTER": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-01T16:28:00.491221"
+      "last_result": {
+        "exp_id": "EXP-0047",
+        "per_trade_pnl": null,
+        "win_rate": 34.9
       }
     },
     {
@@ -55,13 +56,14 @@
       "description": "Activate options flow signal (put/call ratio) from consensus controller",
       "hypothesis": "Put/call ratio provides additional directional confirmation",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "OPTIONS_FLOW_ENABLED": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-01T16:28:00.491221"
+      "last_result": {
+        "exp_id": "EXP-0048",
+        "per_trade_pnl": null,
+        "win_rate": 36.4
       }
     },
     {
@@ -77,5 +79,5 @@
     }
   ],
   "next_id": 91,
-  "last_updated": "2026-01-01T16:28:00.491221"
+  "last_updated": "2026-01-01T16:53:49.160299"
 }
