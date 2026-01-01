@@ -1,0 +1,94 @@
+digraph FuzzyPositionSizing {
+    rankdir=LR;
+    splines=true;
+    fontsize=12;
+
+    // Global node style
+    node [shape=rectangle, style=rounded, fontsize=11];
+
+    // ============================
+    // INPUTS & HARD CONSTRAINTS
+    // ============================
+    subgraph cluster_inputs {
+        label = "Inputs & Hard Constraints";
+        style = "rounded,filled";
+        color = "#4A90E2";          // Blue border
+        fillcolor = "#D9E9FF";      // Light blue background
+
+        Equity          [label="Account Equity (Eₜ)", fillcolor="#FFFFFF"];
+        MaxRiskRule     [label="Max Risk Rule:\nMaxRisk = 0.02 × Eₜ", fillcolor="#FFFFFF"];
+        MaxLossPerCtr   [label="MaxLossPerContract", fillcolor="#FFFFFF"];
+        HardChecks      [label="All Hard Checks Pass?\n(Regime, MTF, Risk, Event)", shape=diamond, fillcolor="#FFFFFF"];
+
+        Equity -> MaxRiskRule;
+        MaxRiskRule -> HardChecks;
+        MaxLossPerCtr -> HardChecks;
+    }
+
+    // ============================
+    // FUZZY LOGIC ENGINE
+    // ============================
+    subgraph cluster_fuzzy {
+        label = "Fuzzy Logic Engine";
+        style = "rounded,filled";
+        color = "#7ED321";          // Green border
+        fillcolor = "#E8FBD9";      // Light green background
+
+        IVFavor      [label="IV Favorability\nμ_IV ∈ [0,1]", fillcolor="#FFFFFF"];
+        RegimeStab   [label="Regime Stability\nμ_R ∈ [0,1]", fillcolor="#FFFFFF"];
+        MTFAlign     [label="MTF Alignment\nμ_MTF ∈ [0,1]", fillcolor="#FFFFFF"];
+        DeltaBalance [label="Delta Balance\nμ_Δ ∈ [0,1]", fillcolor="#FFFFFF"];
+        Liquidity    [label="Liquidity Quality\nμ_Liq ∈ [0,1]", fillcolor="#FFFFFF"];
+
+        Weights      [label="Weights wⱼ\nΣ wⱼ = 1", fillcolor="#FFFFFF"];
+        FuzzyScore   [label="Fuzzy Score Fₜ = Σ wⱼ·μⱼ\nFₜ ∈ [0,1]", fillcolor="#FFFFFF"];
+
+        IVFavor -> FuzzyScore;
+        RegimeStab -> FuzzyScore;
+        MTFAlign -> FuzzyScore;
+        DeltaBalance -> FuzzyScore;
+        Liquidity -> FuzzyScore;
+        Weights -> FuzzyScore;
+    }
+
+    // ============================
+    // VOLATILITY PENALTY
+    // ============================
+    subgraph cluster_vol {
+        label = "Volatility Penalty";
+        style = "rounded,filled";
+        color = "#F5A623";          // Orange border
+        fillcolor = "#FFE9D6";      // Light orange background
+
+        RealizedVol  [label="Realized / Forecast Volatility\nσₜ", fillcolor="#FFFFFF"];
+        VolNorm      [label="Normalize σₜ → σ*ₜ ∈ [0,1]", fillcolor="#FFFFFF"];
+        AdjFunc      [label="Adjustment Function\n g(Fₜ, σ*ₜ)\n0 ≤ g ≤ 1", fillcolor="#FFFFFF"];
+
+        RealizedVol -> VolNorm -> AdjFunc;
+    }
+
+    // ============================
+    // POSITION SIZING
+    // ============================
+    subgraph cluster_size {
+        label = "Position Sizing";
+        style = "rounded,filled";
+        color = "#BD10E0";          // Purple border
+        fillcolor = "#F7E6FF";      // Light purple background
+
+        BaseQty   [label="Base Quantity q₀ = floor(\nMaxRisk / MaxLossPerContract )", fillcolor="#FFFFFF"];
+        FinalQty  [label="Final Quantity q = q₀ · g(Fₜ, σ*ₜ)", fillcolor="#FFFFFF"];
+    }
+
+    // ============================
+    // FLOW CONNECTIONS
+    // ============================
+    HardChecks -> BaseQty [label="MaxRisk = 0.02 × Eₜ", fontsize=9];
+    HardChecks -> FuzzyScore [label="Only if TRUE", fontsize=9];
+
+    FuzzyScore -> AdjFunc;
+    VolNorm -> AdjFunc;
+
+    BaseQty -> FinalQty;
+    AdjFunc -> FinalQty [label="Scaling factor g", fontsize=9];
+}
