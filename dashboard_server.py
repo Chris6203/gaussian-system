@@ -140,7 +140,8 @@ log_parser = LogParser(
 
 db_loader = DatabaseLoader(
     paper_db_path=CONFIG['paper_trading_db'],
-    historical_db_path=CONFIG['historical_db']
+    historical_db_path=CONFIG['historical_db'],
+    trade_filter='live'  # Live dashboard shows only real trades
 )
 
 

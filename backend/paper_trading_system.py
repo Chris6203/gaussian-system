@@ -1862,7 +1862,10 @@ class PaperTradingSystem:
         import math
         otm_decay_factor = math.exp(-otm_pct * 30)  # Exponential decay
         
-        base_time_value = strike_price * 0.008  # 0.8% base time value for ATM
+        # FIX: Base time value should be realistic for 0DTE SPY options
+        # Old formula: strike_price * 0.008 = .52 for 90 strike (WAY too high!)
+        # Real SPY 0DTE ATM options have ~/usr/bin/bash.50-1.00 in time value
+        base_time_value = 0.40 + (current_price * 0.0008)  # ~/usr/bin/bash.40 + /usr/bin/bash.47 for SPY 590 = ~/usr/bin/bash.87
         time_value = base_time_value * time_decay_factor * otm_decay_factor
         
         # Apply daily theta decay for existing positions

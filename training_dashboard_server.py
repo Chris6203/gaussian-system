@@ -122,7 +122,8 @@ log_parser = LogParser(
 
 db_loader = DatabaseLoader(
     paper_db_path=CONFIG['paper_trading_db'],
-    historical_db_path=CONFIG['historical_db']
+    historical_db_path=CONFIG['historical_db'],
+    trade_filter='paper'  # Training dashboard shows only paper trades
 )
 
 
@@ -638,7 +639,14 @@ def get_chart_data():
                 trade_time_range = max(trade_times)
         
         reference_time = simulated_datetime or trade_time_range
-        
+
+        # For live/paper trading, use current market time if no reference
+        if not reference_time:
+            from datetime import datetime
+            import pytz
+            market_tz = pytz.timezone('US/Eastern')
+            reference_time = datetime.now(market_tz).strftime('%Y-%m-%dT%H:%M:%S')
+
         # Load data
         chart_cfg = CONFIG['chart']
         

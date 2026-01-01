@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Database Loader
 ===============
@@ -45,18 +45,29 @@ class DatabaseLoader:
     def __init__(
         self,
         paper_db_path: str = 'data/paper_trading.db',
-        historical_db_path: str = 'data/db/historical.db'
+        historical_db_path: str = 'data/db/historical.db',
+        trade_filter: str = 'all'
     ):
         """
         Initialize database loader.
-        
+
         Args:
             paper_db_path: Path to paper trading database
             historical_db_path: Path to historical data database
+            trade_filter: Filter trades by type - 'all', 'paper', or 'live'
         """
         self.paper_db_path = paper_db_path
         self.historical_db_path = historical_db_path
-    
+        self.trade_filter = trade_filter  # 'all', 'paper', or 'live'
+
+    def _get_trade_filter_sql(self) -> str:
+        """Get SQL WHERE clause for trade filtering."""
+        if self.trade_filter == 'paper':
+            return "AND (is_real_trade = 0 OR is_real_trade IS NULL)"
+        elif self.trade_filter == 'live':
+            return "AND is_real_trade = 1"
+        return ""  # 'all' - no filter
+
     def load_account_state(self, state: TrainingState) -> None:
         """Load account state from paper trading database."""
         if not Path(self.paper_db_path).exists():
@@ -595,20 +606,24 @@ class DatabaseLoader:
             conn = sqlite3.connect(self.paper_db_path)
             cursor = conn.cursor()
             
+            trade_filter_sql = self._get_trade_filter_sql()
+
             if reference_time:
                 cursor.execute(f'''
                     SELECT timestamp, option_type, strike_price, premium_paid, entry_price,
                            exit_price, exit_timestamp, profit_loss, status
-                    FROM trades 
+                    FROM trades
                     WHERE datetime(timestamp) >= datetime(?, '-{lookback_days} days')
+                    {trade_filter_sql}
                     ORDER BY timestamp ASC
                     LIMIT ?
                 ''', (reference_time, max_trades))
             else:
-                cursor.execute('''
+                cursor.execute(f'''
                     SELECT timestamp, option_type, strike_price, premium_paid, entry_price,
                            exit_price, exit_timestamp, profit_loss, status
-                    FROM trades 
+                    FROM trades
+                    WHERE 1=1 {trade_filter_sql}
                     ORDER BY timestamp DESC
                     LIMIT ?
                 ''', (max_trades,))
@@ -665,7 +680,7 @@ class DatabaseLoader:
         entry_annotation = None
         if entry_ts:
             strike_str = f" ${strike:.0f}" if strike else ""
-            emoji = "🟢" if 'CALL' in option_type.upper() else "🔴"
+            emoji = "ðŸŸ¢" if 'CALL' in option_type.upper() else "ðŸ”´"
             entry_annotation = {
                 'timestamp': entry_ts,
                 'type': 'entry',
@@ -678,7 +693,7 @@ class DatabaseLoader:
         exit_annotation = None
         if exit_ts and status in ('PROFIT_TAKEN', 'STOPPED_OUT', 'CLOSED', 'EXPIRED'):
             pnl_label = f"${pnl:+.2f}" if pnl else ""
-            exit_emoji = "✅" if (pnl and pnl > 0) else "❌"
+            exit_emoji = "âœ…" if (pnl and pnl > 0) else "âŒ"
             exit_annotation = {
                 'timestamp': exit_ts,
                 'type': 'exit',
@@ -687,5 +702,6 @@ class DatabaseLoader:
             }
         
         return trade, entry_annotation, exit_annotation
+
 
 
