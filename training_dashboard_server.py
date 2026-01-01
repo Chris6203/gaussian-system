@@ -606,6 +606,54 @@ def health():
     return jsonify({'status': 'ok', 'time': format_timestamp(get_market_time()), 'timezone': 'US/Eastern'})
 
 
+@app.route('/api/runs')
+def list_runs():
+    """List all active/recent training runs based on log files."""
+    import glob
+    from pathlib import Path
+
+    runs = []
+
+    # Find all recent log files (modified in last 2 hours)
+    log_pattern = CONFIG.get('log_pattern', 'logs/real_bot_simulation*.log')
+    cutoff_time = time.time() - (2 * 60 * 60)  # 2 hours ago
+
+    for log_path in glob.glob(log_pattern):
+        try:
+            path = Path(log_path)
+            if not path.exists() or path.stat().st_size == 0:
+                continue
+
+            mtime = path.stat().st_mtime
+            if mtime < cutoff_time:
+                continue
+
+            # Extract run name from log file
+            run_name = path.stem.replace('real_bot_simulation_', '')
+
+            # Check if actively being written (modified in last 30 seconds)
+            is_active = (time.time() - mtime) < 30
+
+            runs.append({
+                'run_name': run_name,
+                'log_file': str(path),
+                'size_mb': round(path.stat().st_size / (1024 * 1024), 1),
+                'last_modified': datetime.fromtimestamp(mtime).isoformat(),
+                'is_active': is_active
+            })
+        except Exception as e:
+            continue
+
+    # Sort by last modified (most recent first)
+    runs.sort(key=lambda x: x['last_modified'], reverse=True)
+
+    return jsonify({
+        'success': True,
+        'runs': runs,
+        'active_count': sum(1 for r in runs if r['is_active'])
+    })
+
+
 @app.route('/api/reset-session', methods=['POST'])
 def reset_session():
     """Manually reset the training session."""

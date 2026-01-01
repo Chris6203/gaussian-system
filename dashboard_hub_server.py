@@ -490,6 +490,16 @@ HUB_HTML = '''
     <main class="content">
         <!-- Live Training Tab -->
         <div id="training-tab" class="tab-content">
+            <div class="card" style="margin-bottom: 16px;">
+                <div class="card-body" style="display: flex; align-items: center; gap: 16px;">
+                    <label style="color: var(--text-muted);">Active Runs:</label>
+                    <select id="run-selector" onchange="switchRun()" style="flex: 1; max-width: 400px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text);">
+                        <option value="">Loading runs...</option>
+                    </select>
+                    <span id="run-status" style="font-size: 12px; color: var(--text-muted);"></span>
+                </div>
+            </div>
+
             <div class="stats-row" id="training-stats">
                 <div class="stat-card">
                     <div class="value" id="train-pnl">--</div>
@@ -1175,6 +1185,45 @@ GET /api/agent/status
 
         // ===== LIVE TRAINING =====
         let trainingInterval = null;
+        let runsInterval = null;
+        let selectedRun = null;
+
+        async function loadActiveRuns() {
+            try {
+                const res = await fetch('{{ training_url }}/api/runs');
+                const data = await res.json();
+
+                if (data.success && data.runs.length > 0) {
+                    const selector = document.getElementById('run-selector');
+                    const currentValue = selector.value;
+
+                    selector.innerHTML = data.runs.map(r => {
+                        const activeIcon = r.is_active ? '🟢 ' : '⚪ ';
+                        return `<option value="${r.log_file}" ${r.log_file === currentValue ? 'selected' : ''}>
+                            ${activeIcon}${r.run_name} (${r.size_mb}MB)
+                        </option>`;
+                    }).join('');
+
+                    document.getElementById('run-status').textContent =
+                        `${data.active_count} active of ${data.runs.length} runs`;
+
+                    // Auto-select first active run if nothing selected
+                    if (!currentValue && data.runs.length > 0) {
+                        const activeRun = data.runs.find(r => r.is_active) || data.runs[0];
+                        selector.value = activeRun.log_file;
+                        selectedRun = activeRun.log_file;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load runs:', e);
+            }
+        }
+
+        function switchRun() {
+            const selector = document.getElementById('run-selector');
+            selectedRun = selector.value;
+            loadTrainingData();
+        }
 
         async function loadTrainingData() {
             try {
@@ -1230,9 +1279,13 @@ GET /api/agent/status
         }
 
         function startTrainingUpdates() {
+            loadActiveRuns();
             loadTrainingData();
             if (!trainingInterval) {
                 trainingInterval = setInterval(loadTrainingData, 2000); // Update every 2 seconds
+            }
+            if (!runsInterval) {
+                runsInterval = setInterval(loadActiveRuns, 10000); // Refresh runs list every 10 seconds
             }
         }
 
@@ -1240,6 +1293,10 @@ GET /api/agent/status
             if (trainingInterval) {
                 clearInterval(trainingInterval);
                 trainingInterval = null;
+            }
+            if (runsInterval) {
+                clearInterval(runsInterval);
+                runsInterval = null;
             }
         }
 
