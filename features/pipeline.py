@@ -26,6 +26,7 @@ from .macro import (
 )
 from .crypto import compute_crypto_features, compute_crypto_equity_correlation, CRYPTO_SYMBOLS
 from .meta import compute_meta_features
+from .jerry_features import compute_jerry_features
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ class FeatureConfig:
     enable_extended_macro: bool = True  # Index proxies, sectors, credit, commodities, mega-caps
     enable_crypto: bool = True
     enable_meta: bool = True
+    enable_jerry: bool = False  # Jerry's fuzzy logic features (Quantor-MTFuzz)
     
     # Equity/ETF parameters
     equity_symbols: List[str] = field(default_factory=lambda: list(EQUITY_ETF_SYMBOLS.keys()))
@@ -77,8 +79,16 @@ class FeatureConfig:
     @classmethod
     def from_dict(cls, config: Dict) -> 'FeatureConfig':
         """Create config from dictionary."""
+        import os
         feature_config = config.get('feature_pipeline', {})
-        
+
+        # Check environment variable for Jerry features (overrides config)
+        enable_jerry_env = os.environ.get('JERRY_FEATURES', None)
+        if enable_jerry_env is not None:
+            enable_jerry = enable_jerry_env == '1'
+        else:
+            enable_jerry = feature_config.get('enable_jerry', False)
+
         return cls(
             enable_equity_etf=feature_config.get('enable_equity_etf', True),
             enable_options_surface=feature_config.get('enable_options_surface', True),
@@ -87,6 +97,7 @@ class FeatureConfig:
             enable_extended_macro=feature_config.get('enable_extended_macro', True),
             enable_crypto=feature_config.get('enable_crypto', True),
             enable_meta=feature_config.get('enable_meta', True),
+            enable_jerry=enable_jerry,
             equity_symbols=feature_config.get('equity_symbols', list(EQUITY_ETF_SYMBOLS.keys())),
             macro_symbols=feature_config.get('macro_symbols', list(ALL_MACRO_SYMBOLS.keys())),
             primary_symbol=config.get('trading', {}).get('symbol', 'SPY'),
@@ -109,6 +120,7 @@ class FeatureConfig:
             'enable_extended_macro': self.enable_extended_macro,
             'enable_crypto': self.enable_crypto,
             'enable_meta': self.enable_meta,
+            'enable_jerry': self.enable_jerry,
             'equity_symbols': self.equity_symbols,
             'breadth_symbols': self.breadth_symbols,
             'macro_symbols': self.macro_symbols,
@@ -356,7 +368,40 @@ class FeaturePipeline:
                 if self.config.use_prefix:
                     meta_features = {f'meta_{k}': v for k, v in meta_features.items()}
                 features.update(meta_features)
-            
+
+            # =================================================================
+            # 7. JERRY FEATURES (Quantor-MTFuzz fuzzy logic)
+            # =================================================================
+            if self.config.enable_jerry:
+                # Get volume ratio for liquidity score
+                volume_ratio = 1.0
+                if self.config.primary_symbol in equity_data:
+                    primary_df = equity_data[self.config.primary_symbol]
+                    vol_col = 'volume' if 'volume' in primary_df.columns else 'Volume'
+                    if vol_col in primary_df.columns and len(primary_df) >= 20:
+                        recent_vol = float(primary_df[vol_col].iloc[-1])
+                        avg_vol = float(primary_df[vol_col].tail(20).mean())
+                        if avg_vol > 0:
+                            volume_ratio = recent_vol / avg_vol
+
+                # Get bars in regime (approximate from vol history stability)
+                bars_in_regime = min(len(self._vol_history), 30)
+
+                jerry_feats = compute_jerry_features(
+                    vix_level=vix_level or 18.0,
+                    iv_percentile=None,  # Could add from options surface
+                    bars_in_regime=bars_in_regime,
+                    regime_changes=0,  # Could track from HMM
+                    multi_horizon_predictions=None,  # Added at inference time
+                    bid_ask_spread_pct=1.0,  # Default
+                    volume_ratio=volume_ratio,
+                    portfolio_delta=0.0,  # Not available here
+                    hmm_confidence=0.5,  # Updated at inference time
+                )
+
+                jerry_dict = jerry_feats.to_dict()
+                features.update(jerry_dict)
+
         except Exception as e:
             self.logger.error(f"Error computing features: {e}")
         
@@ -505,7 +550,8 @@ class FeaturePipeline:
                 lines.append(f"    (includes sectors, credit, commodities, mega-caps)")
         lines.append(f"  Crypto: {'enabled' if self.config.enable_crypto else 'disabled'}")
         lines.append(f"  Meta: {'enabled' if self.config.enable_meta else 'disabled'}")
-        
+        lines.append(f"  Jerry (Quantor-MTFuzz): {'enabled' if self.config.enable_jerry else 'disabled'}")
+
         if self._feature_columns:
             lines.append(f"\nTotal Features: {len(self._feature_columns)}")
             lines.append("\nFeature Columns:")

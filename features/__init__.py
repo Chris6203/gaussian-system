@@ -8,6 +8,7 @@ Provides modular feature families for the SPY options trading bot:
 - macro: Rates/macro proxy features
 - crypto: Crypto risk-on/off features
 - meta: Time and regime features
+- jerry_features: Jerry's fuzzy logic features (Quantor-MTFuzz)
 - pipeline: Unified feature pipeline
 """
 
@@ -17,6 +18,7 @@ from .breadth import compute_breadth_features
 from .macro import compute_macro_features
 from .crypto import compute_crypto_features
 from .meta import compute_meta_features
+from .jerry_features import compute_jerry_features, JerryFeatures, jerry_filter_check
 from .pipeline import FeaturePipeline, FeatureConfig
 
 __all__ = [
@@ -26,6 +28,9 @@ __all__ = [
     'compute_macro_features',
     'compute_crypto_features',
     'compute_meta_features',
+    'compute_jerry_features',
+    'JerryFeatures',
+    'jerry_filter_check',
     'FeaturePipeline',
     'FeatureConfig',
 ]

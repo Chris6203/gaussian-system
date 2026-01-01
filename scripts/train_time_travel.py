@@ -100,6 +100,14 @@ RSI_MOMENTUM_MODE = os.environ.get('RSI_MOMENTUM_MODE', '0') == '1'
 VOLUME_CONFIRM_ENABLED = os.environ.get('VOLUME_CONFIRM', '0') == '1'
 VOLUME_CONFIRM_THRESHOLD = float(os.environ.get('VOLUME_THRESHOLD', '1.2'))  # 1.2 = 20% above average
 
+# Jerry's Quantor-MTFuzz integration
+# JERRY_FEATURES=1: Add Jerry's fuzzy scores as additional NN input features
+# JERRY_FILTER=1: Use Jerry's composite F_t score as trade confirmation filter
+JERRY_FEATURES_ENABLED = os.environ.get('JERRY_FEATURES', '0') == '1'
+JERRY_FILTER_ENABLED = os.environ.get('JERRY_FILTER', '0') == '1'
+JERRY_FILTER_THRESHOLD = float(os.environ.get('JERRY_FILTER_THRESHOLD', '0.5'))
+JERRY_MTF_MIN = float(os.environ.get('JERRY_MTF_MIN', '0.3'))
+
 # Log loaded configuration
 logger.info(f"[CONFIG] Entry controller: {ENTRY_CONTROLLER_TYPE}")
 logger.info(f"[CONFIG] TT_MAX_CYCLES: {TT_MAX_CYCLES}, TT_PRINT_EVERY: {TT_PRINT_EVERY}")
@@ -107,6 +115,8 @@ logger.info(f"[CONFIG] TT_MAX_HOLD_MINUTES: {TT_MAX_HOLD_MINUTES}, TT_MAX_POSITI
 logger.info(f"[CONFIG] TT_DATA_INTERVAL: {TT_DATA_INTERVAL} ({TT_INTERVAL_MINUTES}-minute bars)")
 if RSI_MACD_FILTER_ENABLED:
     logger.info(f"[CONFIG] RSI+MACD filter ENABLED: RSI oversold<{RSI_OVERSOLD_THRESHOLD}, overbought>{RSI_OVERBOUGHT_THRESHOLD}, MACD={MACD_CONFIRM_ENABLED}")
+if JERRY_FEATURES_ENABLED or JERRY_FILTER_ENABLED:
+    logger.info(f"[CONFIG] Jerry integration: features={JERRY_FEATURES_ENABLED}, filter={JERRY_FILTER_ENABLED} (threshold={JERRY_FILTER_THRESHOLD})")
 
 if TT_QUIET:
     _orig_print = builtins.print
@@ -2478,6 +2488,37 @@ for idx, sim_time in enumerate(common_times):
                             print(f"   [V3] VOLUME VETO: volume_spike={volume_spike:.2f} < {VOLUME_CONFIRM_THRESHOLD}")
                         else:
                             print(f"   [V3] VOLUME OK: spike={volume_spike:.2f}")
+
+                    # Jerry's Quantor-MTFuzz confirmation filter
+                    if JERRY_FILTER_ENABLED and should_trade:
+                        try:
+                            from features.jerry_features import compute_jerry_features, jerry_filter_check
+                            # Compute Jerry's fuzzy scores
+                            jerry_feats = compute_jerry_features(
+                                vix_level=signal.get('vix_level', 18.0),
+                                bars_in_regime=getattr(bot, '_bars_in_regime', 10),
+                                volume_ratio=signal.get('volume_spike', 1.0),
+                                hmm_confidence=signal.get('hmm_confidence', 0.5),
+                            )
+                            passed, reason = jerry_filter_check(
+                                f_t=jerry_feats.f_t,
+                                threshold=JERRY_FILTER_THRESHOLD,
+                                min_mtf=JERRY_MTF_MIN,
+                                mu_mtf=jerry_feats.mu_mtf
+                            )
+                            if not passed:
+                                should_trade = False
+                                rejection_reason = f"jerry_filter ({reason})"
+                                rl_details = {"reason": rejection_reason, "mode": "v3"}
+                                try:
+                                    rejection_reasons_for_log.append("jerry_filter")
+                                except Exception:
+                                    pass
+                                print(f"   [V3] JERRY VETO: {reason} (F_t={jerry_feats.f_t:.2f})")
+                            else:
+                                print(f"   [V3] JERRY OK: F_t={jerry_feats.f_t:.2f}")
+                        except Exception as e:
+                            logger.warning(f"Jerry filter error: {e}")
                 else:
                     should_trade = False
                     composite_score = 0.0
