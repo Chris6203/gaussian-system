@@ -280,7 +280,29 @@ class UnifiedExitManager:
                 f"NEAR EXPIRY: {expiry_minutes:.0f}m < {self.hard_min_expiry_minutes}m",
                 pnl, position.trade_id
             )
-        
+
+        # Rule 4b: Stochastic Exit Timing (Jerry's Quantor-MTFuzz A.30)
+        # Exit at 50-75% of expected trade duration to capture most gains
+        # and avoid theta decay / gamma risk near max hold
+        import os
+        stochastic_exit_enabled = os.environ.get('STOCHASTIC_EXIT_ENABLED', '0') == '1'
+        if stochastic_exit_enabled and pnl > 0:
+            try:
+                # Optimal exit zone: [0.5, 0.75] of max hold time
+                hold_ratio = minutes_held / self.hard_max_hold_minutes
+                exit_zone_start = float(os.environ.get('STOCHASTIC_EXIT_START', '0.50'))
+                exit_zone_end = float(os.environ.get('STOCHASTIC_EXIT_END', '0.75'))
+                min_profit_to_exit = float(os.environ.get('STOCHASTIC_EXIT_MIN_PROFIT', '3.0'))
+
+                if exit_zone_start <= hold_ratio <= exit_zone_end and pnl >= min_profit_to_exit:
+                    return self._hard_exit(
+                        f"STOCHASTIC EXIT: P&L {pnl:.1f}% at {hold_ratio*100:.0f}% of max hold "
+                        f"(zone: {exit_zone_start*100:.0f}-{exit_zone_end*100:.0f}%)",
+                        pnl, position.trade_id
+                    )
+            except Exception:
+                pass
+
         # Rule 5: Trailing Stop
         if position.high_water_mark_pct >= self.trailing_stop_activation_pct:
             trailing_level = position.high_water_mark_pct - self.trailing_stop_distance_pct

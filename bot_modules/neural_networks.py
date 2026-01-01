@@ -1411,9 +1411,49 @@ class UnifiedOptionsPredictorV3(nn.Module):
         default_horizon = int(os.environ.get('V3_DEFAULT_HORIZON', '15'))
         if default_horizon not in self.HORIZONS:
             default_horizon = 15
-        result['return'] = result[f'return_{default_horizon}m']
-        result['direction'] = result[f'direction_{default_horizon}m']
-        result['confidence'] = result[f'confidence_{default_horizon}m']
+
+        # MTF Consensus Weighting (Jerry's Quantor-MTFuzz A.9)
+        # Weight longer horizons more heavily for trend confirmation
+        # Jerry: Daily=50%, 60m=35%, 5m=15%
+        # Our horizons: 45m=40%, 30m=30%, 15m=20%, 5m=10%
+        use_mtf_consensus = os.environ.get('MTF_CONSENSUS_ENABLED', '0') == '1'
+        if use_mtf_consensus:
+            # Weights for each horizon (sum to 1.0)
+            mtf_weights = {
+                5: float(os.environ.get('MTF_WEIGHT_5M', '0.10')),
+                15: float(os.environ.get('MTF_WEIGHT_15M', '0.20')),
+                30: float(os.environ.get('MTF_WEIGHT_30M', '0.30')),
+                45: float(os.environ.get('MTF_WEIGHT_45M', '0.40')),
+            }
+            # Normalize weights
+            total_weight = sum(mtf_weights.values())
+            mtf_weights = {k: v / total_weight for k, v in mtf_weights.items()}
+
+            # Weighted average of returns (scalar outputs)
+            weighted_return = sum(
+                mtf_weights[h] * result[f'return_{h}m']
+                for h in self.HORIZONS
+            )
+            # Weighted average of directions (logits, then take max)
+            weighted_direction = sum(
+                mtf_weights[h] * result[f'direction_{h}m']
+                for h in self.HORIZONS
+            )
+            # Weighted average of confidences
+            weighted_confidence = sum(
+                mtf_weights[h] * result[f'confidence_{h}m']
+                for h in self.HORIZONS
+            )
+
+            result['return'] = weighted_return
+            result['direction'] = weighted_direction
+            result['confidence'] = weighted_confidence
+            result['mtf_consensus'] = True
+        else:
+            result['return'] = result[f'return_{default_horizon}m']
+            result['direction'] = result[f'direction_{default_horizon}m']
+            result['confidence'] = result[f'confidence_{default_horizon}m']
+            result['mtf_consensus'] = False
 
         result['fillability'] = torch.sigmoid(self.fillability_head(h))
         result['exp_slippage'] = self.slippage_head(h)

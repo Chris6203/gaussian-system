@@ -2882,6 +2882,42 @@ class PaperTradingSystem:
                     self.logger.debug(f"Drawdown scaling skipped: {e}")
             # === END DRAWDOWN-BASED SCALING ===
 
+            # === FUZZY POSITION SIZING (Jerry's Quantor-MTFuzz A.25-A.26) ===
+            # Scale position size based on confidence and volatility
+            # Formula: g(F_t, σ*_t) = F_t × (1 - β × σ*_t)
+            fuzzy_sizing_enabled = os.environ.get('FUZZY_SIZING_ENABLED', '0') == '1'
+            if fuzzy_sizing_enabled:
+                try:
+                    # F_t = fuzzy confidence [0,1]
+                    fuzzy_confidence = float(ml_confidence) if ml_confidence else 0.5
+                    fuzzy_confidence = max(0.0, min(1.0, fuzzy_confidence))
+
+                    # σ*_t = normalized volatility [0,1]
+                    # Get VIX level from prediction_data or estimate from context
+                    vix_level = prediction_data.get('vix_level', 20.0)
+                    if vix_level is None:
+                        vix_level = 20.0
+                    # Normalize VIX: 12 = low (0.0), 20 = normal (0.5), 35 = high (1.0)
+                    vix_min, vix_max = 12.0, 35.0
+                    normalized_vol = (float(vix_level) - vix_min) / (vix_max - vix_min)
+                    normalized_vol = max(0.0, min(1.0, normalized_vol))
+
+                    # β = volatility penalty factor [0.3, 0.5]
+                    beta = float(os.environ.get('FUZZY_SIZING_BETA', '0.4'))
+
+                    # Scaling function: g(F_t, σ*_t) = F_t × (1 - β × σ*_t)
+                    fuzzy_scale = fuzzy_confidence * (1.0 - beta * normalized_vol)
+                    fuzzy_scale = max(0.1, min(1.0, fuzzy_scale))  # Clamp to [0.1, 1.0]
+
+                    position_value *= fuzzy_scale
+                    self.logger.info(
+                        f"📐 Fuzzy sizing: scale={fuzzy_scale:.2f} "
+                        f"(conf={fuzzy_confidence:.2f}, VIX={vix_level:.1f}, σ*={normalized_vol:.2f})"
+                    )
+                except Exception as e:
+                    self.logger.debug(f"Fuzzy sizing skipped: {e}")
+            # === END FUZZY POSITION SIZING ===
+
             quantity = max(1, int(position_value / (premium * 100)))
             self.logger.info(f"📊 Simple sizing: {quantity} contracts")
         
