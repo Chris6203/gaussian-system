@@ -479,14 +479,109 @@ HUB_HTML = '''
     </header>
 
     <nav class="tabs">
+        <a class="tab" data-tab="training">Live Training</a>
         <a class="tab active" data-tab="scoreboard">Scoreboard</a>
         <a class="tab" data-tab="trades">Trade Browser</a>
         <a class="tab" data-tab="api">Agent API</a>
-        <a class="tab external" href="{{ training_url }}" target="_blank">Training Dashboard ↗</a>
+        <a class="tab external" href="{{ training_url }}" target="_blank">Full Training ↗</a>
         <a class="tab external" href="{{ live_url }}" target="_blank">Live Dashboard ↗</a>
     </nav>
 
     <main class="content">
+        <!-- Live Training Tab -->
+        <div id="training-tab" class="tab-content">
+            <div class="stats-row" id="training-stats">
+                <div class="stat-card">
+                    <div class="value" id="train-pnl">--</div>
+                    <div class="label">P&L</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value" id="train-pnl-pct">--</div>
+                    <div class="label">Return %</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value" id="train-win-rate">--</div>
+                    <div class="label">Win Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value" id="train-trades">--</div>
+                    <div class="label">Trades</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value" id="train-cycles">--</div>
+                    <div class="label">Cycles</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value" id="train-positions">--</div>
+                    <div class="label">Open Positions</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Training Status</h2>
+                    <span id="train-sim-time" style="color: var(--text-muted); font-size: 13px;">--</span>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="value" id="train-balance">--</div>
+                            <div class="label">Balance</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="train-signal">--</div>
+                            <div class="label">Last Signal</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="train-confidence">--</div>
+                            <div class="label">Confidence</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="train-regime">--</div>
+                            <div class="label">HMM Regime</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="train-spy">--</div>
+                            <div class="label">SPY Price</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="train-vix">--</div>
+                            <div class="label">VIX</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Recent Trades</h2>
+                    <span id="train-update-time" style="color: var(--text-muted); font-size: 12px;">Last update: --</span>
+                </div>
+                <div class="card-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Strike</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>P&L</th>
+                                <th>Exit Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="train-trades-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="train-error" class="card" style="display: none; border-color: var(--red);">
+                <div class="card-body" style="color: var(--red); text-align: center;">
+                    Training dashboard not running. Start with: <code>python training_dashboard_server.py</code>
+                </div>
+            </div>
+        </div>
+
         <!-- Scoreboard Tab -->
         <div id="scoreboard-tab" class="tab-content active">
             <div class="stats-row" id="scoreboard-stats"></div>
@@ -1077,6 +1172,87 @@ GET /api/agent/status
                 loadTrades();
             }
         }
+
+        // ===== LIVE TRAINING =====
+        let trainingInterval = null;
+
+        async function loadTrainingData() {
+            try {
+                const res = await fetch('{{ training_url }}/api/data');
+                const d = await res.json();
+
+                document.getElementById('train-error').style.display = 'none';
+
+                // Main stats
+                const pnlClass = d.pnl >= 0 ? 'positive' : 'negative';
+                document.getElementById('train-pnl').className = 'value ' + pnlClass;
+                document.getElementById('train-pnl').textContent = (d.pnl >= 0 ? '+' : '') + '$' + d.pnl?.toFixed(2);
+
+                document.getElementById('train-pnl-pct').className = 'value ' + pnlClass;
+                document.getElementById('train-pnl-pct').textContent = (d.pnl_pct >= 0 ? '+' : '') + d.pnl_pct?.toFixed(1) + '%';
+
+                document.getElementById('train-win-rate').textContent = d.win_rate?.toFixed(1) + '%';
+                document.getElementById('train-trades').textContent = d.trades || 0;
+                document.getElementById('train-cycles').textContent = d.cycles || 0;
+                document.getElementById('train-positions').textContent = d.current_positions || 0;
+
+                // Status
+                document.getElementById('train-balance').textContent = '$' + d.current_balance?.toFixed(0);
+                document.getElementById('train-signal').textContent = d.last_signal || '--';
+                document.getElementById('train-confidence').textContent = d.signal_confidence?.toFixed(0) + '%';
+                document.getElementById('train-regime').textContent = d.hmm_regime || '--';
+                document.getElementById('train-spy').textContent = '$' + d.spy_price?.toFixed(2);
+                document.getElementById('train-vix').textContent = d.vix_value?.toFixed(2);
+                document.getElementById('train-sim-time').textContent = 'Simulated: ' + d.simulated_date + ' ' + d.simulated_time;
+                document.getElementById('train-update-time').textContent = 'Last update: ' + new Date().toLocaleTimeString();
+
+                // Recent trades
+                if (d.recent_trades && d.recent_trades.length > 0) {
+                    const tbody = document.getElementById('train-trades-body');
+                    tbody.innerHTML = d.recent_trades.slice(0, 20).map(t => {
+                        const pnl = t.profit_loss || t.pnl || 0;
+                        const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+                        return `<tr>
+                            <td>${t.exit_time || t.timestamp || '--'}</td>
+                            <td>${t.option_type || t.type || '--'}</td>
+                            <td>$${t.strike || t.strike_price || '--'}</td>
+                            <td>$${t.entry_price?.toFixed(2) || '--'}</td>
+                            <td>$${t.exit_price?.toFixed(2) || '--'}</td>
+                            <td class="${pnlClass}">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</td>
+                            <td>${t.exit_reason || '--'}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            } catch (e) {
+                document.getElementById('train-error').style.display = 'block';
+                console.error('Training data fetch failed:', e);
+            }
+        }
+
+        function startTrainingUpdates() {
+            loadTrainingData();
+            if (!trainingInterval) {
+                trainingInterval = setInterval(loadTrainingData, 2000); // Update every 2 seconds
+            }
+        }
+
+        function stopTrainingUpdates() {
+            if (trainingInterval) {
+                clearInterval(trainingInterval);
+                trainingInterval = null;
+            }
+        }
+
+        // Start/stop training updates based on active tab
+        document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                if (tab.dataset.tab === 'training') {
+                    startTrainingUpdates();
+                } else {
+                    stopTrainingUpdates();
+                }
+            });
+        });
 
         // Initial load
         setupColumnSorting();
