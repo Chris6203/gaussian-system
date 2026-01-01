@@ -3660,3 +3660,86 @@ While the 5K test showed extended macro outperforming baseline by +38%, the 20K 
 4. **Consider regime-based position sizing** - Trade smaller during unfavorable periods
 
 ---
+
+## Phase 33: Experiments Database & Pretrained Model Tests (2026-01-01)
+
+### Goal
+1. Create SQLite database for experiment tracking (replace fragmented markdown/JSON)
+2. Retrain model on Sep-Nov data to reproduce 60% win rate
+3. Test combinations of pretrained + V3 + RSI/MACD
+
+### Experiments Database
+
+Created `tools/experiments_db.py` - SQLite-based tracking system:
+
+```bash
+# Import all 240 model runs
+python tools/experiments_db.py scan
+
+# Show leaderboard by P&L
+python tools/experiments_db.py leaderboard --limit 20
+
+# Search by win rate
+python tools/experiments_db.py search --win-rate-min 0.40
+
+# Show run details
+python tools/experiments_db.py show <run_name>
+```
+
+**Database schema:** run_name, timestamp, start_date, end_date, initial_balance, final_balance, pnl, pnl_pct, cycles, signals, trades, win_rate, wins, losses, per_trade_pnl, training_time_seconds
+
+### Pretrained Model Approach
+
+Retrained model on Sep-Nov 2025 data (20K cycles):
+- **Goal**: Reproduce the 60% win rate from dec_validation_v2
+- **Approach**: Train on Sep-Nov data → conservative NN outputs → test on December
+
+**Training Results (train_sep_nov_v2):**
+| Metric | Value |
+|--------|-------|
+| Cycles | 20,000 |
+| Trades | 2,590 |
+| Win Rate | 39.1% |
+| P&L | -90.60% |
+| Wins/Losses | 1012/1577 |
+
+Model saved to `models/pretrained/` for use with `LOAD_PRETRAINED=1`.
+
+### Test Results (5K cycles, December 2025)
+
+| Configuration | Win Rate | P&L | Trades | Notes |
+|---------------|----------|-----|--------|-------|
+| test_dec_pretrained | 36.4% | -90.46% | 926 | Pretrained on Dec |
+| **v3_rsi_macd** | 34.3% | **-7.34%** | 466 | **Best P&L** |
+| pretrained_rsi_macd | **37.7%** | -96.43% | 1,085 | Best WR but worst P&L |
+
+### Key Findings
+
+1. **V3 + RSI/MACD has best P&L** (-7.34%) due to fewer trades (466 vs 926-1085)
+2. **Pretrained model alone doesn't reproduce 60%** - Only achieves 36.4%
+3. **Adding RSI/MACD to pretrained hurts P&L** - More trades = more losses
+4. **Trade selectivity matters more than win rate** - 466 trades @ 34.3% beats 1085 trades @ 37.7%
+
+### Leaderboard (Top 10 by Win Rate with >10 trades)
+
+| Rank | Run Name | Win Rate | P&L % | Trades |
+|------|----------|----------|-------|--------|
+| 1 | dec_validation | 60.6% | +519% | 63 |
+| 2 | dec_validation_v2 | 59.8% | +413% | 61 |
+| 3 | baseline_dec2025 | 59.8% | +413% | 61 |
+| 4 | baseline_restored | 45.3% | +1334% | 639 |
+| 5 | phase22_baseline | 44.8% | +180753% | 50 |
+| 6 | reproduce_823pct | 43.3% | +3754% | 4320 |
+
+Note: Very high P&L% values (>10000%) are from before the P&L calculation bug fix.
+
+### Conclusion
+
+The 60% win rate from dec_validation_v2 is NOT reproducible with simple retraining. The original pretrained model had specific learned weights that caused conservative predictions. Current approaches achieve ~37-40% win rate maximum.
+
+**Best configurations for different goals:**
+- **Maximize P&L**: V3 + RSI/MACD filter (`RSI_MACD_FILTER=1`)
+- **Maximize Win Rate**: dec_validation_v2 approach (pretrained) - but original model is lost
+- **20K Stable**: V3 Multi-Horizon (`PREDICTOR_ARCH=v3_multi_horizon`)
+
+---
