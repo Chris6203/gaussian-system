@@ -67,6 +67,7 @@ python -m pytest tests/                    # Run all tests
 python -m pytest tests/test_features.py -v # Single test file
 python scripts/diagnose_win_rate.py        # Debug poor performance
 python training_dashboard_server.py        # Web dashboard (port 5001)
+python dashboard_hub_server.py             # Unified hub with Agent API (port 5003)
 ```
 
 ### Data Management
@@ -221,8 +222,9 @@ python scripts/sync_from_datamanager.py --days 30
 ## Databases
 
 SQLite in `data/`:
-- `paper_trading.db`: Paper trading records
+- `paper_trading.db`: Paper trading records (trades linked by `run_id`)
 - `historical.db`: Historical market data
+- `experiments.db`: Experiment tracking (240+ runs, scoreboard data)
 - `unified_options_bot.db`: Main trading database
 
 ## Common Gotchas
@@ -247,6 +249,9 @@ SQLite in `data/`:
 | `docs/Q_SCORER_SYSTEM_MAP.md` | Q-Scorer architecture |
 | `docs/NEURAL_NETWORK_REFERENCE.md` | NN architecture details |
 | `RESULTS_TRACKER.md` | Experiment results and findings |
+| `backend/dashboard/agent_api.py` | Agent API for AI collaboration |
+| `backend/dashboard/scoreboard_api.py` | Scoreboard REST endpoints |
+| `backend/dashboard/trades_api.py` | Trade browser REST endpoints |
 
 ## Debugging Win Rate
 
@@ -259,6 +264,77 @@ See `docs/SYSTEM_ARCHITECTURE.md` "Debugging Win Rate" section. Quick reference:
 | Many small losses | Increase `min_confidence` |
 | Missing good trades | Lower thresholds |
 | Theta eating profits | Reduce `max_hold_minutes` |
+
+## Dashboards
+
+The system has multiple dashboards for monitoring and analysis:
+
+### Dashboard Hub (NEW - Port 5003)
+
+Unified dashboard with scoreboard, trade browser, and agent API:
+
+```bash
+python dashboard_hub_server.py  # Hub on port 5003
+```
+
+**Features:**
+- Experiment Scoreboard - Sort/filter all 240+ experiments
+- Trade Browser - Browse/filter trades with aggregations
+- Agent API - REST endpoints for AI collaboration
+- Links to existing Training and Live dashboards
+
+### Existing Dashboards
+
+| Dashboard | Port | Command | Purpose |
+|-----------|------|---------|---------|
+| Training | 5001 | `python training_dashboard_server.py` | Real-time training monitoring |
+| Live | 5000 | `python dashboard_server.py` | Live trading with Tradier |
+| History | 5002 | `python history_dashboard_server.py` | Browse past models |
+
+## Agent API for AI Collaboration
+
+REST API for AI agents (Claude, Codex, Gemini) to query experiments and suggest improvements.
+
+### Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/agent/summary` | AI-friendly system overview |
+| `GET /api/agent/experiments` | All experiments with filtering |
+| `GET /api/agent/experiments/best` | Top N performers |
+| `GET /api/agent/experiments/compare?runs=a,b` | Compare multiple runs |
+| `GET /api/agent/suggest` | Context for generating suggestions |
+| `POST /api/agent/ideas` | Submit new experiment ideas |
+| `GET /api/agent/status` | Currently running experiments |
+
+### Example Usage
+
+```bash
+# Get AI-friendly summary
+curl http://localhost:5003/api/agent/summary
+
+# Get top 10 experiments
+curl "http://localhost:5003/api/agent/experiments/best?limit=10"
+
+# Submit an experiment idea
+curl -X POST http://localhost:5003/api/agent/ideas \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Test wider stops", "hypothesis": "May reduce premature exits", "env_vars": {"HARD_STOP_LOSS_PCT": "12"}}'
+```
+
+### For External AI Integration
+
+```python
+import requests
+
+# Fetch all experiments for analysis
+experiments = requests.get("http://server:5003/api/agent/experiments").json()
+
+# Get suggestion context
+context = requests.get("http://server:5003/api/agent/suggest").json()
+print(context['patterns_observed'])  # What's working
+print(context['worst_runs'])          # What to avoid
+```
 
 ## Data Manager Subsystem
 

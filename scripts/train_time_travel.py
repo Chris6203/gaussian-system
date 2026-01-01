@@ -7,8 +7,16 @@ Works EXACTLY like live bot, just with historical data instead of waiting for li
 import sys
 import os
 
-# ðŸš¨ GAUSSIAN STANDALONE: Add parent directory to path so we can import local modules
+# GAUSSIAN STANDALONE: Add parent directory to path so we can import local modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Dashboard heartbeat for tracking running experiments
+try:
+    from backend.dashboard.heartbeat import ExperimentHeartbeat
+    HEARTBEAT_AVAILABLE = True
+except ImportError:
+    HEARTBEAT_AVAILABLE = False
+    ExperimentHeartbeat = None
 
 # Import centralized P&L calculation (prevents 100x multiplier bug)
 try:
@@ -1010,6 +1018,27 @@ else:
 
 # Create state directory inside run directory
 os.makedirs(os.path.join(run_dir, 'state'), exist_ok=True)
+
+# Initialize heartbeat for dashboard tracking
+_heartbeat = None
+if HEARTBEAT_AVAILABLE:
+    try:
+        # Collect env vars that affect the experiment
+        _env_vars_for_heartbeat = {
+            k: v for k, v in os.environ.items()
+            if k.startswith(('TT_', 'HARD_', 'HMM_', 'PREDICTOR_', 'TEMPORAL_', 'LOAD_', 'ENTRY_'))
+        }
+        _run_name = os.path.basename(run_dir)
+        _heartbeat = ExperimentHeartbeat(
+            run_name=_run_name,
+            target_cycles=TT_MAX_CYCLES,
+            env_vars=_env_vars_for_heartbeat
+        )
+        _heartbeat.start()
+        logger.info(f"[HEARTBEAT] Registered experiment: {_run_name}")
+    except Exception as e:
+        logger.warning(f"[HEARTBEAT] Failed to initialize: {e}")
+        _heartbeat = None
 
 # Load bot config and override predictor checkpoint path for this run.
 # We want BOTH:
@@ -3857,7 +3886,15 @@ for idx, sim_time in enumerate(common_times):
         if cycles % 10 == 0:
             import gc
             gc.collect()
-        
+
+        # Update heartbeat for dashboard tracking (every 100 cycles)
+        if cycles % 100 == 0 and _heartbeat:
+            try:
+                current_pnl = bot.paper_trader.current_balance - bot.paper_trader.initial_balance
+                _heartbeat.update(cycles, current_pnl)
+            except Exception:
+                pass
+
         # Checkpoint logging (models NOT saved to prevent overfitting)
         if cycles % 1000 == 0 and cycles > 0:
             # Note: We DON'T save models during training to prevent overfitting
@@ -4424,6 +4461,14 @@ if os.environ.get('ENABLE_LIVE_MODE', 'false').lower() == 'true':
         import traceback
         traceback.print_exc()
 else:
+    # Stop heartbeat tracking
+    if _heartbeat:
+        try:
+            _heartbeat.stop()
+            logger.info("[HEARTBEAT] Experiment unregistered (complete)")
+        except Exception:
+            pass
+
     print(f"\n{'='*70}")
     print("[DONE] SIMULATION COMPLETE")
     print(f"{'='*70}")

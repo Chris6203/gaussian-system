@@ -1,0 +1,856 @@
+#!/usr/bin/env python3
+"""
+Dashboard Hub Server
+====================
+
+Central dashboard that provides:
+1. Scoreboard - Experiment leaderboard with filtering/comparison
+2. Trade Browser - Deep trade analysis across all runs
+3. Agent API - REST endpoints for AI collaboration
+4. Links to existing dashboards (training, live)
+
+Run this alongside existing dashboards:
+    python dashboard_hub_server.py  # Port 5003 (hub)
+    python training_dashboard_server.py  # Port 5001 (existing)
+    python dashboard_server.py  # Port 5000 (existing)
+
+Or run standalone with all features.
+"""
+
+import os
+import json
+from pathlib import Path
+from datetime import datetime
+
+from flask import Flask, jsonify, render_template_string, send_from_directory
+from flask_cors import CORS
+
+# Import blueprints
+from backend.dashboard.agent_api import agent_bp
+from backend.dashboard.scoreboard_api import scoreboard_bp
+from backend.dashboard.trades_api import trades_bp
+
+# Configuration
+def load_config():
+    config_path = Path('config.json')
+    defaults = {
+        'port': 5003,
+        'host': '0.0.0.0',
+        'existing_dashboards': {
+            'training': 'http://localhost:5001',
+            'live': 'http://localhost:5000'
+        }
+    }
+
+    if config_path.exists():
+        try:
+            with open(config_path) as f:
+                cfg = json.load(f)
+            hub_cfg = cfg.get('dashboard_hub', {})
+            for k, v in hub_cfg.items():
+                defaults[k] = v
+        except Exception as e:
+            print(f"Warning: Could not load config: {e}")
+
+    return defaults
+
+CONFIG = load_config()
+
+# Create Flask app
+app = Flask(__name__)
+CORS(app)
+
+# Register blueprints
+app.register_blueprint(agent_bp)
+app.register_blueprint(scoreboard_bp)
+app.register_blueprint(trades_bp)
+
+# HTML Template for Hub
+HUB_HTML = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Dashboard Hub</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --bg-card: #161b22;
+            --bg-elevated: #21262d;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --green: #3fb950;
+            --red: #f85149;
+            --cyan: #58a6ff;
+            --yellow: #d29922;
+            --accent: #58a6ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .header .status {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-badge.running {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--green);
+        }
+        .tabs {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 0;
+            padding: 0 24px;
+        }
+        .tab {
+            padding: 12px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .tab:hover {
+            color: var(--text);
+        }
+        .tab.active {
+            color: var(--cyan);
+            border-bottom-color: var(--cyan);
+        }
+        .tab.external {
+            color: var(--yellow);
+        }
+        .content {
+            padding: 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        .card-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .card-body {
+            padding: 16px;
+        }
+        .filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .filters input, .filters select {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text);
+            font-size: 13px;
+        }
+        .filters button {
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .filters button:hover {
+            opacity: 0.9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+        }
+        th:hover {
+            color: var(--cyan);
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+        }
+        tr:hover {
+            background: var(--bg-elevated);
+        }
+        .positive { color: var(--green); }
+        .negative { color: var(--red); }
+        .running-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            margin-right: 6px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .pagination button {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .stat-card .label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .api-docs {
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+        .api-docs code {
+            color: var(--cyan);
+        }
+        .external-links {
+            display: flex;
+            gap: 16px;
+        }
+        .external-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 24px;
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        .external-link:hover {
+            background: var(--border);
+        }
+        .compare-selection {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .compare-chip {
+            background: var(--accent);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .compare-chip .remove {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .compare-chip .remove:hover {
+            opacity: 1;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Trading Dashboard Hub</h1>
+        <div class="status">
+            <span id="running-status" class="status-badge">Loading...</span>
+            <span id="total-experiments">-- experiments</span>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <a class="tab active" data-tab="scoreboard">Scoreboard</a>
+        <a class="tab" data-tab="trades">Trade Browser</a>
+        <a class="tab" data-tab="api">Agent API</a>
+        <a class="tab external" href="{{ training_url }}" target="_blank">Training Dashboard ↗</a>
+        <a class="tab external" href="{{ live_url }}" target="_blank">Live Dashboard ↗</a>
+    </nav>
+
+    <main class="content">
+        <!-- Scoreboard Tab -->
+        <div id="scoreboard-tab" class="tab-content active">
+            <div class="stats-row" id="scoreboard-stats"></div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Experiment Leaderboard</h2>
+                    <div class="compare-selection">
+                        <span id="compare-label" class="hidden">Compare:</span>
+                        <div id="compare-chips"></div>
+                        <button id="compare-btn" class="hidden" onclick="compareSelected()">Compare</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="filters">
+                        <input type="text" id="search" placeholder="Search runs...">
+                        <input type="number" id="min-trades" placeholder="Min trades" value="10">
+                        <select id="sort-by">
+                            <option value="pnl_pct">Sort by P&L %</option>
+                            <option value="win_rate">Sort by Win Rate</option>
+                            <option value="per_trade_pnl">Sort by $/Trade</option>
+                            <option value="trades">Sort by Trade Count</option>
+                            <option value="timestamp">Sort by Date</option>
+                        </select>
+                        <button onclick="loadScoreboard()">Apply</button>
+                    </div>
+
+                    <table id="scoreboard-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Run Name</th>
+                                <th>Date</th>
+                                <th>P&L %</th>
+                                <th>Win Rate</th>
+                                <th>Trades</th>
+                                <th>$/Trade</th>
+                                <th>Cycles</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scoreboard-body"></tbody>
+                    </table>
+
+                    <div class="pagination">
+                        <button id="prev-btn" onclick="prevPage()" disabled>&lt; Prev</button>
+                        <span id="page-info">Page 1</span>
+                        <button id="next-btn" onclick="nextPage()">Next &gt;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trade Browser Tab -->
+        <div id="trades-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Trade Browser</h2>
+                </div>
+                <div class="card-body">
+                    <div class="filters">
+                        <select id="trade-run-filter">
+                            <option value="">All Runs</option>
+                        </select>
+                        <select id="trade-type-filter">
+                            <option value="">All Types</option>
+                            <option value="CALL">CALL</option>
+                            <option value="PUT">PUT</option>
+                        </select>
+                        <input type="date" id="trade-date-from" placeholder="From date">
+                        <input type="date" id="trade-date-to" placeholder="To date">
+                        <button onclick="loadTrades()">Apply</button>
+                    </div>
+
+                    <div class="stats-row" id="trade-stats"></div>
+
+                    <table id="trades-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Strike</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>P&L</th>
+                                <th>Exit Reason</th>
+                                <th>Run</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trades-body"></tbody>
+                    </table>
+
+                    <div class="pagination">
+                        <button id="trades-prev-btn" onclick="prevTradePage()" disabled>&lt; Prev</button>
+                        <span id="trades-page-info">Page 1</span>
+                        <button id="trades-next-btn" onclick="nextTradePage()">Next &gt;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Tab -->
+        <div id="api-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Agent API Documentation</h2>
+                </div>
+                <div class="card-body">
+                    <p style="margin-bottom: 16px; color: var(--text-muted);">
+                        REST API for AI agents (Claude, Codex, Gemini) to query experiments and suggest improvements.
+                    </p>
+
+                    <div class="api-docs">
+<pre>
+<code># Get AI-friendly summary</code>
+GET /api/agent/summary
+
+<code># Get all experiments</code>
+GET /api/agent/experiments?limit=100&min_trades=50
+
+<code># Get top performers</code>
+GET /api/agent/experiments/best?limit=10&metric=pnl_pct
+
+<code># Compare experiments</code>
+GET /api/agent/experiments/compare?runs=run1,run2,run3
+
+<code># Get suggestion context</code>
+GET /api/agent/suggest
+
+<code># Submit experiment idea</code>
+POST /api/agent/ideas
+{
+    "title": "Test wider stop loss",
+    "hypothesis": "Wider stops may reduce premature exits",
+    "env_vars": {"HARD_STOP_LOSS_PCT": "12"},
+    "source": "gemini"
+}
+
+<code># Get trades for a run</code>
+GET /api/agent/trades/{run_id}
+
+<code># Get running experiments</code>
+GET /api/agent/status
+</pre>
+                    </div>
+
+                    <h3 style="margin: 24px 0 16px;">Quick Test</h3>
+                    <div class="external-links">
+                        <a class="external-link" href="/api/agent/summary" target="_blank">
+                            Test /api/agent/summary
+                        </a>
+                        <a class="external-link" href="/api/agent/experiments/best?limit=5" target="_blank">
+                            Test /api/agent/experiments/best
+                        </a>
+                        <a class="external-link" href="/api/agent/suggest" target="_blank">
+                            Test /api/agent/suggest
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // State
+        let currentPage = 1;
+        let totalPages = 1;
+        let tradesPage = 1;
+        let tradesTotalPages = 1;
+        let selectedForCompare = [];
+
+        // Tab switching
+        document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+            });
+        });
+
+        // Load scoreboard stats
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/scoreboard/stats');
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('total-experiments').textContent =
+                        `${data.stats.total_experiments} experiments`;
+
+                    document.getElementById('running-status').textContent =
+                        data.running_experiments > 0 ?
+                        `${data.running_experiments} running` : 'No runs active';
+                    document.getElementById('running-status').className =
+                        'status-badge ' + (data.running_experiments > 0 ? 'running' : '');
+
+                    document.getElementById('scoreboard-stats').innerHTML = `
+                        <div class="stat-card">
+                            <div class="value positive">+${data.stats.best_pnl_pct}%</div>
+                            <div class="label">Best P&L</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value">${data.stats.avg_pnl_pct}%</div>
+                            <div class="label">Avg P&L</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value">${data.stats.best_win_rate_pct}%</div>
+                            <div class="label">Best Win Rate</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value">$${data.stats.avg_per_trade_pnl}</div>
+                            <div class="label">Avg $/Trade</div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+
+        // Load scoreboard
+        async function loadScoreboard() {
+            const search = document.getElementById('search').value;
+            const minTrades = document.getElementById('min-trades').value || 10;
+            const sortBy = document.getElementById('sort-by').value;
+
+            try {
+                const res = await fetch(
+                    `/api/scoreboard?page=${currentPage}&limit=25&min_trades=${minTrades}&sort=${sortBy}&search=${search}`
+                );
+                const data = await res.json();
+
+                if (data.success) {
+                    const tbody = document.getElementById('scoreboard-body');
+                    tbody.innerHTML = data.experiments.map(exp => `
+                        <tr>
+                            <td>
+                                <input type="checkbox"
+                                       onchange="toggleCompare('${exp.run_name}')"
+                                       ${selectedForCompare.includes(exp.run_name) ? 'checked' : ''}>
+                            </td>
+                            <td>
+                                ${exp.is_running ? '<span class="running-indicator"></span>' : ''}
+                                <a href="/api/scoreboard/${exp.run_name}" target="_blank" style="color: var(--cyan)">
+                                    ${exp.run_name}
+                                </a>
+                            </td>
+                            <td>${exp.timestamp ? exp.timestamp.split('T')[0] : '-'}</td>
+                            <td class="${exp.pnl_pct > 0 ? 'positive' : 'negative'}">
+                                ${exp.pnl_pct > 0 ? '+' : ''}${exp.pnl_pct?.toFixed(1) || 0}%
+                            </td>
+                            <td>${exp.win_rate_pct || 0}%</td>
+                            <td>${exp.trades || 0}</td>
+                            <td class="${(exp.per_trade_pnl || 0) > 0 ? 'positive' : 'negative'}">
+                                $${exp.per_trade_pnl?.toFixed(2) || '0.00'}
+                            </td>
+                            <td>${exp.cycles || 0}</td>
+                        </tr>
+                    `).join('');
+
+                    totalPages = data.pagination.total_pages;
+                    document.getElementById('page-info').textContent =
+                        `Page ${currentPage} of ${totalPages}`;
+                    document.getElementById('prev-btn').disabled = currentPage <= 1;
+                    document.getElementById('next-btn').disabled = currentPage >= totalPages;
+                }
+            } catch (e) {
+                console.error('Failed to load scoreboard:', e);
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadScoreboard();
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadScoreboard();
+            }
+        }
+
+        // Compare functionality
+        function toggleCompare(runName) {
+            const idx = selectedForCompare.indexOf(runName);
+            if (idx >= 0) {
+                selectedForCompare.splice(idx, 1);
+            } else {
+                selectedForCompare.push(runName);
+            }
+            updateCompareUI();
+        }
+
+        function updateCompareUI() {
+            const chips = document.getElementById('compare-chips');
+            const label = document.getElementById('compare-label');
+            const btn = document.getElementById('compare-btn');
+
+            if (selectedForCompare.length > 0) {
+                label.classList.remove('hidden');
+                btn.classList.remove('hidden');
+                chips.innerHTML = selectedForCompare.map(name => `
+                    <span class="compare-chip">
+                        ${name}
+                        <span class="remove" onclick="toggleCompare('${name}')">&times;</span>
+                    </span>
+                `).join('');
+            } else {
+                label.classList.add('hidden');
+                btn.classList.add('hidden');
+                chips.innerHTML = '';
+            }
+        }
+
+        async function compareSelected() {
+            if (selectedForCompare.length < 2) {
+                alert('Select at least 2 experiments to compare');
+                return;
+            }
+            // Open comparison in new tab
+            const url = `/api/scoreboard/compare`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({runs: selectedForCompare})
+            });
+            const data = await response.json();
+            // For now, show in alert - could make a nice modal
+            console.log('Comparison:', data);
+            alert('Comparison logged to console. Check for config differences.');
+        }
+
+        // Load trades
+        async function loadTradeRuns() {
+            try {
+                const res = await fetch('/api/trades/runs');
+                const data = await res.json();
+                if (data.success) {
+                    const select = document.getElementById('trade-run-filter');
+                    select.innerHTML = '<option value="">All Runs</option>' +
+                        data.runs.map(r => `<option value="${r.run_id}">${r.run_id} (${r.trade_count})</option>`).join('');
+                }
+            } catch (e) {
+                console.error('Failed to load trade runs:', e);
+            }
+        }
+
+        async function loadTrades() {
+            const runId = document.getElementById('trade-run-filter').value;
+            const optionType = document.getElementById('trade-type-filter').value;
+            const dateFrom = document.getElementById('trade-date-from').value;
+            const dateTo = document.getElementById('trade-date-to').value;
+
+            let url = `/api/trades?page=${tradesPage}&limit=25`;
+            if (runId) url += `&run_id=${runId}`;
+            if (optionType) url += `&option_type=${optionType}`;
+            if (dateFrom) url += `&start_date=${dateFrom}`;
+            if (dateTo) url += `&end_date=${dateTo}`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.success) {
+                    const tbody = document.getElementById('trades-body');
+                    tbody.innerHTML = data.trades.map(t => `
+                        <tr>
+                            <td>${t.timestamp || '-'}</td>
+                            <td>${t.option_type || '-'}</td>
+                            <td>$${t.strike_price || '-'}</td>
+                            <td>$${t.premium_paid?.toFixed(2) || '-'}</td>
+                            <td>$${t.exit_price?.toFixed(2) || '-'}</td>
+                            <td class="${(t.profit_loss || 0) > 0 ? 'positive' : 'negative'}">
+                                ${t.profit_loss > 0 ? '+' : ''}$${t.profit_loss?.toFixed(2) || '0.00'}
+                                (${t.pnl_pct || 0}%)
+                            </td>
+                            <td>${t.exit_reason || '-'}</td>
+                            <td>${t.run_id || '-'}</td>
+                        </tr>
+                    `).join('');
+
+                    tradesTotalPages = data.pagination.total_pages;
+                    document.getElementById('trades-page-info').textContent =
+                        `Page ${tradesPage} of ${tradesTotalPages} (${data.pagination.total} trades)`;
+                    document.getElementById('trades-prev-btn').disabled = tradesPage <= 1;
+                    document.getElementById('trades-next-btn').disabled = tradesPage >= tradesTotalPages;
+
+                    // Load aggregations for stats
+                    loadTradeStats(runId);
+                }
+            } catch (e) {
+                console.error('Failed to load trades:', e);
+            }
+        }
+
+        async function loadTradeStats(runId) {
+            let url = '/api/trades/aggregations?group_by=exit_reason';
+            if (runId) url += `&run_id=${runId}`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.success && data.summary) {
+                    document.getElementById('trade-stats').innerHTML = `
+                        <div class="stat-card">
+                            <div class="value">${data.summary.total_trades}</div>
+                            <div class="label">Total Trades</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value">${data.summary.win_rate}%</div>
+                            <div class="label">Win Rate</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value ${data.summary.total_pnl > 0 ? 'positive' : 'negative'}">
+                                $${data.summary.total_pnl?.toFixed(2) || 0}
+                            </div>
+                            <div class="label">Total P&L</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value">$${data.summary.avg_pnl?.toFixed(2) || 0}</div>
+                            <div class="label">Avg P&L</div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('Failed to load trade stats:', e);
+            }
+        }
+
+        function prevTradePage() {
+            if (tradesPage > 1) {
+                tradesPage--;
+                loadTrades();
+            }
+        }
+
+        function nextTradePage() {
+            if (tradesPage < tradesTotalPages) {
+                tradesPage++;
+                loadTrades();
+            }
+        }
+
+        // Initial load
+        loadStats();
+        loadScoreboard();
+        loadTradeRuns();
+        loadTrades();
+
+        // Refresh stats periodically
+        setInterval(loadStats, 30000);
+    </script>
+</body>
+</html>
+'''
+
+@app.route('/')
+def index():
+    return render_template_string(
+        HUB_HTML,
+        training_url=CONFIG['existing_dashboards']['training'],
+        live_url=CONFIG['existing_dashboards']['live']
+    )
+
+
+@app.route('/health')
+def health():
+    return jsonify({
+        "status": "ok",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat()
+    })
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('HUB_PORT', CONFIG['port']))
+    host = os.environ.get('HUB_HOST', CONFIG['host'])
+
+    print(f"""
+╔═══════════════════════════════════════════════════════════════╗
+║            Trading Dashboard Hub v1.0.0                      ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Hub Dashboard:     http://{host}:{port}
+║  Agent API:         http://{host}:{port}/api/agent/summary
+║  Scoreboard API:    http://{host}:{port}/api/scoreboard
+║  Trades API:        http://{host}:{port}/api/trades
+╠═══════════════════════════════════════════════════════════════╣
+║  Existing Dashboards (external links):                       ║
+║  Training:          {CONFIG['existing_dashboards']['training']}
+║  Live:              {CONFIG['existing_dashboards']['live']}
+╚═══════════════════════════════════════════════════════════════╝
+""")
+
+    app.run(host=host, port=port, debug=False, threaded=True)
