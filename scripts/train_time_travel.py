@@ -88,11 +88,25 @@ TT_INTERVAL_MINUTES = 5 if TT_DATA_INTERVAL == '5m' else 1
 # Entry controller type from config.json
 ENTRY_CONTROLLER_TYPE = _entry_config.get('type', 'bandit').lower()
 
+# RSI+MACD confirmation filter for higher win rate
+# When enabled, trades must have RSI and MACD confirmation
+RSI_MACD_FILTER_ENABLED = os.environ.get('RSI_MACD_FILTER', '0') == '1'
+RSI_OVERSOLD_THRESHOLD = float(os.environ.get('RSI_OVERSOLD', '40'))  # For calls: RSI < this
+RSI_OVERBOUGHT_THRESHOLD = float(os.environ.get('RSI_OVERBOUGHT', '60'))  # For puts: RSI > this
+MACD_CONFIRM_ENABLED = os.environ.get('MACD_CONFIRM', '1') == '1'  # Require MACD alignment
+# Momentum mode: trade WITH trend (RSI>50 for calls, RSI<50 for puts) instead of mean reversion
+RSI_MOMENTUM_MODE = os.environ.get('RSI_MOMENTUM_MODE', '0') == '1'
+# Volume confirmation: require above-average volume for entry
+VOLUME_CONFIRM_ENABLED = os.environ.get('VOLUME_CONFIRM', '0') == '1'
+VOLUME_CONFIRM_THRESHOLD = float(os.environ.get('VOLUME_THRESHOLD', '1.2'))  # 1.2 = 20% above average
+
 # Log loaded configuration
 logger.info(f"[CONFIG] Entry controller: {ENTRY_CONTROLLER_TYPE}")
 logger.info(f"[CONFIG] TT_MAX_CYCLES: {TT_MAX_CYCLES}, TT_PRINT_EVERY: {TT_PRINT_EVERY}")
 logger.info(f"[CONFIG] TT_MAX_HOLD_MINUTES: {TT_MAX_HOLD_MINUTES}, TT_MAX_POSITIONS: {TT_MAX_POSITIONS}")
 logger.info(f"[CONFIG] TT_DATA_INTERVAL: {TT_DATA_INTERVAL} ({TT_INTERVAL_MINUTES}-minute bars)")
+if RSI_MACD_FILTER_ENABLED:
+    logger.info(f"[CONFIG] RSI+MACD filter ENABLED: RSI oversold<{RSI_OVERSOLD_THRESHOLD}, overbought>{RSI_OVERBOUGHT_THRESHOLD}, MACD={MACD_CONFIRM_ENABLED}")
 
 if TT_QUIET:
     _orig_print = builtins.print
@@ -2408,6 +2422,62 @@ for idx, sim_time in enumerate(common_times):
                     signal["action"] = action
                     rl_details = {"reason": f"v3_direction (p={v3_decision.direction_prob:.2f}, hmm={hmm_trend_val:.2f})", "mode": "v3"}
                     print(f"   [V3] TRADE: {action} (p_dir={v3_decision.direction_prob:.3f}, hmm={hmm_trend_val:.2f})")
+
+                    # RSI+MACD confirmation filter for higher win rate
+                    if RSI_MACD_FILTER_ENABLED and should_trade:
+                        rsi_val = signal.get('rsi', signal.get('rsi_14', 50))
+                        macd_val = signal.get('macd', 0)
+
+                        rsi_confirms = False
+                        macd_confirms = True  # Default to True if MACD check disabled
+
+                        if RSI_MOMENTUM_MODE:
+                            # Momentum mode: trade WITH trend
+                            if action == "BUY_CALLS":
+                                rsi_confirms = rsi_val > 50  # Bullish momentum
+                                if MACD_CONFIRM_ENABLED:
+                                    macd_confirms = macd_val > 0  # MACD bullish
+                            else:  # BUY_PUTS
+                                rsi_confirms = rsi_val < 50  # Bearish momentum
+                                if MACD_CONFIRM_ENABLED:
+                                    macd_confirms = macd_val < 0  # MACD bearish
+                        else:
+                            # Mean reversion mode (default): trade against extremes
+                            if action == "BUY_CALLS":
+                                rsi_confirms = rsi_val < RSI_OVERSOLD_THRESHOLD  # Oversold = bounce
+                                if MACD_CONFIRM_ENABLED:
+                                    macd_confirms = macd_val > 0  # MACD bullish
+                            else:  # BUY_PUTS
+                                rsi_confirms = rsi_val > RSI_OVERBOUGHT_THRESHOLD  # Overbought = drop
+                                if MACD_CONFIRM_ENABLED:
+                                    macd_confirms = macd_val < 0  # MACD bearish
+
+                        if not rsi_confirms or not macd_confirms:
+                            should_trade = False
+                            rejection_reason = f"rsi_macd_filter (RSI={rsi_val:.1f}, MACD={macd_val:.4f})"
+                            rl_details = {"reason": rejection_reason, "mode": "v3"}
+                            try:
+                                rejection_reasons_for_log.append("rsi_macd_filter")
+                            except Exception:
+                                pass
+                            print(f"   [V3] RSI/MACD VETO: {action} blocked (RSI={rsi_val:.1f}, MACD={macd_val:.4f})")
+                        else:
+                            print(f"   [V3] RSI/MACD OK: RSI={rsi_val:.1f}, MACD={macd_val:.4f}")
+
+                    # Volume confirmation filter
+                    if VOLUME_CONFIRM_ENABLED and should_trade:
+                        volume_spike = signal.get('volume_spike', 1.0)
+                        if volume_spike < VOLUME_CONFIRM_THRESHOLD:
+                            should_trade = False
+                            rejection_reason = f"volume_filter (spike={volume_spike:.2f} < {VOLUME_CONFIRM_THRESHOLD})"
+                            rl_details = {"reason": rejection_reason, "mode": "v3"}
+                            try:
+                                rejection_reasons_for_log.append("volume_filter")
+                            except Exception:
+                                pass
+                            print(f"   [V3] VOLUME VETO: volume_spike={volume_spike:.2f} < {VOLUME_CONFIRM_THRESHOLD}")
+                        else:
+                            print(f"   [V3] VOLUME OK: spike={volume_spike:.2f}")
                 else:
                     should_trade = False
                     composite_score = 0.0
@@ -2974,7 +3044,21 @@ for idx, sim_time in enumerate(common_times):
                             edge_ok = (predicted_return >= train_min_abs_ret) if is_call else (predicted_return <= -train_min_abs_ret)
                             conf_ok = confidence >= train_min_conf
 
-                            if conf_ok and edge_ok:
+                            # MARKET OPEN FILTER: Big wins happen at market open (09:31)
+                            # Set MARKET_OPEN_MINUTES=30 to only trade in first 30 min after open
+                            market_open_minutes = int(os.environ.get('MARKET_OPEN_MINUTES', '0'))
+                            time_ok = True
+                            if market_open_minutes > 0:
+                                try:
+                                    market_open_time = sim_time.replace(hour=9, minute=30, second=0, microsecond=0)
+                                    mins_since_open = (sim_time - market_open_time).total_seconds() / 60
+                                    time_ok = 0 <= mins_since_open <= market_open_minutes
+                                    if not time_ok:
+                                        pass  # Will be logged below
+                                except Exception:
+                                    time_ok = True  # Default to allowing if time calc fails
+
+                            if conf_ok and edge_ok and time_ok:
                                 should_trade = True
                                 composite_score = confidence
                                 rl_details = {'reason': f'bandit_follow_signal ({action})', 'mode': 'bandit'}
@@ -2991,6 +3075,8 @@ for idx, sim_time in enumerate(common_times):
                                     why.append(f"conf<{train_min_conf:.0%}")
                                 if not edge_ok:
                                     why.append(f"|ret|<{train_min_abs_ret*100:.2f}%")
+                                if not time_ok:
+                                    why.append(f"outside market open ({market_open_minutes}m)")
                                 rl_details = {'reason': f"bandit_gate ({', '.join(why)})", 'mode': 'bandit'}
                                 print(f"   [UNIFIED BANDIT] Skipping: {', '.join(why)} (conf={confidence:.1%}, edge={predicted_return:+.2%})")
                                 try:

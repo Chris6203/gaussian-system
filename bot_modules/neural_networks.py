@@ -1405,10 +1405,15 @@ class UnifiedOptionsPredictorV3(nn.Module):
             result[f'direction_{horizon}m'] = self.horizon_heads[f'direction_{horizon}m'](h)
             result[f'confidence_{horizon}m'] = torch.sigmoid(self.horizon_heads[f'confidence_{horizon}m'](h))
 
-        # Default horizon for backward compatibility (15m)
-        result['return'] = result['return_15m']
-        result['direction'] = result['direction_15m']
-        result['confidence'] = result['confidence_15m']
+        # Default horizon - configurable via V3_DEFAULT_HORIZON env var
+        # Options: 5, 15, 30, 45 (minutes)
+        # Shorter horizons (5m) may have higher accuracy for short hold times
+        default_horizon = int(os.environ.get('V3_DEFAULT_HORIZON', '15'))
+        if default_horizon not in self.HORIZONS:
+            default_horizon = 15
+        result['return'] = result[f'return_{default_horizon}m']
+        result['direction'] = result[f'direction_{default_horizon}m']
+        result['confidence'] = result[f'confidence_{default_horizon}m']
 
         result['fillability'] = torch.sigmoid(self.fillability_head(h))
         result['exp_slippage'] = self.slippage_head(h)
