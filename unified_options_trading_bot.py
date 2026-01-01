@@ -5057,6 +5057,17 @@ class UnifiedOptionsBot:
                 "hmm_state": signal.get("hmm_state"),
                 "hmm_confidence": signal.get("hmm_confidence", 0),
                 "hmm_trend": signal.get("hmm_trend"),
+                # NEW: Tuning fields for strategy optimization
+                "hmm_volatility": signal.get("hmm_volatility", 0),
+                "hmm_liquidity": signal.get("hmm_liquidity", 0),
+                "predicted_return": signal.get("predicted_return", 0),
+                "timeframe_minutes": signal.get("timeframe_minutes", 60),
+                "momentum_5m": signal.get("momentum_5m", signal.get("momentum_5min", 0)),
+                "momentum_15m": signal.get("momentum_15m", signal.get("momentum_15min", 0)),
+                "volume_spike": signal.get("volume_spike", 1.0),
+                "vix_level": signal.get("vix_level", signal.get("vix", 0)),
+                "direction_probs": signal.get("direction_probs"),  # [down, neutral, up]
+                "entry_controller": signal.get("entry_controller"),  # bandit, rl, consensus, q_scorer
             }
 
             logger.info(f"📞 Calling paper_trader.place_trade(symbol={symbol}, price={current_price:.2f})")
@@ -7002,6 +7013,11 @@ class UnifiedOptionsBot:
                         logger.info("🧠 Starting continuous learning cycle with fresh data...")
                         self.continuous_learning_cycle()
                     
+                    # Set market context for exit tracking (tuning data)
+                    vix = getattr(self, 'current_vix', None)
+                    hmm_trend = self.current_hmm_regime.get('trend') if self.current_hmm_regime else None
+                    self.paper_trader.set_market_context(vix=vix, hmm_trend=hmm_trend)
+
                     # Always update positions and generate signals when we have fresh data
                     self.paper_trader.update_positions(symbol)
                     
@@ -7158,6 +7174,10 @@ class UnifiedOptionsBot:
                         # Handle end-of-day tasks even without fresh data
                         if not self.end_of_day_processed:
                             logger.info("Running end-of-day tasks...")
+                            # Set market context for exit tracking
+                            vix = getattr(self, 'current_vix', None)
+                            hmm_trend = self.current_hmm_regime.get('trend') if self.current_hmm_regime else None
+                            self.paper_trader.set_market_context(vix=vix, hmm_trend=hmm_trend)
                             self.paper_trader.update_positions(symbol)
                             logger.info("🌙 Performing final end-of-day learning cycle...")
                             self.continuous_learning_cycle()

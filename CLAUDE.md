@@ -365,6 +365,84 @@ All trades made during training are automatically linked to their run via `run_i
 curl "http://localhost:5003/api/trades/pnl-curve?run_id=run_20251220_143000"
 ```
 
+## Trade Tuning Data
+
+Every trade now captures detailed context for strategy optimization. This data helps analyze what conditions lead to winning vs losing trades.
+
+### Entry Context Fields
+
+Captured when a trade is opened (`paper_trading.db` → `trades` table):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `spy_price` | REAL | SPY price at entry |
+| `vix_level` | REAL | VIX at entry |
+| `hmm_trend` | REAL | HMM trend state (0=bearish, 0.5=neutral, 1=bullish) |
+| `hmm_volatility` | REAL | HMM volatility state (0=low, 1=high) |
+| `hmm_liquidity` | REAL | HMM liquidity state |
+| `hmm_confidence` | REAL | HMM confidence (0-1) |
+| `predicted_return` | REAL | Model's predicted return at entry |
+| `prediction_timeframe` | TEXT | Timeframe used (5min, 15min, 30min, etc.) |
+| `entry_controller` | TEXT | Controller type: bandit, rl, consensus, q_scorer |
+| `signal_strategy` | TEXT | Strategy: NEURAL_BULLISH, HMM_TREND, etc. |
+| `signal_reasoning` | TEXT | Full reasoning chain (semicolon-separated) |
+| `momentum_5m` | REAL | 5-minute momentum at entry |
+| `momentum_15m` | REAL | 15-minute momentum at entry |
+| `volume_spike` | REAL | Volume spike indicator |
+| `direction_probs` | TEXT | JSON array: [down_prob, neutral_prob, up_prob] |
+
+### Exit Context Fields
+
+Captured when a trade is closed:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `exit_spy_price` | REAL | SPY price at exit |
+| `exit_vix_level` | REAL | VIX at exit |
+| `hold_minutes` | REAL | Actual hold duration in minutes |
+| `max_drawdown_pct` | REAL | Maximum drawdown during trade (tracked continuously) |
+| `max_gain_pct` | REAL | Maximum gain during trade (tracked continuously) |
+| `exit_hmm_trend` | REAL | HMM trend at exit (detect regime changes) |
+
+### Querying Tuning Data
+
+```sql
+-- Find trades where HMM regime changed during trade
+SELECT * FROM trades
+WHERE abs(hmm_trend - exit_hmm_trend) > 0.3
+AND profit_loss < 0;
+
+-- Analyze win rate by entry controller
+SELECT entry_controller,
+       COUNT(*) as trades,
+       SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as wins,
+       AVG(profit_loss) as avg_pnl
+FROM trades
+WHERE entry_controller IS NOT NULL
+GROUP BY entry_controller;
+
+-- Find optimal confidence threshold
+SELECT
+    CASE
+        WHEN ml_confidence < 0.6 THEN 'low (<60%)'
+        WHEN ml_confidence < 0.8 THEN 'medium (60-80%)'
+        ELSE 'high (>80%)'
+    END as conf_bucket,
+    COUNT(*) as trades,
+    AVG(profit_loss) as avg_pnl,
+    AVG(CASE WHEN profit_loss > 0 THEN 1.0 ELSE 0.0 END) as win_rate
+FROM trades
+GROUP BY conf_bucket;
+```
+
+### Migration
+
+If upgrading from an older version, run the migration to add tuning columns:
+
+```bash
+python scripts/migrate_add_tuning_fields.py
+```
+
 ## Data Manager Subsystem
 
 `data-manager/` is a separate Flask app for collecting historical market data:

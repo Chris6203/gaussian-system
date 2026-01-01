@@ -464,22 +464,29 @@ def validate_lstm_predictions() -> None:
         state.lstm_predictions_history = state.lstm_predictions_history[-max_predictions:]
 
 
-def refresh_data() -> None:
-    """Refresh all dashboard data."""
+def refresh_data(selected_log_file: str = None) -> None:
+    """Refresh all dashboard data.
+
+    Args:
+        selected_log_file: Optional specific log file to parse. If None, uses latest.
+    """
     global state
-    
+
     with state_lock:
         # Initialize start time
         if state.session.start_time == 0:
             state.session.start_time = time.time()
-        
+
         # Set initial balance
         state.account.initial_balance = CONFIG['initial_balance']
         if state.account.current_balance == 1000.0:
             state.account.current_balance = state.account.initial_balance
-        
-        # Parse log file
-        log_path = log_parser.find_latest_log()
+
+        # Parse log file - use selected or find latest
+        if selected_log_file and Path(selected_log_file).exists():
+            log_path = selected_log_file
+        else:
+            log_path = log_parser.find_latest_log()
         if log_path:
             log_parser.parse_log_file(log_path, state)
         
@@ -561,8 +568,14 @@ def index():
 
 @app.route('/api/data')
 def get_data():
-    """Get current training dashboard data."""
-    refresh_data()
+    """Get current training dashboard data.
+
+    Query params:
+        log_file: Optional specific log file to use (e.g., logs/real_bot_simulation_20260101_123456.log)
+    """
+    from flask import request
+    selected_log = request.args.get('log_file')
+    refresh_data(selected_log)
     
     with state_lock:
         data = state.to_api_dict()
@@ -667,10 +680,18 @@ def reset_session():
 
 @app.route('/api/chart')
 def get_chart_data():
-    """Get SPY price history + trades for chart."""
+    """Get SPY price history + trades for chart.
+
+    Query params:
+        log_file: Optional specific log file to use
+    """
     try:
+        # Get optional log file selection
+        from flask import request
+        selected_log = request.args.get('log_file')
+
         # Refresh state to get latest simulated time
-        refresh_data()
+        refresh_data(selected_log)
         
         # Get reference time
         simulated_datetime = state.session.simulated_datetime

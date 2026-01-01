@@ -169,6 +169,32 @@ class Trade:
     run_id: Optional[str] = None  # Training run ID (e.g., run_20251220_143000)
     exit_reason: Optional[str] = None  # Why trade was exited
 
+    # === NEW: Tuning fields for strategy optimization ===
+    # Entry context
+    spy_price: Optional[float] = None  # SPY price at entry
+    vix_level: Optional[float] = None  # VIX at entry
+    hmm_trend: Optional[float] = None  # HMM trend state (0=bearish, 1=bullish)
+    hmm_volatility: Optional[float] = None  # HMM volatility state
+    hmm_liquidity: Optional[float] = None  # HMM liquidity state
+    hmm_confidence: Optional[float] = None  # HMM confidence
+    predicted_return: Optional[float] = None  # Model's predicted return
+    prediction_timeframe: Optional[str] = None  # Which timeframe (5min, 15min, etc.)
+    entry_controller: Optional[str] = None  # bandit, rl, consensus, q_scorer
+    signal_strategy: Optional[str] = None  # NEURAL_BULLISH, HMM_TREND, etc.
+    signal_reasoning: Optional[str] = None  # Full reasoning chain
+    momentum_5m: Optional[float] = None  # 5-min momentum at entry
+    momentum_15m: Optional[float] = None  # 15-min momentum at entry
+    volume_spike: Optional[float] = None  # Volume spike indicator
+    direction_probs: Optional[str] = None  # JSON: [down, neutral, up]
+
+    # Exit context
+    exit_spy_price: Optional[float] = None  # SPY price at exit
+    exit_vix_level: Optional[float] = None  # VIX at exit
+    hold_minutes: Optional[float] = None  # Actual hold duration in minutes
+    max_drawdown_pct: Optional[float] = None  # Maximum drawdown during trade
+    max_gain_pct: Optional[float] = None  # Maximum gain during trade
+    exit_hmm_trend: Optional[float] = None  # HMM trend at exit (regime change?)
+
 
 class TradierFeeCalculator:
     """Calculate realistic Tradier fees for options trading"""
@@ -3691,6 +3717,25 @@ class PaperTradingSystem:
         raw_predicted_return = prediction_data.get('predicted_return', 0.0)
         trade.prediction_timeframe = prediction_data.get('timeframe_minutes', 60)
         trade.hmm_state = prediction_data.get('hmm_state', None)  # Store HMM regime at entry
+
+        # ============= NEW: Populate tuning fields for strategy optimization =============
+        import json
+        trade.spy_price = current_price
+        trade.vix_level = prediction_data.get('vix_level', prediction_data.get('vix', None))
+        trade.hmm_trend = prediction_data.get('hmm_trend', None)
+        trade.hmm_volatility = prediction_data.get('hmm_volatility', None)
+        trade.hmm_liquidity = prediction_data.get('hmm_liquidity', None)
+        trade.hmm_confidence = prediction_data.get('hmm_confidence', None)
+        trade.entry_controller = prediction_data.get('entry_controller', None)
+        trade.signal_strategy = prediction_data.get('strategy', None)
+        reasoning = prediction_data.get('reasoning', [])
+        trade.signal_reasoning = "; ".join(reasoning) if isinstance(reasoning, list) else str(reasoning)
+        trade.momentum_5m = prediction_data.get('momentum_5m', prediction_data.get('momentum_5min', None))
+        trade.momentum_15m = prediction_data.get('momentum_15m', prediction_data.get('momentum_15min', None))
+        trade.volume_spike = prediction_data.get('volume_spike', None)
+        dir_probs = prediction_data.get('direction_probs', None)
+        trade.direction_probs = json.dumps(dir_probs) if dir_probs else None
+        # ============= END TUNING FIELDS =============
         
         # ============= REALISTIC PROJECTION CAP =============
         # ML models often over-predict moves. Cap based on timeframe:
@@ -3828,8 +3873,13 @@ class PaperTradingSystem:
                  profit_loss, stop_loss, take_profit, ml_confidence, ml_prediction,
                  expiration_date, created_at, projected_profit, projected_return_pct,
                  planned_exit_time, max_hold_hours, tradier_option_symbol,
-                 tradier_order_id, is_real_trade, live_blocked_reason, exit_reason, run_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 tradier_order_id, is_real_trade, live_blocked_reason, exit_reason, run_id,
+                 spy_price, vix_level, hmm_trend, hmm_volatility, hmm_liquidity, hmm_confidence,
+                 predicted_return, prediction_timeframe, entry_controller, signal_strategy,
+                 signal_reasoning, momentum_5m, momentum_15m, volume_spike, direction_probs,
+                 exit_spy_price, exit_vix_level, hold_minutes, max_drawdown_pct, max_gain_pct, exit_hmm_trend)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 trade.id,
                 trade.timestamp.isoformat(),
@@ -3858,9 +3908,39 @@ class PaperTradingSystem:
                 getattr(trade, 'is_real_trade', False),
                 getattr(trade, 'live_blocked_reason', None),
                 getattr(trade, 'exit_reason', None),
-                getattr(trade, 'run_id', None) or getattr(self, 'current_run_id', None)
+                getattr(trade, 'run_id', None) or getattr(self, 'current_run_id', None),
+                # New tuning fields - entry context
+                getattr(trade, 'spy_price', None),
+                getattr(trade, 'vix_level', None),
+                getattr(trade, 'hmm_trend', None),
+                getattr(trade, 'hmm_volatility', None),
+                getattr(trade, 'hmm_liquidity', None),
+                getattr(trade, 'hmm_confidence', None),
+                getattr(trade, 'predicted_return', None),
+                getattr(trade, 'prediction_timeframe', None),
+                getattr(trade, 'entry_controller', None),
+                getattr(trade, 'signal_strategy', None),
+                getattr(trade, 'signal_reasoning', None),
+                getattr(trade, 'momentum_5m', None),
+                getattr(trade, 'momentum_15m', None),
+                getattr(trade, 'volume_spike', None),
+                getattr(trade, 'direction_probs', None),
+                # New tuning fields - exit context
+                getattr(trade, 'exit_spy_price', None),
+                getattr(trade, 'exit_vix_level', None),
+                getattr(trade, 'hold_minutes', None),
+                getattr(trade, 'max_drawdown_pct', None),
+                getattr(trade, 'max_gain_pct', None),
+                getattr(trade, 'exit_hmm_trend', None),
             ))
             conn.commit()
+
+    def set_market_context(self, vix: float = None, hmm_trend: float = None):
+        """Set current market context for exit tracking (tuning data)."""
+        if vix is not None:
+            self._current_vix = vix
+        if hmm_trend is not None:
+            self._current_hmm_trend = hmm_trend
 
     def update_positions(self, symbol: str = 'BITX', current_price: float = None):
         """
@@ -4292,6 +4372,17 @@ class PaperTradingSystem:
             # ============= EMERGENCY CIRCUIT BREAKER (ALWAYS FIRST!) =============
             # These exits happen REGARDLESS of RL, time held, or any other logic!
             current_pnl_pct_emergency = ((current_premium / trade.premium_paid) - 1.0) * 100.0 if trade.premium_paid > 0 else 0
+
+            # ============= Track max drawdown and max gain for tuning =============
+            if not hasattr(trade, '_max_drawdown_pct') or trade._max_drawdown_pct is None:
+                trade._max_drawdown_pct = 0.0
+            if not hasattr(trade, '_max_gain_pct') or trade._max_gain_pct is None:
+                trade._max_gain_pct = 0.0
+            if current_pnl_pct_emergency < trade._max_drawdown_pct:
+                trade._max_drawdown_pct = current_pnl_pct_emergency
+            if current_pnl_pct_emergency > trade._max_gain_pct:
+                trade._max_gain_pct = current_pnl_pct_emergency
+            # ============= END tracking =============
 
             # Calculate DOLLAR loss for this position
             current_dollar_pnl = (current_premium - trade.premium_paid) * trade.quantity * 100  # options are 100 shares each
@@ -5189,6 +5280,26 @@ class PaperTradingSystem:
                 self.max_drawdown = max(self.max_drawdown, current_drawdown)
 
                 trades_to_close.append(trade)
+
+                # ============= NEW: Populate exit context fields for tuning =============
+                try:
+                    entry_time = trade.timestamp if isinstance(trade.timestamp, datetime) else datetime.fromisoformat(str(trade.timestamp).replace('Z', '+00:00'))
+                    exit_time = self.get_market_time()
+                    # Handle timezone differences
+                    if hasattr(entry_time, 'tzinfo') and entry_time.tzinfo is not None and exit_time.tzinfo is None:
+                        entry_time = entry_time.replace(tzinfo=None)
+                    trade.hold_minutes = (exit_time - entry_time).total_seconds() / 60.0
+                    trade.exit_spy_price = current_price
+                    # Try to get current VIX for exit context
+                    trade.exit_vix_level = getattr(self, '_current_vix', None)
+                    # Track max drawdown/gain during trade (if tracked)
+                    trade.max_drawdown_pct = getattr(trade, '_max_drawdown_pct', None)
+                    trade.max_gain_pct = getattr(trade, '_max_gain_pct', None)
+                    # Get current HMM trend if available
+                    trade.exit_hmm_trend = getattr(self, '_current_hmm_trend', None)
+                except Exception as e:
+                    self.logger.warning(f"Could not populate exit context: {e}")
+                # ============= END EXIT CONTEXT =============
 
                 # === ATOMIC CLOSE: Remove from active_trades IMMEDIATELY ===
                 # This prevents double-booking if exception occurs later

@@ -22,7 +22,8 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-from flask import Flask, jsonify, render_template_string, send_from_directory
+import requests
+from flask import Flask, jsonify, render_template_string, send_from_directory, request
 from flask_cors import CORS
 
 # Import blueprints
@@ -73,6 +74,10 @@ HUB_HTML = '''
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trading Dashboard Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <style>
         :root {
             --bg: #0d1117;
@@ -492,11 +497,12 @@ HUB_HTML = '''
         <div id="training-tab" class="tab-content">
             <div class="card" style="margin-bottom: 16px;">
                 <div class="card-body" style="display: flex; align-items: center; gap: 16px;">
-                    <label style="color: var(--text-muted);">Active Runs:</label>
-                    <select id="run-selector" onchange="switchRun()" style="flex: 1; max-width: 400px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text);">
+                    <label style="color: var(--text-muted);">Training Run:</label>
+                    <select id="run-selector" onchange="onRunSelected()" style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; padding: 6px 12px; color: var(--cyan); font-family: monospace; font-size: 13px; min-width: 280px;">
                         <option value="">Loading runs...</option>
                     </select>
                     <span id="run-status" style="font-size: 12px; color: var(--text-muted);"></span>
+                    <button onclick="loadActiveRuns()" style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; color: var(--text); font-size: 12px; cursor: pointer; margin-left: auto;">Refresh Runs</button>
                 </div>
             </div>
 
@@ -524,6 +530,43 @@ HUB_HTML = '''
                 <div class="stat-card">
                     <div class="value" id="train-positions">--</div>
                     <div class="label">Open Positions</div>
+                </div>
+            </div>
+
+            <!-- SPY Chart with Trades -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>
+                        SPY Price
+                        <span class="mono" style="color: var(--cyan); margin-left: 8px;" id="chart-price">$---</span>
+                        <span style="color: var(--text-muted); margin-left: 8px;">VIX:</span>
+                        <span class="mono" style="color: rgba(32, 150, 90, 0.8);" id="chart-vix">--</span>
+                    </h2>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <span id="train-chart-info" style="color: var(--text-muted); font-size: 12px;">-- trades</span>
+                        <select id="chart-hours" onchange="updateSPYChart()" style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; color: var(--text); font-size: 12px;">
+                            <option value="2">2 Hours</option>
+                            <option value="4">4 Hours</option>
+                            <option value="8">8 Hours</option>
+                            <option value="24">24 Hours</option>
+                            <option value="48" selected>48 Hours</option>
+                            <option value="0">All Data</option>
+                        </select>
+                        <button onclick="resetChartZoom()" style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; color: var(--text); font-size: 12px; cursor: pointer;">Reset Zoom</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 350px; position: relative;">
+                        <canvas id="spy-chart-canvas"></canvas>
+                    </div>
+                    <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+                        <span><span style="color: #7c5cff;">━━</span> SPY</span>
+                        <span><span style="color: rgba(0, 200, 255, 0.8);">┅┅</span> TCN Prediction</span>
+                        <span><span style="color: #00d68f;">●</span> CALL Entry</span>
+                        <span><span style="color: #ff5c7c;">●</span> PUT Entry</span>
+                        <span><span style="color: #00d68f;">◆</span> Win</span>
+                        <span><span style="color: #ff5c7c;">◆</span> Loss</span>
+                    </div>
                 </div>
             </div>
 
@@ -1185,50 +1228,63 @@ GET /api/agent/status
 
         // ===== LIVE TRAINING =====
         let trainingInterval = null;
-        let runsInterval = null;
-        let selectedRun = null;
+
+        // Global variable for selected run
+        let selectedLogFile = null;
 
         async function loadActiveRuns() {
             try {
-                const res = await fetch('{{ training_url }}/api/runs');
+                const res = await fetch('/api/training/runs');
                 const data = await res.json();
+                const selector = document.getElementById('run-selector');
 
                 if (data.success && data.runs.length > 0) {
-                    const selector = document.getElementById('run-selector');
-                    const currentValue = selector.value;
+                    const activeRuns = data.runs.filter(r => r.is_active);
+                    document.getElementById('run-status').textContent =
+                        `${activeRuns.length} active of ${data.runs.length} total runs`;
 
+                    // Populate dropdown
                     selector.innerHTML = data.runs.map(r => {
-                        const activeIcon = r.is_active ? '🟢 ' : '⚪ ';
-                        return `<option value="${r.log_file}" ${r.log_file === currentValue ? 'selected' : ''}>
-                            ${activeIcon}${r.run_name} (${r.size_mb}MB)
-                        </option>`;
+                        const isActive = r.is_active ? ' 🟢' : '';
+                        const name = r.run_name || r.log_file;
+                        return `<option value="${r.log_file}" ${r.log_file === selectedLogFile ? 'selected' : ''}>${name}${isActive}</option>`;
                     }).join('');
 
-                    document.getElementById('run-status').textContent =
-                        `${data.active_count} active of ${data.runs.length} runs`;
-
-                    // Auto-select first active run if nothing selected
-                    if (!currentValue && data.runs.length > 0) {
-                        const activeRun = data.runs.find(r => r.is_active) || data.runs[0];
-                        selector.value = activeRun.log_file;
-                        selectedRun = activeRun.log_file;
+                    // Auto-select first active run if none selected
+                    if (!selectedLogFile && activeRuns.length > 0) {
+                        selectedLogFile = activeRuns[0].log_file;
+                        selector.value = selectedLogFile;
+                    } else if (!selectedLogFile && data.runs.length > 0) {
+                        selectedLogFile = data.runs[0].log_file;
+                        selector.value = selectedLogFile;
                     }
+                } else {
+                    selector.innerHTML = '<option value="">No runs found</option>';
                 }
             } catch (e) {
                 console.error('Failed to load runs:', e);
+                document.getElementById('run-selector').innerHTML = '<option value="">Error loading runs</option>';
             }
         }
 
-        function switchRun() {
+        function onRunSelected() {
             const selector = document.getElementById('run-selector');
-            selectedRun = selector.value;
+            selectedLogFile = selector.value;
+            // Reload data for the newly selected run
             loadTrainingData();
+            refreshSPYChart();
         }
 
         async function loadTrainingData() {
             try {
-                const res = await fetch('{{ training_url }}/api/data');
+                const params = selectedLogFile ? `?log_file=${encodeURIComponent(selectedLogFile)}` : '';
+                const res = await fetch('/api/training/data' + params);
                 const d = await res.json();
+
+                // Check for proxy error
+                if (d.success === false && d.error) {
+                    throw new Error(d.error);
+                }
 
                 document.getElementById('train-error').style.display = 'none';
 
@@ -1255,7 +1311,11 @@ GET /api/agent/status
                 document.getElementById('train-sim-time').textContent = 'Simulated: ' + d.simulated_date + ' ' + d.simulated_time;
                 document.getElementById('train-update-time').textContent = 'Last update: ' + new Date().toLocaleTimeString();
 
-                // Recent trades
+                // Render P&L chart - use log_trades (all trades) if available, else recent_trades
+                const chartTrades = d.log_trades || d.recent_trades || [];
+                renderTrainingPnLChart(chartTrades);
+
+                // Recent trades table
                 if (d.recent_trades && d.recent_trades.length > 0) {
                     const tbody = document.getElementById('train-trades-body');
                     tbody.innerHTML = d.recent_trades.slice(0, 20).map(t => {
@@ -1278,14 +1338,17 @@ GET /api/agent/status
             }
         }
 
+        let chartInterval = null;
+
         function startTrainingUpdates() {
             loadActiveRuns();
             loadTrainingData();
+            refreshSPYChart();
             if (!trainingInterval) {
-                trainingInterval = setInterval(loadTrainingData, 2000); // Update every 2 seconds
+                trainingInterval = setInterval(loadTrainingData, 2000); // Update stats every 2 seconds
             }
-            if (!runsInterval) {
-                runsInterval = setInterval(loadActiveRuns, 10000); // Refresh runs list every 10 seconds
+            if (!chartInterval) {
+                chartInterval = setInterval(refreshSPYChart, 5000); // Refresh chart every 5 seconds
             }
         }
 
@@ -1294,9 +1357,253 @@ GET /api/agent/status
                 clearInterval(trainingInterval);
                 trainingInterval = null;
             }
-            if (runsInterval) {
-                clearInterval(runsInterval);
-                runsInterval = null;
+            if (chartInterval) {
+                clearInterval(chartInterval);
+                chartInterval = null;
+            }
+        }
+
+        // ===== SPY CHART (matching old training dashboard) =====
+        let spyChart = null;
+        let chartData = { spy_prices: [], trades: [], lstm_predictions: [], current_lstm: {}, simulated_time: null };
+
+        function parseLocalTime(ts) {
+            if (!ts) return new Date();
+            return new Date(ts.replace('T', ' '));
+        }
+
+        function initSPYChart() {
+            const ctx = document.getElementById('spy-chart-canvas').getContext('2d');
+            spyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'SPY',
+                            data: [],
+                            borderColor: '#7c5cff',
+                            backgroundColor: 'rgba(124, 92, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'TCN Prediction',
+                            data: [],
+                            borderColor: 'rgba(0, 200, 255, 0.8)',
+                            borderWidth: 2.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'VIX',
+                            data: [],
+                            borderColor: 'rgba(32, 150, 90, 0.7)',
+                            borderWidth: 1.5,
+                            fill: false,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            yAxisID: 'y2'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(18, 18, 26, 0.95)',
+                            titleColor: '#f0f0f5',
+                            bodyColor: '#c9d1d9',
+                            borderColor: '#30363d',
+                            borderWidth: 1,
+                            padding: 10,
+                            filter: item => item.datasetIndex < 3,
+                            callbacks: {
+                                label: ctx => {
+                                    if (ctx.dataset.label === 'VIX') return `VIX: ${ctx.parsed.y.toFixed(2)}`;
+                                    return `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        },
+                        annotation: { annotations: {} },
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'x',
+                                scaleMode: 'x'
+                            },
+                            zoom: {
+                                wheel: { enabled: true },
+                                pinch: { enabled: true },
+                                drag: { enabled: false },
+                                mode: 'x'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { displayFormats: { minute: 'HH:mm', hour: 'HH:mm' } },
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#8b949e', maxTicksLimit: 8 }
+                        },
+                        y: {
+                            position: 'left',
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#8b949e', callback: v => '$' + v.toFixed(0) }
+                        },
+                        y2: {
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: 'rgba(32, 150, 90, 0.6)', callback: v => v.toFixed(1) },
+                            title: { display: true, text: 'VIX', color: 'rgba(32, 150, 90, 0.7)', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function refreshSPYChart() {
+            try {
+                const params = selectedLogFile ? `?log_file=${encodeURIComponent(selectedLogFile)}` : '';
+                const res = await fetch('/api/training/chart' + params);
+                if (!res.ok) return;
+                chartData = await res.json();
+                updateSPYChart();
+            } catch (e) {
+                console.error('Chart fetch error:', e);
+            }
+        }
+
+        function updateSPYChart() {
+            if (!spyChart || !chartData.spy_prices?.length) return;
+
+            const chartHours = parseInt(document.getElementById('chart-hours').value) || 48;
+            const now = chartData.simulated_time ? parseLocalTime(chartData.simulated_time) : new Date();
+
+            // For "All Data" (0), use all available prices
+            let cutoff;
+            if (chartHours === 0) {
+                cutoff = new Date(0); // Beginning of time
+            } else {
+                cutoff = new Date(now.getTime() - chartHours * 60 * 60 * 1000);
+            }
+
+            // SPY prices
+            const prices = chartData.spy_prices
+                .filter(p => { const t = parseLocalTime(p.timestamp); return t >= cutoff && t <= now; })
+                .map(p => ({ x: parseLocalTime(p.timestamp), y: p.close }));
+            spyChart.data.datasets[0].data = prices;
+
+            // VIX prices
+            if (chartData.vix_prices) {
+                const vix = chartData.vix_prices
+                    .filter(p => { const t = parseLocalTime(p.timestamp); return t >= cutoff && t <= now; })
+                    .map(p => ({ x: parseLocalTime(p.timestamp), y: p.close }));
+                spyChart.data.datasets[2].data = vix;
+                if (vix.length > 0) {
+                    document.getElementById('chart-vix').textContent = vix[vix.length - 1].y.toFixed(2);
+                }
+            }
+
+            // TCN predictions (future line from current price)
+            const lstmData = [];
+            if (chartData.current_lstm && chartData.current_price) {
+                const tfMinutes = { '5min': 5, '10min': 10, '15min': 15, '20min': 20, '30min': 30, '1h': 60 };
+                lstmData.push({ x: now, y: chartData.current_price });
+                const sorted = Object.entries(chartData.current_lstm)
+                    .filter(([tf, p]) => tfMinutes[tf] && p?.return !== undefined)
+                    .sort((a, b) => tfMinutes[a[0]] - tfMinutes[b[0]]);
+                for (const [tf, pred] of sorted) {
+                    const futureTime = new Date(now.getTime() + tfMinutes[tf] * 60 * 1000);
+                    lstmData.push({ x: futureTime, y: chartData.current_price * (1 + pred.return / 100) });
+                }
+            }
+            spyChart.data.datasets[1].data = lstmData;
+
+            // Trade annotations
+            const annotations = {};
+
+            // "NOW" line
+            if (prices.length > 0) {
+                annotations.now = {
+                    type: 'line', xMin: now, xMax: now,
+                    borderColor: '#7c5cff', borderWidth: 2, borderDash: [5, 5],
+                    label: { display: true, content: 'NOW', position: 'start', backgroundColor: '#7c5cff', color: '#fff', font: { size: 9 }, padding: 3 }
+                };
+            }
+
+            // Price lookup for annotation positioning
+            const priceLookup = {};
+            for (const p of prices) {
+                priceLookup[new Date(p.x).toISOString().slice(0, 16)] = p.y;
+            }
+            const findPrice = (ts) => {
+                if (!ts) return null;
+                const key = parseLocalTime(ts).toISOString().slice(0, 16);
+                return priceLookup[key];
+            };
+
+            // Trade markers
+            let tradeCount = 0;
+            if (chartData.trades) {
+                chartData.trades.forEach((trade, idx) => {
+                    const entryTime = parseLocalTime(trade.entry_time);
+                    if (entryTime < cutoff || entryTime > now) return;
+
+                    const price = findPrice(trade.entry_time);
+                    if (!price) return;
+
+                    const isCall = trade.type?.includes('CALL');
+                    const entryColor = isCall ? '#00d68f' : '#ff5c7c';
+
+                    // Entry point
+                    annotations[`e${idx}`] = {
+                        type: 'point', xValue: entryTime, yValue: price,
+                        backgroundColor: entryColor, borderColor: '#fff', borderWidth: 2, radius: 5
+                    };
+
+                    // Exit point and connecting line
+                    if (trade.exit_time && trade.status !== 'OPEN') {
+                        const exitTime = parseLocalTime(trade.exit_time);
+                        if (exitTime >= cutoff && exitTime <= now) {
+                            const exitPrice = findPrice(trade.exit_time);
+                            if (exitPrice) {
+                                const pnlColor = trade.pnl > 0 ? '#00d68f' : '#ff5c7c';
+                                annotations[`x${idx}`] = {
+                                    type: 'point', xValue: exitTime, yValue: exitPrice,
+                                    backgroundColor: pnlColor, borderColor: '#fff', borderWidth: 2, radius: 4
+                                };
+                                annotations[`l${idx}`] = {
+                                    type: 'line', xMin: entryTime, xMax: exitTime, yMin: price, yMax: exitPrice,
+                                    borderColor: pnlColor, borderWidth: 1.5
+                                };
+                            }
+                        }
+                    }
+                    tradeCount++;
+                });
+            }
+
+            spyChart.options.plugins.annotation.annotations = annotations;
+            spyChart.update('none');
+
+            // Update header info
+            document.getElementById('train-chart-info').textContent = `${tradeCount} trades`;
+            if (chartData.current_price) {
+                document.getElementById('chart-price').textContent = '$' + chartData.current_price.toFixed(2);
+            }
+        }
+
+        function resetChartZoom() {
+            if (spyChart) {
+                spyChart.resetZoom();
             }
         }
 
@@ -1313,6 +1620,7 @@ GET /api/agent/status
 
         // Initial load
         setupColumnSorting();
+        initSPYChart();
         loadStats();
         loadScoreboard();
         loadTradeRuns();
@@ -1517,6 +1825,70 @@ def health():
         "version": "1.0.0",
         "timestamp": datetime.now().isoformat()
     })
+
+
+# ===== TRAINING DASHBOARD PROXY =====
+# Proxy requests to training dashboard so browser doesn't need direct access to port 5001
+TRAINING_SERVER = os.environ.get('TRAINING_SERVER', '192.168.20.235')
+TRAINING_PORT = os.environ.get('TRAINING_PORT', '5001')
+
+@app.route('/api/training/runs')
+def proxy_training_runs():
+    """Proxy request to training dashboard /api/runs"""
+    try:
+        resp = requests.get(
+            f'http://{TRAINING_SERVER}:{TRAINING_PORT}/api/runs',
+            timeout=5
+        )
+        return jsonify(resp.json())
+    except requests.RequestException as e:
+        return jsonify({
+            'success': False,
+            'error': f'Training dashboard not reachable: {e}',
+            'runs': [],
+            'active_count': 0
+        })
+
+
+@app.route('/api/training/data')
+def proxy_training_data():
+    """Proxy request to training dashboard /api/data"""
+    try:
+        # Forward any query params
+        params = request.args.to_dict()
+        resp = requests.get(
+            f'http://{TRAINING_SERVER}:{TRAINING_PORT}/api/data',
+            params=params,
+            timeout=20  # Longer timeout for parsing large log files
+        )
+        return jsonify(resp.json())
+    except requests.RequestException as e:
+        return jsonify({
+            'success': False,
+            'error': f'Training dashboard not reachable: {e}'
+        })
+
+
+@app.route('/api/training/chart')
+def proxy_training_chart():
+    """Proxy request to training dashboard /api/chart (SPY prices, trades, predictions)"""
+    try:
+        # Forward any query params (like log_file)
+        params = request.args.to_dict()
+        resp = requests.get(
+            f'http://{TRAINING_SERVER}:{TRAINING_PORT}/api/chart',
+            params=params,
+            timeout=10
+        )
+        return jsonify(resp.json())
+    except requests.RequestException as e:
+        return jsonify({
+            'success': False,
+            'error': f'Training dashboard not reachable: {e}',
+            'spy_prices': [],
+            'trades': [],
+            'lstm_predictions': []
+        })
 
 
 if __name__ == '__main__':

@@ -402,6 +402,79 @@ Trade Result → record_step_reward()
 
 ---
 
+## Trade Tuning Data
+
+Every trade captures detailed entry and exit context for strategy optimization. This data is stored in `paper_trading.db` → `trades` table.
+
+### Entry Context (captured when trade opens)
+
+| Field | Description | Use Case |
+|-------|-------------|----------|
+| `spy_price` | SPY price at entry | Track price level effects |
+| `vix_level` | VIX at entry | Analyze volatility impact |
+| `hmm_trend` | HMM trend (0-1) | Compare regime at entry vs exit |
+| `hmm_volatility` | HMM volatility state | Volatility regime tracking |
+| `hmm_confidence` | HMM confidence (0-1) | Filter by regime certainty |
+| `predicted_return` | Model prediction | Validate prediction accuracy |
+| `entry_controller` | Controller type | Compare controller performance |
+| `signal_strategy` | Strategy name | Track which strategies work |
+| `signal_reasoning` | Full reasoning chain | Debug decision logic |
+| `momentum_5m` | 5-min momentum | Momentum filter tuning |
+| `volume_spike` | Volume spike indicator | Volume confirmation |
+| `direction_probs` | [down, neutral, up] | Direction confidence |
+
+### Exit Context (captured when trade closes)
+
+| Field | Description | Use Case |
+|-------|-------------|----------|
+| `exit_spy_price` | SPY at exit | Calculate underlying move |
+| `exit_vix_level` | VIX at exit | Detect volatility changes |
+| `hold_minutes` | Actual duration | Optimize hold time |
+| `max_drawdown_pct` | Worst point during trade | Stop loss tuning |
+| `max_gain_pct` | Best point during trade | Take profit tuning |
+| `exit_hmm_trend` | HMM at exit | Detect regime changes |
+
+### Analysis Examples
+
+```sql
+-- Win rate by entry controller
+SELECT entry_controller,
+       AVG(CASE WHEN profit_loss > 0 THEN 1.0 ELSE 0.0 END) as win_rate,
+       AVG(profit_loss) as avg_pnl
+FROM trades WHERE entry_controller IS NOT NULL
+GROUP BY entry_controller;
+
+-- Optimal hold time analysis
+SELECT CASE
+    WHEN hold_minutes < 15 THEN '<15min'
+    WHEN hold_minutes < 30 THEN '15-30min'
+    ELSE '>30min'
+  END as hold_bucket,
+  AVG(profit_loss) as avg_pnl,
+  COUNT(*) as trades
+FROM trades GROUP BY hold_bucket;
+
+-- Regime change impact
+SELECT CASE
+    WHEN abs(hmm_trend - exit_hmm_trend) > 0.3 THEN 'regime_changed'
+    ELSE 'regime_stable'
+  END as regime_status,
+  AVG(profit_loss) as avg_pnl
+FROM trades
+WHERE hmm_trend IS NOT NULL AND exit_hmm_trend IS NOT NULL
+GROUP BY regime_status;
+```
+
+### Migration
+
+Run this to add tuning columns to existing database:
+
+```bash
+python scripts/migrate_add_tuning_fields.py
+```
+
+---
+
 ## Debugging Win Rate
 
 ### 1. Check Neural Network Quality
