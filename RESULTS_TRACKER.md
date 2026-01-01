@@ -3783,21 +3783,39 @@ Integrate concepts from Jerry's Quantor-MTFuzz research to improve trading perfo
 | Jerry Filter Only | -2.5% | **35.6%** | 2,026 | +2.5% WR |
 | **Features + Filter** | **-2.3%** | **36.3%** | 2,026 | **+0.5% P&L, +3.2% WR** |
 
+### All-Combined Test (5K cycles)
+
+Tested ALL Jerry features together:
+- Jerry fuzzy features (NN inputs)
+- Jerry filter (quality gate)
+- Fuzzy position sizing
+- MTF consensus weighting
+- Stochastic exit timing
+- RSI/MACD filter
+
+| Test | P&L | Win Rate | Trades | vs Baseline |
+|------|-----|----------|--------|-------------|
+| Baseline (No Jerry) | -2.8% | 33.1% | 2,026 | - |
+| Features + Filter | -2.3% | 36.3% | 2,026 | +0.5% P&L, +3.2% WR |
+| **All Combined** | **-26.27%** | 34.8% | 1,148 | **-23.5% P&L, +1.7% WR** |
+
+**Finding:** Combining ALL features is WORSE than simpler combinations!
+
 ### Key Findings
 
-1. **Features + Filter is best** - Combining Jerry fuzzy features AND filter gives best results
-2. **Filter improves win rate most** - RSI/MACD filter alone adds +2.5% win rate
-3. **Jerry features reduce losses** - Fuzzy position sizing preserves capital during uncertain conditions
-4. **V3 baseline still strong** - Extended macro features provide value (+1506% vs +704% for 5m-only)
+1. **Simpler is better** - Features + Filter (-2.3% P&L) beats All Combined (-26.27% P&L)
+2. **Feature interference** - Multiple adjustment features conflict with each other
+3. **Fuzzy sizing + stochastic exit** - Together they reduce gains more than losses
+4. **Filter improves win rate most** - RSI/MACD filter alone adds +2.5% win rate
+5. **V3 baseline still strong** - Extended macro features provide value (+1506% vs +704% for 5m-only)
 
 ### Recommended Configuration
 
-For best performance, enable Jerry features + filter:
+For best performance, use **Features + Filter only** (not all combined):
 ```bash
-# Jerry enhancements
-FUZZY_SIZING_ENABLED=1
-MTF_CONSENSUS_ENABLED=1
-STOCHASTIC_EXIT_ENABLED=1
+# Jerry features (NN inputs only)
+JERRY_FEATURES=1
+JERRY_FILTER=1
 
 # RSI/MACD filter
 RSI_MACD_FILTER=1
@@ -3805,8 +3823,10 @@ RSI_OVERSOLD=30
 RSI_OVERBOUGHT=70
 MACD_CONFIRM=1
 
-# V3 predictor
+# V3 predictor (when testing architecture)
 PREDICTOR_ARCH=v3_multi_horizon
 ```
+
+**DO NOT combine:** Fuzzy sizing + MTF consensus + Stochastic exit - these interfere with each other.
 
 ---

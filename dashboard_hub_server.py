@@ -211,9 +211,22 @@ HUB_HTML = '''
             text-transform: uppercase;
             border-bottom: 1px solid var(--border);
             cursor: pointer;
+            user-select: none;
         }
         th:hover {
             color: var(--cyan);
+        }
+        th.sortable::after {
+            content: ' ↕';
+            opacity: 0.3;
+        }
+        th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+        th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
         }
         td {
             padding: 10px 12px;
@@ -338,6 +351,122 @@ HUB_HTML = '''
             opacity: 1;
         }
         .hidden { display: none; }
+
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow: auto;
+        }
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 {
+            font-size: 18px;
+            margin: 0;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        .modal-close:hover {
+            color: var(--text);
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .chart-container {
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            height: 300px;
+            position: relative;
+        }
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+        .chart-line {
+            fill: none;
+            stroke-width: 2;
+        }
+        .chart-line.positive { stroke: var(--green); }
+        .chart-line.negative { stroke: var(--red); }
+        .chart-area {
+            opacity: 0.2;
+        }
+        .chart-area.positive { fill: var(--green); }
+        .chart-area.negative { fill: var(--red); }
+        .chart-zero-line {
+            stroke: var(--border);
+            stroke-dasharray: 4;
+        }
+        .chart-tooltip {
+            position: absolute;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+        }
+        .run-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .run-stat {
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .run-stat .value {
+            font-size: 20px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .run-stat .label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .trades-mini-table {
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -389,13 +518,13 @@ HUB_HTML = '''
                         <thead>
                             <tr>
                                 <th></th>
-                                <th>Run Name</th>
-                                <th>Date</th>
-                                <th>P&L %</th>
-                                <th>Win Rate</th>
-                                <th>Trades</th>
-                                <th>$/Trade</th>
-                                <th>Cycles</th>
+                                <th class="sortable" data-sort="run_name">Run Name</th>
+                                <th class="sortable" data-sort="timestamp">Date</th>
+                                <th class="sortable sort-desc" data-sort="pnl_pct">P&L %</th>
+                                <th class="sortable" data-sort="win_rate">Win Rate</th>
+                                <th class="sortable" data-sort="trades">Trades</th>
+                                <th class="sortable" data-sort="per_trade_pnl">$/Trade</th>
+                                <th class="sortable" data-sort="cycles">Cycles</th>
                             </tr>
                         </thead>
                         <tbody id="scoreboard-body"></tbody>
@@ -436,14 +565,14 @@ HUB_HTML = '''
                     <table id="trades-table">
                         <thead>
                             <tr>
-                                <th>Time</th>
-                                <th>Type</th>
-                                <th>Strike</th>
-                                <th>Entry</th>
-                                <th>Exit</th>
-                                <th>P&L</th>
-                                <th>Exit Reason</th>
-                                <th>Run</th>
+                                <th class="sortable" data-sort="timestamp" data-table="trades">Time</th>
+                                <th class="sortable" data-sort="option_type" data-table="trades">Type</th>
+                                <th class="sortable" data-sort="strike_price" data-table="trades">Strike</th>
+                                <th class="sortable" data-sort="premium_paid" data-table="trades">Entry</th>
+                                <th class="sortable" data-sort="exit_price" data-table="trades">Exit</th>
+                                <th class="sortable" data-sort="profit_loss" data-table="trades">P&L</th>
+                                <th class="sortable" data-sort="exit_reason" data-table="trades">Exit Reason</th>
+                                <th class="sortable" data-sort="run_id" data-table="trades">Run</th>
                             </tr>
                         </thead>
                         <tbody id="trades-body"></tbody>
@@ -520,6 +649,37 @@ GET /api/agent/status
         </div>
     </main>
 
+    <!-- Run Detail Modal -->
+    <div id="run-modal" class="modal-overlay" onclick="if(event.target===this) closeRunModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-run-name">Run Details</h2>
+                <button class="modal-close" onclick="closeRunModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-stats" class="run-stats-grid"></div>
+                <div class="chart-container">
+                    <svg id="pnl-chart" class="chart-svg"></svg>
+                    <div id="chart-tooltip" class="chart-tooltip"></div>
+                </div>
+                <h3 style="margin-bottom: 12px;">Trade History</h3>
+                <div class="trades-mini-table">
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>P&L</th>
+                                <th>Exit Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-trades-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // State
         let currentPage = 1;
@@ -527,6 +687,110 @@ GET /api/agent/status
         let tradesPage = 1;
         let tradesTotalPages = 1;
         let selectedForCompare = [];
+        let scoreboardSort = { column: 'pnl_pct', direction: 'desc' };
+        let tradesSort = { column: 'timestamp', direction: 'desc' };
+        let scoreboardData = [];
+        let tradesData = [];
+
+        // Format date as YYYY-MM-DD
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr.split('T')[0] || '-';
+                return d.toISOString().split('T')[0];
+            } catch (e) {
+                return dateStr.split('T')[0] || '-';
+            }
+        }
+
+        // Format datetime as YYYY-MM-DD HH:MM
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toISOString().slice(0, 16).replace('T', ' ');
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        // Sort data by column
+        function sortData(data, column, direction) {
+            return [...data].sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+
+                // Handle nulls
+                if (aVal == null) aVal = direction === 'asc' ? Infinity : -Infinity;
+                if (bVal == null) bVal = direction === 'asc' ? Infinity : -Infinity;
+
+                // Numeric comparison for numbers
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                // String comparison
+                aVal = String(aVal).toLowerCase();
+                bVal = String(bVal).toLowerCase();
+                if (direction === 'asc') {
+                    return aVal.localeCompare(bVal);
+                } else {
+                    return bVal.localeCompare(aVal);
+                }
+            });
+        }
+
+        // Handle column header click for sorting
+        function setupColumnSorting() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const column = th.dataset.sort;
+                    const table = th.dataset.table || 'scoreboard';
+
+                    if (table === 'trades') {
+                        // Toggle direction if same column
+                        if (tradesSort.column === column) {
+                            tradesSort.direction = tradesSort.direction === 'asc' ? 'desc' : 'asc';
+                        } else {
+                            tradesSort.column = column;
+                            tradesSort.direction = 'desc';
+                        }
+                        updateTradesSortUI();
+                        renderTrades();
+                    } else {
+                        // Toggle direction if same column
+                        if (scoreboardSort.column === column) {
+                            scoreboardSort.direction = scoreboardSort.direction === 'asc' ? 'desc' : 'asc';
+                        } else {
+                            scoreboardSort.column = column;
+                            scoreboardSort.direction = 'desc';
+                        }
+                        updateScoreboardSortUI();
+                        renderScoreboard();
+                    }
+                });
+            });
+        }
+
+        function updateScoreboardSortUI() {
+            document.querySelectorAll('#scoreboard-table th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.sort === scoreboardSort.column) {
+                    th.classList.add(scoreboardSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+
+        function updateTradesSortUI() {
+            document.querySelectorAll('#trades-table th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.sort === tradesSort.column) {
+                    th.classList.add(tradesSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
 
         // Tab switching
         document.querySelectorAll('.tab[data-tab]').forEach(tab => {
@@ -581,51 +845,56 @@ GET /api/agent/status
         async function loadScoreboard() {
             const search = document.getElementById('search').value;
             const minTrades = document.getElementById('min-trades').value || 10;
-            const sortBy = document.getElementById('sort-by').value;
 
             try {
                 const res = await fetch(
-                    `/api/scoreboard?page=${currentPage}&limit=25&min_trades=${minTrades}&sort=${sortBy}&search=${search}`
+                    `/api/scoreboard?page=${currentPage}&limit=100&min_trades=${minTrades}&search=${search}`
                 );
                 const data = await res.json();
 
                 if (data.success) {
-                    const tbody = document.getElementById('scoreboard-body');
-                    tbody.innerHTML = data.experiments.map(exp => `
-                        <tr>
-                            <td>
-                                <input type="checkbox"
-                                       onchange="toggleCompare('${exp.run_name}')"
-                                       ${selectedForCompare.includes(exp.run_name) ? 'checked' : ''}>
-                            </td>
-                            <td>
-                                ${exp.is_running ? '<span class="running-indicator"></span>' : ''}
-                                <a href="/api/scoreboard/${exp.run_name}" target="_blank" style="color: var(--cyan)">
-                                    ${exp.run_name}
-                                </a>
-                            </td>
-                            <td>${exp.timestamp ? exp.timestamp.split('T')[0] : '-'}</td>
-                            <td class="${exp.pnl_pct > 0 ? 'positive' : 'negative'}">
-                                ${exp.pnl_pct > 0 ? '+' : ''}${exp.pnl_pct?.toFixed(1) || 0}%
-                            </td>
-                            <td>${exp.win_rate_pct || 0}%</td>
-                            <td>${exp.trades || 0}</td>
-                            <td class="${(exp.per_trade_pnl || 0) > 0 ? 'positive' : 'negative'}">
-                                $${exp.per_trade_pnl?.toFixed(2) || '0.00'}
-                            </td>
-                            <td>${exp.cycles || 0}</td>
-                        </tr>
-                    `).join('');
-
+                    scoreboardData = data.experiments;
                     totalPages = data.pagination.total_pages;
-                    document.getElementById('page-info').textContent =
-                        `Page ${currentPage} of ${totalPages}`;
-                    document.getElementById('prev-btn').disabled = currentPage <= 1;
-                    document.getElementById('next-btn').disabled = currentPage >= totalPages;
+                    renderScoreboard();
                 }
             } catch (e) {
                 console.error('Failed to load scoreboard:', e);
             }
+        }
+
+        function renderScoreboard() {
+            const sorted = sortData(scoreboardData, scoreboardSort.column, scoreboardSort.direction);
+            const tbody = document.getElementById('scoreboard-body');
+            tbody.innerHTML = sorted.map(exp => `
+                <tr>
+                    <td>
+                        <input type="checkbox"
+                               onchange="toggleCompare('${exp.run_name}')"
+                               ${selectedForCompare.includes(exp.run_name) ? 'checked' : ''}>
+                    </td>
+                    <td>
+                        ${exp.is_running ? '<span class="running-indicator"></span>' : ''}
+                        <a href="#" onclick="openRunModal('${exp.run_name}'); return false;" style="color: var(--cyan)">
+                            ${exp.run_name}
+                        </a>
+                    </td>
+                    <td>${formatDate(exp.timestamp)}</td>
+                    <td class="${exp.pnl_pct > 0 ? 'positive' : 'negative'}">
+                        ${exp.pnl_pct > 0 ? '+' : ''}${exp.pnl_pct?.toFixed(1) || 0}%
+                    </td>
+                    <td>${exp.win_rate_pct || 0}%</td>
+                    <td>${exp.trades || 0}</td>
+                    <td class="${(exp.per_trade_pnl || 0) > 0 ? 'positive' : 'negative'}">
+                        $${exp.per_trade_pnl?.toFixed(2) || '0.00'}
+                    </td>
+                    <td>${exp.cycles || 0}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('page-info').textContent =
+                `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prev-btn').disabled = currentPage <= 1;
+            document.getElementById('next-btn').disabled = currentPage >= totalPages;
         }
 
         function prevPage() {
@@ -713,7 +982,7 @@ GET /api/agent/status
             const dateFrom = document.getElementById('trade-date-from').value;
             const dateTo = document.getElementById('trade-date-to').value;
 
-            let url = `/api/trades?page=${tradesPage}&limit=25`;
+            let url = `/api/trades?page=${tradesPage}&limit=100`;
             if (runId) url += `&run_id=${runId}`;
             if (optionType) url += `&option_type=${optionType}`;
             if (dateFrom) url += `&start_date=${dateFrom}`;
@@ -724,28 +993,11 @@ GET /api/agent/status
                 const data = await res.json();
 
                 if (data.success) {
-                    const tbody = document.getElementById('trades-body');
-                    tbody.innerHTML = data.trades.map(t => `
-                        <tr>
-                            <td>${t.timestamp || '-'}</td>
-                            <td>${t.option_type || '-'}</td>
-                            <td>$${t.strike_price || '-'}</td>
-                            <td>$${t.premium_paid?.toFixed(2) || '-'}</td>
-                            <td>$${t.exit_price?.toFixed(2) || '-'}</td>
-                            <td class="${(t.profit_loss || 0) > 0 ? 'positive' : 'negative'}">
-                                ${t.profit_loss > 0 ? '+' : ''}$${t.profit_loss?.toFixed(2) || '0.00'}
-                                (${t.pnl_pct || 0}%)
-                            </td>
-                            <td>${t.exit_reason || '-'}</td>
-                            <td>${t.run_id || '-'}</td>
-                        </tr>
-                    `).join('');
-
+                    tradesData = data.trades;
                     tradesTotalPages = data.pagination.total_pages;
+                    renderTrades();
                     document.getElementById('trades-page-info').textContent =
                         `Page ${tradesPage} of ${tradesTotalPages} (${data.pagination.total} trades)`;
-                    document.getElementById('trades-prev-btn').disabled = tradesPage <= 1;
-                    document.getElementById('trades-next-btn').disabled = tradesPage >= tradesTotalPages;
 
                     // Load aggregations for stats
                     loadTradeStats(runId);
@@ -753,6 +1005,29 @@ GET /api/agent/status
             } catch (e) {
                 console.error('Failed to load trades:', e);
             }
+        }
+
+        function renderTrades() {
+            const sorted = sortData(tradesData, tradesSort.column, tradesSort.direction);
+            const tbody = document.getElementById('trades-body');
+            tbody.innerHTML = sorted.map(t => `
+                <tr>
+                    <td>${formatDateTime(t.timestamp)}</td>
+                    <td>${t.option_type || '-'}</td>
+                    <td>$${t.strike_price || '-'}</td>
+                    <td>$${t.premium_paid?.toFixed(2) || '-'}</td>
+                    <td>$${t.exit_price?.toFixed(2) || '-'}</td>
+                    <td class="${(t.profit_loss || 0) > 0 ? 'positive' : 'negative'}">
+                        ${t.profit_loss > 0 ? '+' : ''}$${t.profit_loss?.toFixed(2) || '0.00'}
+                        (${t.pnl_pct || 0}%)
+                    </td>
+                    <td>${t.exit_reason || '-'}</td>
+                    <td>${t.run_id || '-'}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('trades-prev-btn').disabled = tradesPage <= 1;
+            document.getElementById('trades-next-btn').disabled = tradesPage >= tradesTotalPages;
         }
 
         async function loadTradeStats(runId) {
@@ -804,6 +1079,7 @@ GET /api/agent/status
         }
 
         // Initial load
+        setupColumnSorting();
         loadStats();
         loadScoreboard();
         loadTradeRuns();
@@ -811,6 +1087,182 @@ GET /api/agent/status
 
         // Refresh stats periodically
         setInterval(loadStats, 30000);
+
+        // ===== RUN DETAIL MODAL =====
+        function openRunModal(runName) {
+            document.getElementById('modal-run-name').textContent = runName;
+            document.getElementById('run-modal').classList.add('active');
+            loadRunDetails(runName);
+        }
+
+        function closeRunModal() {
+            document.getElementById('run-modal').classList.remove('active');
+        }
+
+        async function loadRunDetails(runName) {
+            // Load P&L curve
+            try {
+                const curveRes = await fetch(`/api/trades/pnl-curve?run_id=${runName}`);
+                const curveData = await curveRes.json();
+
+                if (curveData.success) {
+                    renderPnLChart(curveData.curve, curveData.stats);
+                    renderModalStats(curveData.stats, runName);
+                }
+            } catch (e) {
+                console.error('Failed to load P&L curve:', e);
+            }
+
+            // Load trades
+            try {
+                const tradesRes = await fetch(`/api/trades?run_id=${runName}&limit=100`);
+                const tradesData = await tradesRes.json();
+
+                if (tradesData.success) {
+                    renderModalTrades(tradesData.trades);
+                }
+            } catch (e) {
+                console.error('Failed to load trades:', e);
+            }
+        }
+
+        function renderModalStats(stats, runName) {
+            document.getElementById('modal-stats').innerHTML = `
+                <div class="run-stat">
+                    <div class="value ${stats.total_pnl >= 0 ? 'positive' : 'negative'}">
+                        ${stats.total_pnl >= 0 ? '+' : ''}$${stats.total_pnl?.toFixed(2) || 0}
+                    </div>
+                    <div class="label">Total P&L</div>
+                </div>
+                <div class="run-stat">
+                    <div class="value ${stats.total_pnl_pct >= 0 ? 'positive' : 'negative'}">
+                        ${stats.total_pnl_pct >= 0 ? '+' : ''}${stats.total_pnl_pct?.toFixed(1) || 0}%
+                    </div>
+                    <div class="label">Return</div>
+                </div>
+                <div class="run-stat">
+                    <div class="value">${stats.total_trades || 0}</div>
+                    <div class="label">Total Trades</div>
+                </div>
+                <div class="run-stat">
+                    <div class="value negative">-${stats.max_drawdown_pct?.toFixed(1) || 0}%</div>
+                    <div class="label">Max Drawdown</div>
+                </div>
+                <div class="run-stat">
+                    <div class="value">$${stats.initial_balance?.toFixed(0) || 0}</div>
+                    <div class="label">Starting</div>
+                </div>
+                <div class="run-stat">
+                    <div class="value ${stats.final_balance >= stats.initial_balance ? 'positive' : 'negative'}">
+                        $${stats.final_balance?.toFixed(0) || 0}
+                    </div>
+                    <div class="label">Ending</div>
+                </div>
+            `;
+        }
+
+        function renderPnLChart(curve, stats) {
+            const svg = document.getElementById('pnl-chart');
+            const container = svg.parentElement;
+            const width = container.clientWidth - 32;
+            const height = container.clientHeight - 32;
+            const padding = { top: 20, right: 20, bottom: 30, left: 60 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            if (!curve || curve.length === 0) {
+                svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#8b949e">No trade data</text>';
+                return;
+            }
+
+            // Find min/max for scaling
+            const pnls = curve.map(d => d.cumulative_pnl);
+            const minPnl = Math.min(0, ...pnls);
+            const maxPnl = Math.max(0, ...pnls);
+            const range = maxPnl - minPnl || 1;
+
+            // Scale functions
+            const xScale = (i) => padding.left + (i / (curve.length - 1 || 1)) * chartWidth;
+            const yScale = (pnl) => padding.top + chartHeight - ((pnl - minPnl) / range) * chartHeight;
+            const zeroY = yScale(0);
+
+            // Build path
+            let linePath = `M ${xScale(0)} ${yScale(curve[0].cumulative_pnl)}`;
+            let areaPath = `M ${xScale(0)} ${zeroY} L ${xScale(0)} ${yScale(curve[0].cumulative_pnl)}`;
+            for (let i = 1; i < curve.length; i++) {
+                linePath += ` L ${xScale(i)} ${yScale(curve[i].cumulative_pnl)}`;
+                areaPath += ` L ${xScale(i)} ${yScale(curve[i].cumulative_pnl)}`;
+            }
+            areaPath += ` L ${xScale(curve.length - 1)} ${zeroY} Z`;
+
+            const finalPnl = curve[curve.length - 1].cumulative_pnl;
+            const colorClass = finalPnl >= 0 ? 'positive' : 'negative';
+
+            // Y-axis labels
+            const yLabels = [minPnl, minPnl + range/2, maxPnl].map(v => `
+                <text x="${padding.left - 8}" y="${yScale(v)}" text-anchor="end"
+                      fill="#8b949e" font-size="10" dominant-baseline="middle">
+                    $${v.toFixed(0)}
+                </text>
+                <line x1="${padding.left}" y1="${yScale(v)}" x2="${width - padding.right}" y2="${yScale(v)}"
+                      stroke="#30363d" stroke-width="1" stroke-dasharray="2"/>
+            `).join('');
+
+            svg.innerHTML = `
+                ${yLabels}
+                <line class="chart-zero-line" x1="${padding.left}" y1="${zeroY}"
+                      x2="${width - padding.right}" y2="${zeroY}"/>
+                <path class="chart-area ${colorClass}" d="${areaPath}"/>
+                <path class="chart-line ${colorClass}" d="${linePath}"/>
+                ${curve.map((d, i) => `
+                    <circle cx="${xScale(i)}" cy="${yScale(d.cumulative_pnl)}" r="3"
+                            fill="${d.pnl >= 0 ? '#3fb950' : '#f85149'}"
+                            opacity="0.7"
+                            onmouseover="showChartTooltip(event, '${formatDateTime(d.timestamp)}', ${d.pnl}, ${d.cumulative_pnl}, '${d.option_type}')"
+                            onmouseout="hideChartTooltip()"/>
+                `).join('')}
+            `;
+        }
+
+        function showChartTooltip(event, time, pnl, cumPnl, type) {
+            const tooltip = document.getElementById('chart-tooltip');
+            tooltip.innerHTML = `
+                <div><strong>${time}</strong></div>
+                <div>${type}: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</div>
+                <div>Cumulative: ${cumPnl >= 0 ? '+' : ''}$${cumPnl.toFixed(2)}</div>
+            `;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (event.offsetX + 10) + 'px';
+            tooltip.style.top = (event.offsetY - 10) + 'px';
+        }
+
+        function hideChartTooltip() {
+            document.getElementById('chart-tooltip').style.display = 'none';
+        }
+
+        function renderModalTrades(trades) {
+            const tbody = document.getElementById('modal-trades-body');
+            if (!trades || trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No trades found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = trades.map(t => `
+                <tr>
+                    <td>${formatDateTime(t.timestamp)}</td>
+                    <td>${t.option_type || '-'}</td>
+                    <td class="${(t.profit_loss || 0) >= 0 ? 'positive' : 'negative'}">
+                        ${(t.profit_loss || 0) >= 0 ? '+' : ''}$${(t.profit_loss || 0).toFixed(2)}
+                    </td>
+                    <td>${t.exit_reason || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeRunModal();
+        });
     </script>
 </body>
 </html>

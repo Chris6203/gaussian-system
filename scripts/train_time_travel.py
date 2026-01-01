@@ -1105,6 +1105,12 @@ except Exception as e:
 # Create bot (pass config so predictor arch + checkpoint_path are honored)
 bot = UnifiedOptionsBot(initial_balance=initial_balance, config=bot_config)
 
+# Set run_id on paper trader for trade tracking in dashboard
+run_name = os.path.basename(run_dir)
+if hasattr(bot, "paper_trader") and bot.paper_trader is not None:
+    bot.paper_trader.set_run_id(run_name)
+    logger.info(f"[TRAIN] Paper trader run_id set to: {run_name}")
+
 # Training capacity: allow more concurrent paper positions so learning isn't blocked by max_positions.
 try:
     train_max_positions = int(os.environ.get("TT_TRAIN_MAX_POSITIONS", "10"))

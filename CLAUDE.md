@@ -278,10 +278,16 @@ python dashboard_hub_server.py  # Hub on port 5003
 ```
 
 **Features:**
-- Experiment Scoreboard - Sort/filter all 240+ experiments
+- Experiment Scoreboard - Sort/filter all 240+ experiments (click column headers to sort)
+- Run Detail Modal - Click any run name to see P&L chart and trade history
 - Trade Browser - Browse/filter trades with aggregations
 - Agent API - REST endpoints for AI collaboration
 - Links to existing Training and Live dashboards
+
+**Access URLs:**
+- Local: `http://localhost:5003/`
+- Network: `http://192.168.20.235/gaussian/` (via nginx)
+- External: `http://50.127.71.5/gaussian/` (if gateway configured)
 
 ### Existing Dashboards
 
@@ -334,6 +340,29 @@ experiments = requests.get("http://server:5003/api/agent/experiments").json()
 context = requests.get("http://server:5003/api/agent/suggest").json()
 print(context['patterns_observed'])  # What's working
 print(context['worst_runs'])          # What to avoid
+```
+
+## Trade Tracking
+
+All trades made during training are automatically linked to their run via `run_id`. This enables:
+- Viewing all trades for a specific experiment run
+- P&L curve visualization per run
+- Comparing trade patterns across different configurations
+
+**How it works:**
+1. `train_time_travel.py` sets `run_id` on the paper trader at startup
+2. All trades saved to `paper_trading.db` include the `run_id` column
+3. Dashboard Hub displays trades grouped by run with P&L charts
+
+**Viewing Trades for a Run:**
+- Click any run name in the Dashboard Hub scoreboard
+- Modal shows: P&L chart, stats (drawdown, win rate), and trade table
+- Or use API: `GET /api/trades?run_id=run_20251220_143000`
+
+**P&L Curve API:**
+```bash
+# Get cumulative P&L data for charting
+curl "http://localhost:5003/api/trades/pnl-curve?run_id=run_20251220_143000"
 ```
 
 ## Data Manager Subsystem

@@ -165,6 +165,9 @@ class Trade:
     tradier_order_id: Optional[str] = None  # Tradier order ID
     is_real_trade: bool = False  # TRUE if this is a real Tradier trade (not just paper)
     live_blocked_reason: Optional[str] = None  # Why live trade was blocked (if paper-only)
+    # Run tracking for dashboard
+    run_id: Optional[str] = None  # Training run ID (e.g., run_20251220_143000)
+    exit_reason: Optional[str] = None  # Why trade was exited
 
 
 class TradierFeeCalculator:
@@ -299,6 +302,11 @@ class PaperTradingSystem:
     def set_bot_reference(self, bot):
         """Set reference to main bot for liquidity learning"""
         self.bot = bot
+
+    def set_run_id(self, run_id: str):
+        """Set the current run ID for trade tracking in dashboard"""
+        self.current_run_id = run_id
+        self.logger.info(f"📊 Run ID set to: {run_id}")
 
     def _training_unlimited_funds(self) -> bool:
         """
@@ -3820,8 +3828,8 @@ class PaperTradingSystem:
                  profit_loss, stop_loss, take_profit, ml_confidence, ml_prediction,
                  expiration_date, created_at, projected_profit, projected_return_pct,
                  planned_exit_time, max_hold_hours, tradier_option_symbol,
-                 tradier_order_id, is_real_trade, live_blocked_reason, exit_reason)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 tradier_order_id, is_real_trade, live_blocked_reason, exit_reason, run_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 trade.id,
                 trade.timestamp.isoformat(),
@@ -3849,7 +3857,8 @@ class PaperTradingSystem:
                 getattr(trade, 'tradier_order_id', None),
                 getattr(trade, 'is_real_trade', False),
                 getattr(trade, 'live_blocked_reason', None),
-                getattr(trade, 'exit_reason', None)
+                getattr(trade, 'exit_reason', None),
+                getattr(trade, 'run_id', None) or getattr(self, 'current_run_id', None)
             ))
             conn.commit()
 

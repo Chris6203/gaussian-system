@@ -1,322 +1,81 @@
 {
   "ideas": [
     {
-      "id": "IDEA-054",
+      "id": "IDEA-087",
       "source": "claude",
-      "timestamp": "2025-12-28T15:22:00.000000",
-      "category": "validation",
-      "title": "20K validation of protected pretrained",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-055",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-056",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-057",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-058",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-059",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-061",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-062",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-064",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-065",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-066",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-067",
-      "source": "claude",
-      "status": "already_tested"
-    },
-    {
-      "id": "IDEA-071",
-      "source": "claude",
-      "timestamp": "2025-12-28T18:12:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: ultra-wide TP (+50%)",
-      "description": "Push TP to extreme to find optimal point",
-      "hypothesis": "Very wide TP may capture larger moves",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_TAKE_PROFIT_PCT": "50"
-      },
-      "last_result": {
-        "exp_id": "EXP-0035",
-        "per_trade_pnl": null,
-        "win_rate": 37.5
-      }
-    },
-    {
-      "id": "IDEA-072",
-      "source": "claude",
-      "timestamp": "2025-12-28T18:12:00.000000",
-      "category": "exit_strategy",
-      "title": "5K test: moderate TP + loose stop (-12%/+20%)",
-      "description": "Give trades room with wider stop loss",
-      "hypothesis": "May reduce premature stop-outs",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "12",
-        "HARD_TAKE_PROFIT_PCT": "20"
-      },
-      "last_result": {
-        "exp_id": "EXP-0036",
-        "per_trade_pnl": null,
-        "win_rate": 38.1
-      }
-    },
-    {
-      "id": "IDEA-073",
-      "source": "claude",
-      "timestamp": "2025-12-28T19:35:00.000000",
-      "category": "exit_strategy",
-      "title": "5K: tighter stop (-5%/+30%) = 6:1 R:R",
-      "description": "Even tighter stop on winning config",
-      "hypothesis": "Smaller losses with 46.9% win rate may turn profitable",
+      "timestamp": "2026-01-01T16:22:00.000000",
+      "category": "integration",
+      "title": "Jerry All-Combined test",
+      "description": "Tested all Jerry features together: fuzzy sizing + MTF + stochastic exit + filter",
+      "hypothesis": "More features = better results",
       "priority": "high",
       "status": "rejected",
       "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "30"
+        "JERRY_FEATURES": "1",
+        "JERRY_FILTER": "1",
+        "FUZZY_SIZING_ENABLED": "1",
+        "MTF_CONSENSUS_ENABLED": "1",
+        "STOCHASTIC_EXIT_ENABLED": "1",
+        "RSI_MACD_FILTER": "1"
       },
       "last_result": {
-        "exp_id": "EXP-0037",
-        "per_trade_pnl": null,
-        "win_rate": 35.6
+        "pnl_pct": -26.27,
+        "win_rate": 34.8,
+        "trades": 1148,
+        "notes": "WORSE than Features+Filter (-2.3%). Don't combine adjustment features."
       }
     },
     {
-      "id": "IDEA-074",
+      "id": "IDEA-088",
       "source": "claude",
-      "timestamp": "2025-12-28T19:35:00.000000",
-      "category": "exit_strategy",
-      "title": "5K: -7%/+35% = 5:1 R:R wider",
-      "description": "Slightly wider both sides from winning config",
-      "hypothesis": "May improve win rate while maintaining R:R",
+      "timestamp": "2026-01-01T16:22:00.000000",
+      "category": "architecture",
+      "title": "V3 + Jerry Features + Filter (best combo)",
+      "description": "Test V3 predictor with Jerry NN features and filter only",
+      "hypothesis": "V3 (+1506%) + Features+Filter (+3.2% WR) = best combination",
       "priority": "high",
-      "status": "rejected",
+      "status": "in_progress",
       "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "7",
-        "HARD_TAKE_PROFIT_PCT": "35"
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "JERRY_FEATURES": "1",
+        "JERRY_FILTER": "1",
+        "RSI_MACD_FILTER": "1"
       },
-      "last_result": {
-        "exp_id": "EXP-0038",
-        "per_trade_pnl": null,
-        "win_rate": 36.1
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-01T16:28:00.491221"
       }
     },
     {
-      "id": "IDEA-075",
+      "id": "IDEA-089",
       "source": "claude",
-      "timestamp": "2025-12-28T19:35:00.000000",
-      "category": "exit_strategy",
-      "title": "5K: very tight stop (-4%/+32%) = 8:1",
-      "description": "Very high R:R ratio test",
-      "hypothesis": "Extreme R:R may compensate for lower win rate",
+      "timestamp": "2026-01-01T16:22:00.000000",
+      "category": "feature",
+      "title": "Enable options flow signal",
+      "description": "Activate options flow signal (put/call ratio) from consensus controller",
+      "hypothesis": "Put/call ratio provides additional directional confirmation",
       "priority": "medium",
-      "status": "rejected",
+      "status": "in_progress",
       "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "4",
-        "HARD_TAKE_PROFIT_PCT": "32"
+        "OPTIONS_FLOW_ENABLED": "1"
       },
-      "last_result": {
-        "exp_id": "EXP-0039",
-        "per_trade_pnl": null,
-        "win_rate": 52.0
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-01T16:28:00.491221"
       }
     },
     {
-      "id": "IDEA-076",
+      "id": "IDEA-090",
       "source": "claude",
-      "timestamp": "2025-12-28T19:35:00.000000",
-      "category": "validation",
-      "title": "20K validation: -6%/+30% best config",
-      "description": "Validate IDEA-069 winning config over 20K cycles",
-      "hypothesis": "46.9% WR with 5:1 R:R should remain favorable",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "6",
-        "HARD_TAKE_PROFIT_PCT": "30",
-        "TT_MAX_CYCLES": "20000"
-      },
-      "last_result": {
-        "exp_id": "EXP-0040",
-        "per_trade_pnl": null,
-        "win_rate": 38.4
-      }
-    },
-    {
-      "id": "IDEA-077",
-      "source": "claude",
-      "timestamp": "2025-12-28T19:35:00.000000",
-      "category": "exit_strategy",
-      "title": "5K: -5%/+25% = 5:1 R:R tighter",
-      "description": "Tighter on both sides",
-      "hypothesis": "May have higher win rate with smaller swings",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "25"
-      },
-      "last_result": {
-        "exp_id": "EXP-0041",
-        "per_trade_pnl": null,
-        "win_rate": 44.1
-      }
-    },
-    {
-      "id": "IDEA-080",
-      "source": "claude",
-      "timestamp": "2025-12-28T20:03:00.000000",
-      "category": "validation",
-      "title": "20K validation: -5%/+30% best config",
-      "description": "Validate IDEA-073 best config over 20K",
-      "hypothesis": "43.6% WR with 6:1 R:R at -$0.23/trade",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "30",
-        "TT_MAX_CYCLES": "20000"
-      },
-      "last_result": {
-        "exp_id": "EXP-0042",
-        "per_trade_pnl": null,
-        "win_rate": 45.5
-      }
-    },
-    {
-      "id": "IDEA-83",
-      "source": "claude",
-      "timestamp": "2025-12-29T09:51:04.912610",
-      "category": "exit_strategy",
-      "title": "5K: -6%/+35% wider TP from best config",
-      "description": "IDEA-069 (-6%/+30%) was best at -$0.63/trade. Try wider TP.",
-      "hypothesis": "Wider TP may push to profitability",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "6",
-        "HARD_TAKE_PROFIT_PCT": "35"
-      },
-      "last_result": {
-        "exp_id": "EXP-0043",
-        "per_trade_pnl": null,
-        "win_rate": 37.4
-      }
-    },
-    {
-      "id": "IDEA-84",
-      "source": "claude",
-      "timestamp": "2025-12-29T09:51:04.912619",
-      "category": "exit_strategy",
-      "title": "5K: -7%/+30% looser stop from best config",
-      "description": "Give trades more room with slightly wider stop",
-      "hypothesis": "May reduce premature stop-outs while keeping good R:R",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "7",
-        "HARD_TAKE_PROFIT_PCT": "30"
-      },
-      "last_result": {
-        "exp_id": "EXP-0044",
-        "per_trade_pnl": null,
-        "win_rate": 36.9
-      }
-    },
-    {
-      "id": "IDEA-85",
-      "source": "claude",
-      "timestamp": "2025-12-29T09:51:04.912622",
-      "category": "exit_strategy",
-      "title": "5K: -6%/+28% tighter TP from best",
-      "description": "Test slightly tighter TP for higher hit rate",
-      "hypothesis": "Smaller target may increase win rate enough",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "6",
-        "HARD_TAKE_PROFIT_PCT": "28"
-      },
-      "last_result": {
-        "exp_id": "EXP-0045",
-        "per_trade_pnl": null,
-        "win_rate": 41.0
-      }
-    },
-    {
-      "id": "IDEA-86",
-      "source": "claude",
-      "timestamp": "2025-12-29T09:51:04.912625",
-      "category": "exit_strategy",
-      "title": "5K: -5.5%/+30% split difference stop",
-      "description": "Between -5% (worse) and -6% (best) stops",
-      "hypothesis": "Fine-tune the stop loss level",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "LOAD_PRETRAINED": "1",
-        "HARD_STOP_LOSS_PCT": "5.5",
-        "HARD_TAKE_PROFIT_PCT": "30"
-      },
-      "last_result": {
-        "exp_id": "EXP-0046",
-        "per_trade_pnl": null,
-        "win_rate": 34.8
-      }
+      "timestamp": "2026-01-01T16:22:00.000000",
+      "category": "architecture",
+      "title": "Hard constraint chain with logging",
+      "description": "Implement explicit modus ponens gate chain with rejection logging",
+      "hypothesis": "Better visibility into why trades are rejected helps optimization",
+      "priority": "low",
+      "status": "already_tested"
     }
   ],
-  "next_id": 87,
-  "last_updated": "2025-12-29T12:12:28.323621"
+  "next_id": 91,
+  "last_updated": "2026-01-01T16:28:00.491221"
 }
