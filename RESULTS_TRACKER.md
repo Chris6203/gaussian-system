@@ -23,6 +23,68 @@ Track configuration changes and their impact on performance.
 
 ---
 
+## Phase 32: Combining RSI+MACD with High Selectivity (2025-12-31)
+
+### Goal
+Achieve 60% win rate by combining RSI+MACD filter with high confidence thresholds to match the selectivity of the pretrained model that achieved 59.8% win rate.
+
+### Background
+The 59.8% win rate (dec_validation_v2) was achieved using:
+1. Pre-trained neural network from `long_run_20k`
+2. The pre-trained model outputs conservative predictions
+3. This causes 98.5% of signals to be rejected (~2% trade rate)
+
+**CRITICAL: The pretrained model files are GONE.** The state directories are empty.
+
+### Test Results (5K cycles each)
+
+| Configuration | P&L | Win Rate | Trades | Notes |
+|---------------|-----|----------|--------|-------|
+| RSI 30/70 + MACD (Phase 31 best) | +62.08% | 40.1% | 313 | Baseline |
+| RSI+MACD + 50% conf | +145.80% | 35.3% | 1,508 | Lower win rate |
+| **RSI+MACD + 60% conf** | +83.09% | **40.5%** | 265 | **Best win rate** |
+| RSI+MACD + 2x volume | +113.44% | 35.8% | 96 | Volume hurts |
+| Extreme selective (70% conf) | -95.67% | 36.0% | 1,270 | Lost money |
+| RSI+MACD + 50% conf + 0.2% edge | +0.00% | 0.0% | 0 | Too restrictive |
+| Ultra selective (60% conf + 0.3% edge) | +0.00% | 0.0% | 0 | Too restrictive |
+| RSI+MACD moderate (35% conf + 0.1% edge) | -16.45% | 31.0% | 143 | Worse than baseline |
+
+### Key Findings
+
+1. **Best achievable win rate: 40.5%** (RSI 30/70 + MACD + 60% confidence)
+2. **Higher thresholds don't help**: 50%+ conf thresholds either reduce trade rate to 0 or hurt win rate
+3. **Edge thresholds cause 0 trades**: TT_TRAIN_MIN_ABS_RET > 0.001 prevents all trades
+4. **60% win rate is NOT achievable** without the pretrained model
+
+### Why We Can't Reach 60%
+
+| Factor | Status |
+|--------|--------|
+| Pretrained model files | **GONE** (state directories empty) |
+| Direction prediction accuracy | ~50% (neural network limit) |
+| Conservative NN outputs | Only achievable with pretrained state |
+| Threshold tuning | Can't replicate pretrained behavior |
+
+The pretrained model achieved 60% by:
+1. Being trained on 20K+ cycles → learned conservative outputs
+2. Conservative outputs → most signals rejected
+3. Only highest quality 1.5% pass through → higher win rate
+
+Without pretrained state, fresh models output high confidence/edge values → more trades → lower quality → lower win rate.
+
+### Recommended Configuration
+Best available (40.5% win rate):
+```bash
+RSI_MACD_FILTER=1 RSI_OVERSOLD=30 RSI_OVERBOUGHT=70 MACD_CONFIRM=1
+```
+
+For higher selectivity (but still ~40% win rate):
+```bash
+RSI_MACD_FILTER=1 RSI_OVERSOLD=30 RSI_OVERBOUGHT=70 MACD_CONFIRM=1 TT_TRAIN_MIN_CONF=0.35
+```
+
+---
+
 ## Phase 31: RSI+MACD Confirmation Filter (2025-12-31)
 
 ### Goal
