@@ -4187,3 +4187,35 @@ A well-calibrated model should show win rate ≈ confidence bucket.
 4. Consider adding BCE loss to predictor training
 
 ---
+
+---
+
+## Phase 35: DEC_VALIDATION_V2 Improvement Tests (2026-01-02)
+
+### Goal
+Rebuild and improve upon the 59.8% win rate model (dec_validation_v2).
+
+### Background
+The original 59.8% win rate was achieved through:
+1. Training 20K+ cycles → conservative neural network predictions
+2. Bandit gate (20% conf, 0.08% edge) rejects 98% of signals
+3. Only 2% highest-quality signals trade → 59.8% WR, +$339/trade
+
+### Training Period Results (Sept-Nov 2025, 10K cycles)
+
+| Experiment | Win Rate | P&L | Trades | Per-Trade P&L | Notes |
+|------------|----------|-----|--------|---------------|-------|
+| EXP-35.4 Transformer | 35.8% | +$138,844 (+2777%) | 1,706 | +$81.39 | Transformer temporal encoder |
+| EXP-35.5 V3 Multi-Horizon | 34.5% | +$155,927 (+3119%) | 902 | +$172.87 | V3 multi-horizon predictor |
+
+**Key Finding:** V3 Multi-Horizon has 2x higher per-trade P&L (+$173 vs +$81) with half the trades. More selective entry.
+
+### In Progress
+- 20K cycle pretrain on Sept-Nov (rebuilding long_run_20k equivalent)
+- Waiting to test pretrained model on December 2025 data
+
+### Planned Tests
+1. Confidence threshold variations (15%, 25%, 30%)
+2. Exit configuration (tighter: -6%/+10%, wider: -10%/+15%)
+3. Max hold time variations (30, 45, 60 minutes)
+
