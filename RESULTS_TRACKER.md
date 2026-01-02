@@ -4783,3 +4783,69 @@ The original 59.8% win rate was achieved through:
 
 **Recommendation:** Use Transformer temporal encoder for production - it shows real generalization ability.
 
+---
+
+## Phase 36: Code Fixes and dec_validation_v2 Verification (2026-01-02)
+
+### Goal
+Verify if dec_validation_v2's 59.8% win rate and +413% P&L were affected by the P&L calculation bug.
+
+### Code Fixes Applied
+
+#### 1. Database Schema Compatibility Fix
+**File:** `scripts/train_time_travel.py` (line 1365-1374)
+```python
+# Fixed: Check if run_id column exists before DELETE query
+cursor.execute("PRAGMA table_info(trades)")
+columns = [col[1] for col in cursor.fetchall()]
+if 'run_id' in columns:
+    cursor.execute("DELETE FROM trades WHERE run_id = ?", (run_name,))
+else:
+    logger.info("[SKIP] run_id column not in trades table")
+```
+**Problem:** `sqlite3.OperationalError: no such column: run_id`
+
+#### 2. Auto-detect Pretrained Model Feature Dimension
+**File:** `scripts/train_time_travel.py` (line 1206-1245)
+```python
+# Fixed: Auto-detect feature_dim from checkpoint instead of hardcoding 59
+pretrained_model_path = os.environ.get('PRETRAINED_MODEL_PATH', "models/pretrained/trained_model.pth")
+checkpoint = torch.load(pretrained_model_path, map_location='cpu')
+pretrained_feature_dim = checkpoint['temporal_encoder.input_proj.weight'].shape[1]
+```
+**Problem:** `size mismatch for temporal_encoder.input_proj.weight: torch.Size([128, 59]) vs torch.Size([128, 50])`
+
+### Model Analysis
+
+| Model | Feature Dim | Location |
+|-------|-------------|----------|
+| dec_validation_v2 | 50 | models/dec_validation_v2/state/ |
+| models/pretrained/predictor_v2.pt | 59 | Old model (Dec 28) |
+
+### Verification Run Status
+- **Run ID:** dec_v2_bugfix_verify
+- **Model:** dec_validation_v2 pretrained (50 features)
+- **Cycles:** 3000
+- **Status:** Running
+
+**Expected behavior:** Low trade rate (~1-2%) due to conservative pretrained NN predictions.
+
+### P&L Bug Context
+
+The P&L calculation bug (fixed in Phase 29) was:
+- Missing SQL placeholder in `_save_trade()` - 49 columns but only 48 `?` placeholders
+- Caused trades to be credited ~165x their actual value
+- Fixed on 2026-01-01 by adding missing placeholder
+
+**dec_validation_v2 was created on 2025-12-24** - potentially affected by the bug.
+
+### Verification Results
+*(To be updated when run completes)*
+
+| Metric | Original (Dec 24) | With Bug Fix | Delta |
+|--------|-------------------|--------------|-------|
+| Win Rate | 59.8% | TBD | TBD |
+| P&L | +413% | TBD | TBD |
+| Trades | 61 | TBD | TBD |
+| Per-Trade P&L | +$339 | TBD | TBD |
+

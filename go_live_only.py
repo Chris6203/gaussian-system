@@ -33,13 +33,32 @@ print(f"[CONFIG] Paper Balance (simulated): ${config.get_paper_initial_balance()
 print(f"[CONFIG] Data Source: {config.get_data_source()}")
 
 # ============================================================================
-# PAPER ONLY MODE - Set to True to disable all live trading
-# Set to False when ready to resume live trades
+# PAPER ONLY MODE - Dynamic switching via flag file
+# Create 'go_live.flag' file to switch to live trading without restart
+# Delete 'go_live.flag' to switch back to paper mode
 # ============================================================================
-PAPER_ONLY_MODE = False
-print(f"[CONFIG] Paper Only Mode: {PAPER_ONLY_MODE}")
-if PAPER_ONLY_MODE:
-    print(f"[CONFIG] ** LIVE TRADES DISABLED - Bot will learn with paper trades only **")
+PAPER_ONLY_MODE = True  # Start in paper mode by default
+GO_LIVE_FLAG_FILE = Path("go_live.flag")
+
+def check_live_mode():
+    """Check if we should be in live mode (flag file exists)."""
+    return GO_LIVE_FLAG_FILE.exists()
+
+def get_current_mode():
+    """Get current trading mode based on flag file."""
+    if check_live_mode():
+        return False  # Not paper only = live mode
+    return True  # Paper only mode
+
+print(f"[CONFIG] Initial Mode: {'PAPER' if PAPER_ONLY_MODE else 'LIVE'}")
+print(f"[CONFIG] Dynamic switching enabled:")
+print(f"[CONFIG]   - Create 'go_live.flag' to switch to LIVE trading")
+print(f"[CONFIG]   - Delete 'go_live.flag' to switch back to PAPER mode")
+if GO_LIVE_FLAG_FILE.exists():
+    print(f"[CONFIG] ** go_live.flag EXISTS - Will trade LIVE **")
+    PAPER_ONLY_MODE = False
+else:
+    print(f"[CONFIG] ** No go_live.flag - Paper trading only **")
 print()
 
 if len(sys.argv) < 2:
@@ -845,7 +864,26 @@ try:
                     block_reason = None  # Track why live trade was blocked
                     
                     # Only attempt live trades if LSTM is ready AND paper-only mode is off
-                    if PAPER_ONLY_MODE:
+                    # Check flag file each cycle for dynamic mode switching
+                    current_paper_mode = get_current_mode()
+
+                    # Track mode changes and notify user
+                    if not hasattr(check_live_mode, '_last_mode'):
+                        check_live_mode._last_mode = current_paper_mode
+                    if check_live_mode._last_mode != current_paper_mode:
+                        if current_paper_mode:
+                            print("\n" + "="*60)
+                            print("MODE CHANGED: Switched to PAPER trading")
+                            print("(go_live.flag was deleted)")
+                            print("="*60 + "\n")
+                        else:
+                            print("\n" + "="*60)
+                            print("MODE CHANGED: Switched to LIVE trading!")
+                            print("(go_live.flag detected)")
+                            print("="*60 + "\n")
+                        check_live_mode._last_mode = current_paper_mode
+
+                    if current_paper_mode:
                         block_reason = "Paper Only Mode enabled - learning with paper trades"
                         logger.info(f"[PAPER-ONLY] Live trading disabled - {block_reason}")
                         print(f"  [📚] LEARNING MODE: Paper trades only")

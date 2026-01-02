@@ -1206,15 +1206,28 @@ logger.info("[TRAIN] Each run is isolated in its own timestamped directory")
 # Load pretrained model if available (BEFORE overwriting save paths!)
 # CRITICAL: Use models/pretrained/ directory which is never overwritten by training runs
 if os.environ.get('LOAD_PRETRAINED', '0') == '1':
-    pretrained_model_path = "models/pretrained/trained_model.pth"  # Protected directory
+    # Allow override via PRETRAINED_MODEL_PATH env var
+    pretrained_model_path = os.environ.get('PRETRAINED_MODEL_PATH', "models/pretrained/trained_model.pth")
     if os.path.exists(pretrained_model_path):
         # Force model initialization if not already done
-        # IMPORTANT: Use feature_dim=59 to match long_run_20k pretrained model
+        # Auto-detect feature_dim from the checkpoint
         if not hasattr(bot, 'model') or bot.model is None:
             from bot_modules.neural_networks import create_predictor
             logger.info(f"[PRETRAINED] Forcing model initialization for pretrained loading...")
             predictor_arch = "v2_slim_bayesian"  # Default architecture
-            pretrained_feature_dim = 59  # Must match long_run_20k training
+
+            # Auto-detect feature_dim from checkpoint
+            pretrained_feature_dim = 50  # Default fallback
+            try:
+                checkpoint = torch.load(pretrained_model_path, map_location='cpu')
+                # Check if it's a state_dict directly or wrapped
+                state_dict = checkpoint if isinstance(checkpoint, dict) and 'temporal_encoder.input_proj.weight' in checkpoint else checkpoint.get('model_state_dict', checkpoint)
+                if 'temporal_encoder.input_proj.weight' in state_dict:
+                    pretrained_feature_dim = state_dict['temporal_encoder.input_proj.weight'].shape[1]
+                    logger.info(f"[PRETRAINED] Auto-detected feature_dim={pretrained_feature_dim} from checkpoint")
+            except Exception as e_detect:
+                logger.warning(f"[PRETRAINED] Could not auto-detect feature_dim: {e_detect}, using default={pretrained_feature_dim}")
+
             try:
                 cfg = bot.config.config if bot.config else {}
                 predictor_arch = cfg.get("architecture", {}).get("predictor", {}).get("arch", predictor_arch)
@@ -1363,9 +1376,15 @@ conn = sqlite3.connect(bot.paper_trader.db_path)
 cursor = conn.cursor()
 
 # Delete only trades from THIS run (preserve other runs for dashboard history)
-cursor.execute("DELETE FROM trades WHERE run_id = ?", (run_name,))
-deleted_trades = cursor.rowcount
-logger.info(f"   Deleted {deleted_trades} old trades from run {run_name}")
+# First check if run_id column exists (backwards compatibility)
+cursor.execute("PRAGMA table_info(trades)")
+columns = [col[1] for col in cursor.fetchall()]
+if 'run_id' in columns:
+    cursor.execute("DELETE FROM trades WHERE run_id = ?", (run_name,))
+    deleted_trades = cursor.rowcount
+    logger.info(f"   Deleted {deleted_trades} old trades from run {run_name}")
+else:
+    logger.info(f"   [SKIP] run_id column not in trades table - no per-run cleanup")
 
 # Reset account state
 cursor.execute("""
