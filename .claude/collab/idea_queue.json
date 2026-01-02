@@ -186,14 +186,15 @@
       "description": "30-min exit has 41.3% WR, 31-min drops to 32%, 32-min to 12.5%. Force exact 30-min exit.",
       "hypothesis": "Extra minutes after 30 hurt performance significantly",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TT_MAX_HOLD_MINUTES": "30",
         "FORCE_EXIT_AT_MAX_HOLD": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T12:14:57.152784"
+      "last_result": {
+        "exp_id": "EXP-0083",
+        "per_trade_pnl": null,
+        "win_rate": 22.5
       }
     },
     {
@@ -205,16 +206,17 @@
       "description": "Combine both winning signals: 40-50% confidence AND consensus strength >= 0.28",
       "hypothesis": "Uncertain model + strong consensus = highest quality trades",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.40",
         "PNL_CAL_MAX_PROB": "0.55",
         "MIN_CONSENSUS_STRENGTH": "0.28"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T12:14:57.152784"
+      "last_result": {
+        "exp_id": "EXP-0084",
+        "per_trade_pnl": null,
+        "win_rate": 18.6
       }
     },
     {
@@ -226,14 +228,15 @@
       "description": "Since higher confidence = worse WR, try disabling confidence filtering completely",
       "hypothesis": "Confidence filter is counterproductive - removing it may help",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PNL_CAL_GATE": "0",
         "REQUIRE_NEURAL_CONFIRM": "0"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T12:14:57.152784"
+      "last_result": {
+        "exp_id": "EXP-0085",
+        "per_trade_pnl": null,
+        "win_rate": 38.2
       }
     },
     {
@@ -245,15 +248,16 @@
       "description": "Build on exp35_v3_multi (+3118% P&L) by adding calibration gate for higher win rate.",
       "hypothesis": "V3 architecture + calibrated confidence = best of both worlds",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.55"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T12:14:57.152784"
+      "last_result": {
+        "exp_id": "EXP-0086",
+        "per_trade_pnl": -1.6270454545454547,
+        "win_rate": 21.6
       }
     },
     {
@@ -430,5 +434,5 @@
     }
   ],
   "next_id": 143,
-  "last_updated": "2026-01-02T12:14:57.152784"
+  "last_updated": "2026-01-02T12:35:41.987661"
 }

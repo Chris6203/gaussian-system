@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0083: DATA: Strict 30-minute max hold (not 31+) (2026-01-02 12:35)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 22.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 75 |
+| Run Dir | `models/EXP-0083_IDEA-133` |
+
+**Source**: DECISION_ANALYSIS
+**Category**: exit
+**Hypothesis**: Extra minutes after 30 hurt performance significantly
+**Result**: ERROR
+
+---
+
+### EXP-0085: DATA: Disable confidence gate entirely (2026-01-02 12:35)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 87 |
+| Run Dir | `models/EXP-0085_IDEA-135` |
+
+**Source**: DECISION_ANALYSIS
+**Category**: entry
+**Hypothesis**: Confidence filter is counterproductive - removing it may help
+**Result**: ERROR
+
+---
+
+### EXP-0084: DATA: Combined - Inverted conf + High consensus (2026-01-02 12:35)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 18.6% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 22 |
+| Run Dir | `models/EXP-0084_IDEA-134` |
+
+**Source**: DECISION_ANALYSIS
+**Category**: entry
+**Hypothesis**: Uncertain model + strong consensus = highest quality trades
+**Result**: ERROR
+
+---
+
+### EXP-0086: BEST: V3 Multi-Horizon + Calibration Gate (2026-01-02 12:35)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 21.6% |
+| P&L | -2.86% |
+| Per-Trade P&L | $-1.63 |
+| Trades | 88 |
+| Run Dir | `models/EXP-0086_IDEA-127` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: V3 architecture + calibrated confidence = best of both worlds
+**Result**: FAIL
+
+---
+
+
 ### EXP-0082: DATA: High consensus strength filter (>=0.28) (2026-01-02 12:13)
 
 | Metric | Quick Test (5K) |
