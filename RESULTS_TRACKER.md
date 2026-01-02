@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0082: DATA: High consensus strength filter (>=0.28) (2026-01-02 12:13)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.9% |
+| P&L | -0.25% |
+| Per-Trade P&L | $-0.44 |
+| Trades | 29 |
+| Run Dir | `models/EXP-0082_IDEA-132` |
+
+**Source**: DECISION_ANALYSIS
+**Category**: entry
+**Hypothesis**: Multi-timeframe agreement strength is a strong win predictor
+**Result**: FAIL
+
+---
+
+### EXP-0080: ARCH: Freeze NN weights (stable calibration) (2026-01-02 12:13)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 21.6% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 67 |
+| Run Dir | `models/EXP-0080_IDEA-141` |
+
+**Source**: ARCHITECTURE_REVIEW
+**Category**: training
+**Hypothesis**: Frequent retraining destabilizes calibration - freeze for stability
+**Result**: ERROR
+
+---
+
+### EXP-0081: DATA: Inverted confidence (40-50% sweet spot) (2026-01-02 12:13)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 71 |
+| Run Dir | `models/EXP-0081_IDEA-131` |
+
+**Source**: DECISION_ANALYSIS
+**Category**: entry
+**Hypothesis**: Model overconfidence predicts LOSING trades. Lower confidence = better.
+**Result**: ERROR
+
+---
+
+### EXP-0079: ARCH: Greeks-aware stops (vol-adjusted) (2026-01-02 12:13)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 71 |
+| Run Dir | `models/EXP-0079_IDEA-140` |
+
+**Source**: ARCHITECTURE_REVIEW
+**Category**: exit
+**Hypothesis**: Vol-adjusted stops reduce premature exits in high-gamma regimes
+**Result**: ERROR
+
+---
+
+
 ### EXP-0075: ARCH: EV Gate (expected value after costs) (2026-01-02 11:51)
 
 | Metric | Quick Test (5K) |
