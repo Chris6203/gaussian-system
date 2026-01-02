@@ -9,87 +9,233 @@
       "description": "Critical bug causing ~$50K phantom profits in backtests. Balance increases don't match logged trade P&L. Must fix before any further testing.",
       "hypothesis": "Duplicate trade crediting between update_positions() and FORCE_CLOSE, or get_recent_closed_trades() returning wrong trades",
       "priority": "critical",
-      "status": "in_progress",
-      "notes": "See RESULTS_TRACKER.md for full analysis. Math is correct, issue is trade attribution."
+      "status": "completed",
+      "notes": "Fixed - missing placeholder in SQL VALUES clause causing trades to never save, then be credited multiple times."
     },
     {
-      "id": "IDEA-087",
-      "source": "claude",
-      "timestamp": "2026-01-01T16:22:00.000000",
-      "category": "integration",
-      "title": "Jerry All-Combined test",
-      "description": "Tested all Jerry features together: fuzzy sizing + MTF + stochastic exit + filter",
-      "hypothesis": "More features = better results",
+      "id": "IDEA-092",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "entry",
+      "title": "High confidence threshold (75%)",
+      "description": "Only trade when ML confidence is above 75%. Based on tuning data showing high-conf trades have better win rates.",
+      "hypothesis": "Higher confidence trades should have better outcomes",
       "priority": "high",
-      "status": "rejected",
+      "status": "in_progress",
       "env_vars": {
-        "JERRY_FEATURES": "1",
-        "JERRY_FILTER": "1",
-        "FUZZY_SIZING_ENABLED": "1",
-        "MTF_CONSENSUS_ENABLED": "1",
-        "STOCHASTIC_EXIT_ENABLED": "1",
-        "RSI_MACD_FILTER": "1"
+        "MIN_CONFIDENCE_TO_TRADE": "0.75"
       },
-      "last_result": {
-        "pnl_pct": -26.27,
-        "win_rate": 34.8,
-        "trades": 1148,
-        "notes": "WORSE than Features+Filter (-2.3%). Don't combine adjustment features."
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T00:26:14.072337"
       }
     },
     {
-      "id": "IDEA-088",
-      "source": "claude",
-      "timestamp": "2026-01-01T16:22:00.000000",
-      "category": "architecture",
-      "title": "V3 + Jerry Features + Filter (best combo)",
-      "description": "Test V3 predictor with Jerry NN features and filter only",
-      "hypothesis": "V3 (+1506%) + Features+Filter (+3.2% WR) = best combination",
+      "id": "IDEA-093",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "entry",
+      "title": "Very high confidence threshold (80%)",
+      "description": "Only trade when ML confidence is above 80%. Fewer trades but higher quality.",
+      "hypothesis": "Top 20% confidence predictions should have significantly better win rates",
       "priority": "high",
-      "status": "rejected",
+      "status": "in_progress",
+      "env_vars": {
+        "MIN_CONFIDENCE_TO_TRADE": "0.80"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T00:26:14.072337"
+      }
+    },
+    {
+      "id": "IDEA-094",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "entry",
+      "title": "Strict HMM regime filter (0.75/0.25)",
+      "description": "Only trade in strong trending regimes - HMM trend > 0.75 for calls, < 0.25 for puts.",
+      "hypothesis": "Trades aligned with strong HMM trends should perform better",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "HMM_STRONG_BULLISH": "0.75",
+        "HMM_STRONG_BEARISH": "0.25",
+        "HMM_MIN_CONFIDENCE": "0.70"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T00:26:14.072337"
+      }
+    },
+    {
+      "id": "IDEA-095",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "exit",
+      "title": "Short max hold (15 min)",
+      "description": "Reduce max hold time to 15 minutes to limit theta decay exposure.",
+      "hypothesis": "Short-duration trades have better risk/reward as theta decay is minimal",
+      "priority": "medium",
+      "status": "in_progress",
+      "env_vars": {
+        "TT_MAX_HOLD_MINUTES": "15"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T00:26:14.072337"
+      }
+    },
+    {
+      "id": "IDEA-096",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "exit",
+      "title": "Very short max hold (10 min)",
+      "description": "Very short trades to capture quick moves without theta exposure.",
+      "hypothesis": "Ultra-short trades are scalping momentum which should be more predictable",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TT_MAX_HOLD_MINUTES": "10"
+      }
+    },
+    {
+      "id": "IDEA-097",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "exit",
+      "title": "Tight stop with quick take-profit (-5%/+10%)",
+      "description": "Quick 2:1 risk/reward - take small profits quickly before reversal.",
+      "hypothesis": "Smaller, more frequent wins beat larger, rarer wins",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "HARD_STOP_LOSS_PCT": "5",
+        "HARD_TAKE_PROFIT_PCT": "10"
+      }
+    },
+    {
+      "id": "IDEA-098",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "exit",
+      "title": "Very tight stop with moderate TP (-3%/+15%)",
+      "description": "5:1 risk/reward - small stops, let winners run.",
+      "hypothesis": "High R:R ratio should be profitable even with low win rate",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "HARD_STOP_LOSS_PCT": "3",
+        "HARD_TAKE_PROFIT_PCT": "15"
+      }
+    },
+    {
+      "id": "IDEA-099",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "entry",
+      "title": "Combined: High conf + strict HMM",
+      "description": "Only trade when both confidence > 75% AND HMM shows strong trend.",
+      "hypothesis": "Double confirmation should filter out noise trades",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "MIN_CONFIDENCE_TO_TRADE": "0.75",
+        "HMM_STRONG_BULLISH": "0.75",
+        "HMM_STRONG_BEARISH": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-100",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "entry",
+      "title": "Momentum filter + high confidence",
+      "description": "Only trade when 5m momentum > 0.002 (0.2%) AND confidence > 70%.",
+      "hypothesis": "Active momentum + high confidence should catch real moves",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "MIN_CONFIDENCE_TO_TRADE": "0.70",
+        "MIN_MOMENTUM_5M": "0.002"
+      }
+    },
+    {
+      "id": "IDEA-101",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "exit",
+      "title": "Trailing stop activation at 5% gain",
+      "description": "Activate trailing stop earlier (5% vs 8%) to lock in profits.",
+      "hypothesis": "Earlier profit protection prevents winners from becoming losers",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TRAILING_STOP_ACTIVATION_PCT": "5",
+        "TRAILING_STOP_PCT": "3"
+      }
+    },
+    {
+      "id": "IDEA-102",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "architecture",
+      "title": "V3 predictor + 75% confidence",
+      "description": "Use best predictor (V3) with strict confidence filter.",
+      "hypothesis": "V3's multi-horizon prediction + high confidence should find best entries",
+      "priority": "high",
+      "status": "pending",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
-        "JERRY_FEATURES": "1",
-        "JERRY_FILTER": "1",
-        "RSI_MACD_FILTER": "1"
-      },
-      "last_result": {
-        "exp_id": "EXP-0047",
-        "per_trade_pnl": null,
-        "win_rate": 34.9
+        "MIN_CONFIDENCE_TO_TRADE": "0.75"
       }
     },
     {
-      "id": "IDEA-089",
-      "source": "claude",
-      "timestamp": "2026-01-01T16:22:00.000000",
-      "category": "feature",
-      "title": "Enable options flow signal",
-      "description": "Activate options flow signal (put/call ratio) from consensus controller",
-      "hypothesis": "Put/call ratio provides additional directional confirmation",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "OPTIONS_FLOW_ENABLED": "1"
-      },
-      "last_result": {
-        "exp_id": "EXP-0048",
-        "per_trade_pnl": null,
-        "win_rate": 36.4
-      }
-    },
-    {
-      "id": "IDEA-090",
-      "source": "claude",
-      "timestamp": "2026-01-01T16:22:00.000000",
+      "id": "IDEA-103",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
       "category": "architecture",
-      "title": "Hard constraint chain with logging",
-      "description": "Implement explicit modus ponens gate chain with rejection logging",
-      "hypothesis": "Better visibility into why trades are rejected helps optimization",
-      "priority": "low",
-      "status": "already_tested"
+      "title": "V3 + short hold (20 min)",
+      "description": "V3 predictor optimized for shorter prediction horizons.",
+      "hypothesis": "V3's 5m/15m predictions are most accurate; match hold time to horizon",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TT_MAX_HOLD_MINUTES": "20"
+      }
+    },
+    {
+      "id": "IDEA-104",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "entry",
+      "title": "Only trade in low volatility (VIX < 20)",
+      "description": "Avoid trading when VIX is elevated.",
+      "hypothesis": "High VIX = unpredictable markets = random outcomes",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "MAX_VIX_FOR_ENTRY": "20"
+      }
+    },
+    {
+      "id": "IDEA-105",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:30:00.000000",
+      "category": "exit",
+      "title": "Balanced 1:1 risk/reward (-8%/+8%)",
+      "description": "Equal stop and take profit for symmetric outcomes.",
+      "hypothesis": "If win rate > 50%, symmetric R:R is profitable",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "HARD_STOP_LOSS_PCT": "8",
+        "HARD_TAKE_PROFIT_PCT": "8"
+      }
     }
   ],
-  "next_id": 92,
-  "last_updated": "2026-01-01T19:05:15.041464"
+  "next_id": 106,
+  "last_updated": "2026-01-02T00:26:14.072337"
 }
