@@ -346,15 +346,16 @@
       "description": "Only trade when calibrated P(profit) >= 70%. Target 2-5% trade rate.",
       "hypothesis": "Extreme selectivity via calibration = 60%+ win rate",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.70",
         "PNL_CAL_MIN_SAMPLES": "30"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T14:37:47.850837"
+      "last_result": {
+        "exp_id": "EXP-0087",
+        "per_trade_pnl": null,
+        "win_rate": 43.0
       }
     },
     {
@@ -366,14 +367,15 @@
       "description": "Load the saved unified_rl.pth from dec_validation_v2 and test with calibration gate.",
       "hypothesis": "RL weights + calibration = replicate 60% behavior",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "LOAD_RL_WEIGHTS": "models/dec_validation_v2/unified_rl.pth",
         "PNL_CAL_GATE": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T14:37:47.850837"
+      "last_result": {
+        "exp_id": "EXP-0088",
+        "per_trade_pnl": -0.7910576923076923,
+        "win_rate": 36.5
       }
     },
     {
@@ -385,16 +387,17 @@
       "description": "Require very strong HMM trend (>0.85 or <0.15) AND calibrated confidence >65%.",
       "hypothesis": "Double extreme filtering = highest quality trades only",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "HMM_STRONG_BULLISH": "0.85",
         "HMM_STRONG_BEARISH": "0.15",
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.65"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T14:37:47.850837"
+      "last_result": {
+        "exp_id": "EXP-0089",
+        "per_trade_pnl": -0.24431818181818182,
+        "win_rate": 50.0
       }
     },
     {
@@ -406,15 +409,16 @@
       "description": "Longer training period on 4 months of data for better pattern learning.",
       "hypothesis": "More training data + longer training = better generalization",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TT_MAX_CYCLES": "30000",
         "START_DATE": "2025-09-01",
         "END_DATE": "2025-12-15"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T14:37:47.850837"
+      "last_result": {
+        "exp_id": "EXP-0090",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     },
     {
@@ -466,5 +470,5 @@
     }
   ],
   "next_id": 143,
-  "last_updated": "2026-01-02T14:37:47.850837"
+  "last_updated": "2026-01-02T16:37:49.861406"
 }

@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0087: PRIORITY: 70% calibrated confidence gate (2026-01-02 16:37)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 43.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 76 |
+| Run Dir | `models/EXP-0087_IDEA-122` |
+
+**Source**: CLAUDE
+**Category**: entry
+**Hypothesis**: Extreme selectivity via calibration = 60%+ win rate
+**Result**: ERROR
+
+---
+
+### EXP-0089: Ultra-strict: HMM 0.85 + Calibration 65% (2026-01-02 16:37)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 50.0% |
+| P&L | -0.22% |
+| Per-Trade P&L | $-0.24 |
+| Trades | 44 |
+| Run Dir | `models/EXP-0089_IDEA-124` |
+
+**Source**: CLAUDE
+**Category**: entry
+**Hypothesis**: Double extreme filtering = highest quality trades only
+**Result**: FAIL
+
+---
+
+### EXP-0088: PRIORITY: Load dec_validation_v2 RL weights (2026-01-02 16:37)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.5% |
+| P&L | -3.29% |
+| Per-Trade P&L | $-0.79 |
+| Trades | 208 |
+| Run Dir | `models/EXP-0088_IDEA-123` |
+
+**Source**: CLAUDE
+**Category**: entry
+**Hypothesis**: RL weights + calibration = replicate 60% behavior
+**Result**: FAIL
+
+---
+
+### EXP-0090: 30K training on Sept-Dec data (2026-01-02 16:37)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0090_IDEA-125` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: More training data + longer training = better generalization
+**Result**: ERROR
+
+---
+
+
 ### EXP-0083: DATA: Strict 30-minute max hold (not 31+) (2026-01-02 12:35)
 
 | Metric | Quick Test (5K) |
