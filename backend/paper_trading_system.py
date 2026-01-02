@@ -151,7 +151,8 @@ class Trade:
     profit_loss: float = 0.0
     stop_loss: float = 0.0
     take_profit: float = 0.0
-    ml_confidence: float = 0.0
+    ml_confidence: float = 0.0  # Raw model confidence (may not be calibrated!)
+    calibrated_confidence: Optional[float] = None  # P(profit) from calibration tracker
     ml_prediction: str = ""
     expiration_date: Optional[datetime] = None
     # Position management fields
@@ -3735,6 +3736,8 @@ class PaperTradingSystem:
         trade.volume_spike = prediction_data.get('volume_spike', None)
         dir_probs = prediction_data.get('direction_probs', None)
         trade.direction_probs = json.dumps(dir_probs) if dir_probs else None
+        # Phase 14: Calibrated confidence from online Platt/isotonic calibration
+        trade.calibrated_confidence = prediction_data.get('calibrated_confidence', None)
         # ============= END TUNING FIELDS =============
         
         # ============= REALISTIC PROJECTION CAP =============
@@ -3870,7 +3873,7 @@ class PaperTradingSystem:
                 INSERT OR REPLACE INTO trades
                 (id, timestamp, symbol, option_type, strike_price, premium_paid,
                  quantity, entry_price, exit_price, exit_timestamp, status,
-                 profit_loss, stop_loss, take_profit, ml_confidence, ml_prediction,
+                 profit_loss, stop_loss, take_profit, ml_confidence, calibrated_confidence, ml_prediction,
                  expiration_date, created_at, projected_profit, projected_return_pct,
                  planned_exit_time, max_hold_hours, tradier_option_symbol,
                  tradier_order_id, is_real_trade, live_blocked_reason, exit_reason, run_id,
@@ -3878,7 +3881,7 @@ class PaperTradingSystem:
                  predicted_return, prediction_timeframe, entry_controller, signal_strategy,
                  signal_reasoning, momentum_5m, momentum_15m, volume_spike, direction_probs,
                  exit_spy_price, exit_vix_level, hold_minutes, max_drawdown_pct, max_gain_pct, exit_hmm_trend)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 trade.id,
@@ -3896,6 +3899,7 @@ class PaperTradingSystem:
                 trade.stop_loss,
                 trade.take_profit,
                 trade.ml_confidence,
+                getattr(trade, 'calibrated_confidence', None),  # Phase 14: P(profit) from calibration
                 trade.ml_prediction,
                 trade.expiration_date.isoformat() if trade.expiration_date else None,
                 self.get_market_time().isoformat(),

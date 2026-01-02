@@ -4024,3 +4024,97 @@ PREDICTOR_ARCH=v3_multi_horizon
 **DO NOT combine:** Fuzzy sizing + MTF consensus + Stochastic exit - these interfere with each other.
 
 ---
+
+## Phase 35: Confidence Calibration Fix (2026-01-02) ⚠️ CRITICAL BUG
+
+### Discovery
+
+**CRITICAL FINDING: Model confidence does NOT predict outcomes!**
+
+Analysis of 1,596 trades from tuning data revealed an inverse correlation:
+
+| Confidence | Win Rate | Expected |
+|------------|----------|----------|
+| 0.2 | 38.8% | Should be lowest |
+| 0.3 | 37.5% | Should be ~37% |
+| 0.4 | 36.6% | **Should be highest** |
+
+**Win rate DECREASES as confidence increases!** This means using raw confidence to filter trades was counterproductive.
+
+### Root Cause
+
+Found in `backend/rl_enhancements.py`:
+- Calibration penalty only triggered for confidence > 0.7
+- But 99% of trades have confidence 0.2-0.4
+- No BCE loss against actual outcomes
+- No reward for correct calibration
+
+The confidence head learned to predict something, but NOT probability of profit.
+
+### Solution Implemented
+
+Enabled the existing `CalibrationTracker` system by default:
+
+1. **PNL_CAL_GATE enabled by default** (`train_time_travel.py`)
+   - Changed from `'0'` to `'1'`
+   - Gates trades based on calibrated P(profit) >= 42%
+
+2. **Calibrated confidence tracking** (`paper_trading_system.py`)
+   - Added `calibrated_confidence` field to Trade dataclass
+   - Persisted to database for analysis
+
+3. **Database migration** (`migrate_add_tuning_fields.py`)
+   - Added `calibrated_confidence REAL` column
+
+4. **Enhanced summary output**
+   - Shows calibration curve in training summary
+   - Displays both raw and calibrated confidence
+
+### CalibrationTracker System
+
+Located in `backend/calibration_tracker.py`:
+- Uses hybrid Platt scaling + isotonic regression
+- Learns mapping: raw_confidence → P(profit)
+- Requires min 50 samples before gating
+- Updates online after each trade
+
+### Configuration
+
+```bash
+# Enabled by default now
+PNL_CAL_GATE=1           # Use calibrated probability for entry gate
+PNL_CAL_MIN_PROB=0.42    # Minimum calibrated P(profit) to trade
+PNL_CAL_MIN_SAMPLES=50   # Samples before gating activates
+```
+
+### Verification Query
+
+Check calibration quality with:
+```sql
+SELECT
+    ROUND(calibrated_confidence, 1) as conf_bucket,
+    COUNT(*) as trades,
+    SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as actual_win_rate
+FROM trades
+WHERE calibrated_confidence IS NOT NULL
+GROUP BY conf_bucket
+ORDER BY conf_bucket;
+```
+
+A well-calibrated model should show win rate ≈ confidence bucket.
+
+### Impact
+
+- **All experiments using confidence thresholds need re-evaluation**
+- IDEA-092 (75% conf) and IDEA-093 (80% conf) were filtering on UNCALIBRATED values
+- The calibration gate should now properly select higher-quality trades
+- Existing experiments with `MIN_CONFIDENCE_TO_TRADE` were using broken filtering
+
+### Next Steps
+
+1. Run baseline test with calibration gate enabled
+2. Let calibration tracker learn from 50+ trades
+3. Compare gated vs ungated performance
+4. Consider adding BCE loss to predictor training
+
+---

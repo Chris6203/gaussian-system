@@ -1323,30 +1323,39 @@ if rl_exit_policy:
 # =============================================================================
 # PNL CALIBRATION GATE (Phase 13 Improvement)
 # =============================================================================
-# This uses the CalibrationTracker's PnL-based calibration to gate entries.
-# Instead of trusting raw confidence, we use calibrated P(profit) to filter.
-PNL_CAL_GATE_ENABLED = os.environ.get('PNL_CAL_GATE', '0') == '1'
-PNL_CAL_MIN_PROB = float(os.environ.get('PNL_CAL_MIN_PROB', '0.40'))  # Min calibrated P(profit)
+# CONFIDENCE CALIBRATION SYSTEM (Phase 14 - ENABLED BY DEFAULT)
+# =============================================================================
+# Problem discovered: Raw confidence doesn't predict outcomes (0.3 conf = 37.5% WR)
+# Solution: Online Platt/isotonic calibration to map confidence → P(profit)
+#
+# The CalibrationTracker learns the true mapping between model confidence and
+# actual trade outcomes. Once it has enough samples, it blocks trades where
+# the calibrated P(profit) is too low.
+#
+# ALWAYS learn (even if gate disabled) so we can analyze calibration quality.
+PNL_CAL_GATE_ENABLED = os.environ.get('PNL_CAL_GATE', '1') == '1'  # ENABLED by default
+PNL_CAL_MIN_PROB = float(os.environ.get('PNL_CAL_MIN_PROB', '0.42'))  # Min calibrated P(profit)
 PNL_CAL_MIN_SAMPLES = int(os.environ.get('PNL_CAL_MIN_SAMPLES', '30'))  # Min trades before gating
 
+# Always initialize calibration tracker for learning (even if gate disabled)
 pnl_calibration_tracker = None
-if PNL_CAL_GATE_ENABLED:
-    try:
-        from backend.calibration_tracker import CalibrationTracker
-        pnl_calibration_tracker = CalibrationTracker(
-            direction_horizon=15,
-            pnl_horizon=45,  # Match max_hold_minutes
-            buffer_size=500,
-            min_samples_for_calibration=PNL_CAL_MIN_SAMPLES,
-            refit_interval=20,
-            use_hybrid=True
-        )
+try:
+    from backend.calibration_tracker import CalibrationTracker
+    pnl_calibration_tracker = CalibrationTracker(
+        direction_horizon=15,
+        pnl_horizon=45,  # Match max_hold_minutes
+        buffer_size=500,
+        min_samples_for_calibration=PNL_CAL_MIN_SAMPLES,
+        refit_interval=20,
+        use_hybrid=True
+    )
+    if PNL_CAL_GATE_ENABLED:
         logger.info(f"[OK] PnL Calibration Gate ENABLED (min_prob={PNL_CAL_MIN_PROB:.0%}, min_samples={PNL_CAL_MIN_SAMPLES})")
-    except Exception as e:
-        logger.warning(f"[WARN] Could not initialize PnL CalibrationTracker: {e}")
-        PNL_CAL_GATE_ENABLED = False
-else:
-    logger.info("[OK] PnL Calibration Gate disabled (set PNL_CAL_GATE=1 to enable)")
+    else:
+        logger.info(f"[OK] PnL Calibration LEARNING (gate disabled, set PNL_CAL_GATE=1 to enable)")
+except Exception as e:
+    logger.warning(f"[WARN] Could not initialize PnL CalibrationTracker: {e}")
+    PNL_CAL_GATE_ENABLED = False
 
 # FULL RESET - Delete ALL old trades and reset statistics
 logger.info("[RESET] Clearing all old data...")
@@ -3354,29 +3363,34 @@ for idx, sim_time in enumerate(common_times):
                         rl_filter_passed = True  # Don't block on error
 
                 # ============================================================
-                # PNL CALIBRATION GATE (Phase 13)
+                # PNL CALIBRATION GATE (Phase 13/14)
                 # ============================================================
                 pnl_cal_blocked = False
-                if should_trade and PNL_CAL_GATE_ENABLED and pnl_calibration_tracker:
+                calibrated_pnl_prob = None  # Store for trade record
+                if pnl_calibration_tracker:
                     try:
                         pnl_metrics = pnl_calibration_tracker.get_metrics()
                         pnl_samples = pnl_metrics.get('pnl_sample_count', 0)
 
+                        # Always calculate calibrated confidence for tracking
+                        raw_conf = signal.get('confidence', 0.5)
                         if pnl_samples >= PNL_CAL_MIN_SAMPLES:
-                            # Get calibrated P(profit) for this confidence level
-                            raw_conf = signal.get('confidence', 0.5)
                             calibrated_pnl_prob = pnl_calibration_tracker.calibrate_pnl(raw_conf)
+                            # Store in signal for trade record (Phase 14)
+                            signal['calibrated_confidence'] = calibrated_pnl_prob
 
-                            if calibrated_pnl_prob < PNL_CAL_MIN_PROB:
-                                pnl_cal_blocked = True
-                                should_trade = False
-                                print(f"   [PNL_CAL] BLOCKED: P(profit)={calibrated_pnl_prob:.1%} < {PNL_CAL_MIN_PROB:.0%} threshold")
-                                try:
-                                    decision_stats["pnl_cal_blocked"] = decision_stats.get("pnl_cal_blocked", 0) + 1
-                                except Exception:
-                                    pass
-                            else:
-                                print(f"   [PNL_CAL] PASSED: P(profit)={calibrated_pnl_prob:.1%} >= {PNL_CAL_MIN_PROB:.0%}")
+                            # Gate if enabled
+                            if should_trade and PNL_CAL_GATE_ENABLED:
+                                if calibrated_pnl_prob < PNL_CAL_MIN_PROB:
+                                    pnl_cal_blocked = True
+                                    should_trade = False
+                                    print(f"   [PNL_CAL] BLOCKED: P(profit)={calibrated_pnl_prob:.1%} < {PNL_CAL_MIN_PROB:.0%} threshold")
+                                    try:
+                                        decision_stats["pnl_cal_blocked"] = decision_stats.get("pnl_cal_blocked", 0) + 1
+                                    except Exception:
+                                        pass
+                                else:
+                                    print(f"   [PNL_CAL] PASSED: P(profit)={calibrated_pnl_prob:.1%} >= {PNL_CAL_MIN_PROB:.0%}")
                         else:
                             print(f"   [PNL_CAL] Learning phase ({pnl_samples}/{PNL_CAL_MIN_SAMPLES} samples)")
                     except Exception as e:
@@ -4141,15 +4155,15 @@ if rl_threshold_learner:
     except Exception as e_rl:
         print(f"  [WARN] Could not save RL threshold: {e_rl}")
 
-# PNL CALIBRATION STATS (Phase 13)
+# PNL CALIBRATION STATS (Phase 13/14 - Confidence Calibration)
 if pnl_calibration_tracker:
     try:
         pnl_metrics = pnl_calibration_tracker.get_metrics()
-        print(f"\n📊 PNL CALIBRATION STATS:")
+        print(f"\n📊 CONFIDENCE CALIBRATION STATS (Phase 14):")
         print(f"   Samples collected: {pnl_metrics.get('pnl_sample_count', 0)}")
-        print(f"   Win rate: {pnl_metrics.get('pnl_win_rate', 0):.1%}")
-        print(f"   Brier score: {pnl_metrics.get('pnl_brier_score', 1.0):.4f}")
-        print(f"   ECE: {pnl_metrics.get('pnl_ece', 1.0):.4f}")
+        print(f"   Overall win rate: {pnl_metrics.get('pnl_win_rate', 0):.1%}")
+        print(f"   Brier score: {pnl_metrics.get('pnl_brier_score', 1.0):.4f} (lower=better, <0.25=good)")
+        print(f"   ECE: {pnl_metrics.get('pnl_ece', 1.0):.4f} (lower=better, <0.10=well-calibrated)")
         print(f"   Calibration method: {pnl_metrics.get('pnl_calibration_method', 'none')}")
         print(f"   Is calibrated: {pnl_metrics.get('pnl_is_calibrated', False)}")
 
@@ -4157,12 +4171,37 @@ if pnl_calibration_tracker:
             blocked = decision_stats.get('pnl_cal_blocked', 0)
             print(f"   PnL gate blocked: {blocked} trades")
 
-        # Get bucket stats
+        # Get bucket stats - THE KEY DIAGNOSTIC
         bucket_stats = pnl_calibration_tracker.get_pnl_bucket_stats()
         if bucket_stats:
-            print(f"   Bucket breakdown:")
+            print(f"\n   📈 CALIBRATION CURVE (Raw Confidence → Actual Win Rate):")
+            print(f"   {'Raw Conf':>10} │ {'Actual WR':>10} │ {'Samples':>8} │ {'Status':>12}")
+            print(f"   {'─'*10}─┼─{'─'*10}─┼─{'─'*8}─┼─{'─'*12}")
             for bucket, stats in sorted(bucket_stats.items()):
-                print(f"      {bucket}: {stats['actual_win_rate']:.0%} win rate ({stats['samples']} trades)")
+                raw_conf = float(bucket.replace('_', '.'))
+                actual_wr = stats['actual_win_rate']
+                samples = stats['samples']
+                # Check if calibrated (actual should be close to raw if well-calibrated)
+                if samples >= 10:
+                    diff = abs(actual_wr - raw_conf)
+                    status = "✓ Good" if diff < 0.15 else "⚠ Needs fix" if diff < 0.25 else "✗ Broken"
+                else:
+                    status = "⏳ Learning"
+                print(f"   {raw_conf:>10.0%} │ {actual_wr:>10.0%} │ {samples:>8} │ {status:>12}")
+
+        # Save calibration state for persistence
+        try:
+            import pickle
+            cal_save_path = f'{run_dir}/pnl_calibration.pkl'
+            with open(cal_save_path, 'wb') as f:
+                pickle.dump({
+                    'metrics': pnl_metrics,
+                    'bucket_stats': bucket_stats,
+                }, f)
+            print(f"   [OK] Calibration state saved to {cal_save_path}")
+        except Exception as e_save:
+            print(f"   [WARN] Could not save calibration: {e_save}")
+
     except Exception as e_pnl:
         print(f"  [WARN] Could not get PnL calibration stats: {e_pnl}")
 

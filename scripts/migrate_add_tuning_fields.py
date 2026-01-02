@@ -15,6 +15,9 @@ DB_PATH = Path('data/paper_trading.db')
 
 # New columns to add
 NEW_COLUMNS = [
+    # Calibration (Phase 14)
+    ("calibrated_confidence", "REAL"),  # P(profit) from calibration tracker
+
     # Entry context
     ("spy_price", "REAL"),           # SPY price at entry
     ("vix_level", "REAL"),           # VIX at entry

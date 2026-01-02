@@ -253,6 +253,62 @@ SQLite in `data/`:
 | `backend/dashboard/scoreboard_api.py` | Scoreboard REST endpoints |
 | `backend/dashboard/trades_api.py` | Trade browser REST endpoints |
 
+## Confidence Calibration (Phase 14)
+
+**CRITICAL FINDING**: Raw model confidence does NOT predict trade outcomes!
+
+Analysis of 1,596 trades showed:
+- 0.2 confidence → 38.8% win rate
+- 0.3 confidence → 37.5% win rate
+- 0.4 confidence → 36.6% win rate
+
+Win rate *decreases* as confidence increases - the confidence head was not calibrated.
+
+### Solution: Online Platt/Isotonic Calibration
+
+The `CalibrationTracker` learns the true mapping between raw confidence and P(profit):
+
+```python
+# Enabled by default (PNL_CAL_GATE=1)
+# Blocks trades where calibrated P(profit) < 42%
+PNL_CAL_MIN_PROB=0.42
+PNL_CAL_MIN_SAMPLES=30  # Learn from 30 trades before gating
+```
+
+### How It Works
+
+1. **Record Entry**: `pnl_calibration_tracker.record_trade_entry(confidence, direction, price)`
+2. **Record Exit**: `pnl_calibration_tracker.record_pnl_outcome(trade_id, pnl)`
+3. **Calibrate**: After 30 samples, `calibrate_pnl(raw_conf)` returns true P(profit)
+4. **Gate**: Block trades where calibrated P(profit) < threshold
+
+### Tracking for Analysis
+
+Both values are saved to trades table:
+- `ml_confidence`: Raw model output (may be miscalibrated)
+- `calibrated_confidence`: P(profit) from calibration tracker
+
+Query to check calibration quality:
+```sql
+SELECT
+    ROUND(ml_confidence, 1) as raw_conf,
+    ROUND(calibrated_confidence, 2) as cal_conf,
+    COUNT(*) as trades,
+    ROUND(100.0 * SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) as actual_win_pct
+FROM trades
+WHERE calibrated_confidence IS NOT NULL
+GROUP BY ROUND(ml_confidence, 1)
+ORDER BY raw_conf;
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PNL_CAL_GATE` | `1` | Enable calibration gating |
+| `PNL_CAL_MIN_PROB` | `0.42` | Minimum P(profit) to allow trade |
+| `PNL_CAL_MIN_SAMPLES` | `30` | Trades needed before gating |
+
 ## Debugging Win Rate
 
 See `docs/SYSTEM_ARCHITECTURE.md` "Debugging Win Rate" section. Quick reference:
@@ -264,6 +320,7 @@ See `docs/SYSTEM_ARCHITECTURE.md` "Debugging Win Rate" section. Quick reference:
 | Many small losses | Increase `min_confidence` |
 | Missing good trades | Lower thresholds |
 | Theta eating profits | Reduce `max_hold_minutes` |
+| Confidence not predictive | Check calibration stats |
 
 ## Dashboards
 

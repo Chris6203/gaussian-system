@@ -21,8 +21,9 @@
       "description": "CRITICAL: Tuning data shows confidence does NOT predict outcomes!\n    \nAnalysis of 1,596 trades:\n- 0.2 confidence: 38.8% win rate\n- 0.3 confidence: 37.5% win rate  \n- 0.4 confidence: 36.6% win rate\n\nWin rate DECREASES as confidence increases! The confidence head is not calibrated.\n\nRoot cause in rl_enhancements.py:\n- Only penalizes overconfidence > 0.7 (most trades are 0.2-0.4)\n- No reward for correct calibration\n- No BCE loss against actual outcomes\n\nFix options:\n1. Add BCE loss: confidence should predict P(profit > 0)\n2. Add bidirectional calibration reward\n3. Post-hoc Platt scaling calibration",
       "hypothesis": "Properly calibrated confidence will enable effective trade filtering",
       "priority": "critical",
-      "status": "already_tested",
-      "env_vars": {}
+      "status": "completed",
+      "env_vars": {},
+      "notes": "Implemented in Phase 14: enabled PNL_CAL_GATE by default, added calibrated_confidence tracking"
     },
     {
       "id": "IDEA-092",
