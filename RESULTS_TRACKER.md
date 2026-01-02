@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0054: Tight stop with quick take-profit (-5%/+10%) (2026-01-02 01:07)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 17.6% |
+| P&L | -2.56% |
+| Per-Trade P&L | $-1.41 |
+| Trades | 91 |
+| Run Dir | `models/EXP-0054_IDEA-097` |
+
+**Source**: TUNING_ANALYZER
+**Category**: exit
+**Hypothesis**: Smaller, more frequent wins beat larger, rarer wins
+**Result**: FAIL
+
+---
+
+### EXP-0055: Very tight stop with moderate TP (-3%/+15%) (2026-01-02 01:07)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 22.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 83 |
+| Run Dir | `models/EXP-0055_IDEA-098` |
+
+**Source**: TUNING_ANALYZER
+**Category**: exit
+**Hypothesis**: High R:R ratio should be profitable even with low win rate
+**Result**: ERROR
+
+---
+
+### EXP-0056: Combined: High conf + strict HMM (2026-01-02 01:07)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 80 |
+| Run Dir | `models/EXP-0056_IDEA-099` |
+
+**Source**: TUNING_ANALYZER
+**Category**: entry
+**Hypothesis**: Double confirmation should filter out noise trades
+**Result**: ERROR
+
+---
+
+### EXP-0053: Very short max hold (10 min) (2026-01-02 01:07)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.3% |
+| P&L | -1.57% |
+| Per-Trade P&L | $-0.35 |
+| Trades | 222 |
+| Run Dir | `models/EXP-0053_IDEA-096` |
+
+**Source**: TUNING_ANALYZER
+**Category**: exit
+**Hypothesis**: Ultra-short trades are scalping momentum which should be more predictable
+**Result**: FAIL
+
+---
+
+
 ### EXP-0052: Short max hold (15 min) (2026-01-02 00:48)
 
 | Metric | Quick Test (5K) |

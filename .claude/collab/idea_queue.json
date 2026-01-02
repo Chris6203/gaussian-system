@@ -112,13 +112,14 @@
       "description": "Very short trades to capture quick moves without theta exposure.",
       "hypothesis": "Ultra-short trades are scalping momentum which should be more predictable",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TT_MAX_HOLD_MINUTES": "10"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T00:49:31.952909"
+      "last_result": {
+        "exp_id": "EXP-0053",
+        "per_trade_pnl": -0.35387387387387387,
+        "win_rate": 38.3
       }
     },
     {
@@ -130,14 +131,15 @@
       "description": "Quick 2:1 risk/reward - take small profits quickly before reversal.",
       "hypothesis": "Smaller, more frequent wins beat larger, rarer wins",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "10"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T00:49:31.952909"
+      "last_result": {
+        "exp_id": "EXP-0054",
+        "per_trade_pnl": -1.4065934065934067,
+        "win_rate": 17.6
       }
     },
     {
@@ -149,14 +151,15 @@
       "description": "5:1 risk/reward - small stops, let winners run.",
       "hypothesis": "High R:R ratio should be profitable even with low win rate",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "3",
         "HARD_TAKE_PROFIT_PCT": "15"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T00:49:31.952909"
+      "last_result": {
+        "exp_id": "EXP-0055",
+        "per_trade_pnl": null,
+        "win_rate": 22.2
       }
     },
     {
@@ -168,15 +171,16 @@
       "description": "Only trade when both confidence > 75% AND HMM shows strong trend.",
       "hypothesis": "Double confirmation should filter out noise trades",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "MIN_CONFIDENCE_TO_TRADE": "0.75",
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T00:49:31.952909"
+      "last_result": {
+        "exp_id": "EXP-0056",
+        "per_trade_pnl": null,
+        "win_rate": 37.1
       }
     },
     {
@@ -270,5 +274,5 @@
     }
   ],
   "next_id": 107,
-  "last_updated": "2026-01-02T00:49:31.952909"
+  "last_updated": "2026-01-02T01:07:04.659092"
 }
