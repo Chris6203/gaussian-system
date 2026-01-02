@@ -398,9 +398,6 @@ def monitor_and_improve():
             # Sync experiments to database for dashboard visibility
             sync_experiments_db()
 
-            # Commit and push results to GitHub every cycle
-            git_commit_and_push()
-
             # Status update
             logger.info(f"Ideas submitted this session: {ideas_submitted}")
             logger.info("Sleeping for 10 minutes...")
