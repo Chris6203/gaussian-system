@@ -1923,8 +1923,10 @@ for idx, sim_time in enumerate(common_times):
                 if hasattr(bot.paper_trader, '_close_trade'):
                     bot.paper_trader._close_trade(trade, exit_premium, f"FORCE_CLOSE: Held {minutes_held:.0f}min")
                     print(f"   [FORCE_CLOSE] {trade.option_type} held {minutes_held:.0f}min - closed")
-            except Exception:
-                pass
+            except Exception as e:
+                import traceback
+                print(f"[FORCE_CLOSE_ERROR] Exception closing trade: {e}")
+                traceback.print_exc()
 
         new_trade_count = len(bot.paper_trader.active_trades)
 

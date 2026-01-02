@@ -69,9 +69,22 @@ The bug is likely in **which trades** get credited, not **how** they're credited
 4. Consider consolidating all exit logic into one place
 
 ### Status
-🔴 **BLOCKING** - Must fix before any further testing
+✅ **FIXED** (2026-01-01)
 
-**Investigation Progress**: Code flow traced, math verified correct, suspected issue is trade attribution not calculation.
+**Root Cause**: Missing placeholder in SQL VALUES clause
+- `_save_trade()` had 49 columns but only 48 `?` placeholders
+- This caused `sqlite3.OperationalError: 48 values for 49 columns`
+- The exception was silently swallowed by `FORCE_CLOSE`'s `except Exception: pass`
+- Result: Balance was updated but trade NOT removed from `active_trades`
+- Each trade was credited multiple times (13 entries → 2155 exits = 165x per trade!)
+
+**Fix Applied**:
+1. Added missing `?` placeholder in `_save_trade()` VALUES clause (line 3898)
+2. Changed FORCE_CLOSE exception handling from `except Exception: pass` to log errors
+
+**Verification**:
+- Before fix: 13 entries, 2155 exits, +$1,000,000 phantom profit
+- After fix: 13 entries, 4 exits, -$4,276 realistic loss
 
 ---
 

@@ -1593,15 +1593,15 @@ class PaperTradingSystem:
             else:
                 self.losing_trades += 1
             self.total_profit_loss += profit_loss
-            
+
             # Save to DB
             self._save_trade(trade)
             self._save_account_state()
-            
+
             # Remove from active trades
             if trade in self.active_trades:
                 self.active_trades.remove(trade)
-            
+
             self.logger.info(f"[CLOSE] Trade closed: P&L=${profit_loss:.2f}, Reason: {reason}")
             
         except Exception as e:
@@ -3879,7 +3879,7 @@ class PaperTradingSystem:
                  signal_reasoning, momentum_5m, momentum_15m, volume_spike, direction_probs,
                  exit_spy_price, exit_vix_level, hold_minutes, max_drawdown_pct, max_gain_pct, exit_hmm_trend)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 trade.id,
                 trade.timestamp.isoformat(),
