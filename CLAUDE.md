@@ -6,23 +6,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Gaussian Options Trading Bot** - an algorithmic SPY options trading system combining:
 - Bayesian neural networks with Gaussian kernel processors for price/volatility prediction
-- **V3 Multi-Horizon Predictor** (5m, 15m, 30m, 45m predictions) - **NEW BEST: +1327% P&L**
+- **Transformer temporal encoder** - **VALIDATED BEST: +32.65% OOS profit** (Phase 35)
 - Multi-dimensional HMM (3×3×3 = 27 states) for market regime detection
 - Multiple entry controllers: bandit (default), RL (PPO), Q-Scorer, consensus
 - Paper trading and live execution via Tradier API
 
 The system uses a modular architecture with swappable predictors and temporal encoders.
 
+### Critical Bug Fix (2026-01-01)
+A P&L calculation bug was discovered and fixed. **All results before this date showing massive gains (+1327%, +284,618%, etc.) are INVALID.** The bug caused trades to be credited ~165x their actual value due to a missing SQL placeholder. See RESULTS_TRACKER.md "CRITICAL BUG FOUND" section for details.
+
 ## Common Commands
 
 ### Training & Simulation
 
 ```bash
-# BEST CONFIGURATION - V3 Multi-Horizon Predictor (+1327% P&L in 10K test)
-PREDICTOR_ARCH=v3_multi_horizon python scripts/train_time_travel.py
-
-# Alternative - Transformer encoder (+801% P&L in 10K test)
+# BEST CONFIGURATION - Transformer encoder (+32.65% OOS profit, validated post-bug-fix)
 TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+
+# Alternative - V3 Multi-Horizon Predictor (experimental, needs validation)
+PREDICTOR_ARCH=v3_multi_horizon python scripts/train_time_travel.py
 
 # Combined (experimental)
 PREDICTOR_ARCH=v3_multi_horizon TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
