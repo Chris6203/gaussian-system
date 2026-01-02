@@ -21,7 +21,7 @@
       "description": "CRITICAL: Tuning data shows confidence does NOT predict outcomes!\n    \nAnalysis of 1,596 trades:\n- 0.2 confidence: 38.8% win rate\n- 0.3 confidence: 37.5% win rate  \n- 0.4 confidence: 36.6% win rate\n\nWin rate DECREASES as confidence increases! The confidence head is not calibrated.\n\nRoot cause in rl_enhancements.py:\n- Only penalizes overconfidence > 0.7 (most trades are 0.2-0.4)\n- No reward for correct calibration\n- No BCE loss against actual outcomes\n\nFix options:\n1. Add BCE loss: confidence should predict P(profit > 0)\n2. Add bidirectional calibration reward\n3. Post-hoc Platt scaling calibration",
       "hypothesis": "Properly calibrated confidence will enable effective trade filtering",
       "priority": "critical",
-      "status": "pending",
+      "status": "already_tested",
       "env_vars": {}
     },
     {
@@ -111,9 +111,13 @@
       "description": "Very short trades to capture quick moves without theta exposure.",
       "hypothesis": "Ultra-short trades are scalping momentum which should be more predictable",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TT_MAX_HOLD_MINUTES": "10"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T00:49:31.952909"
       }
     },
     {
@@ -125,10 +129,14 @@
       "description": "Quick 2:1 risk/reward - take small profits quickly before reversal.",
       "hypothesis": "Smaller, more frequent wins beat larger, rarer wins",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "5",
         "HARD_TAKE_PROFIT_PCT": "10"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T00:49:31.952909"
       }
     },
     {
@@ -140,10 +148,14 @@
       "description": "5:1 risk/reward - small stops, let winners run.",
       "hypothesis": "High R:R ratio should be profitable even with low win rate",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "3",
         "HARD_TAKE_PROFIT_PCT": "15"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T00:49:31.952909"
       }
     },
     {
@@ -155,11 +167,15 @@
       "description": "Only trade when both confidence > 75% AND HMM shows strong trend.",
       "hypothesis": "Double confirmation should filter out noise trades",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "MIN_CONFIDENCE_TO_TRADE": "0.75",
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T00:49:31.952909"
       }
     },
     {
@@ -253,5 +269,5 @@
     }
   ],
   "next_id": 107,
-  "last_updated": "2026-01-02T00:48:30.591419"
+  "last_updated": "2026-01-02T00:49:31.952909"
 }
