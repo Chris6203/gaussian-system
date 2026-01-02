@@ -91,10 +91,14 @@
       "description": "Use modern LLaMA-style normalization and activation",
       "hypothesis": "Modern architecture components improve gradient flow",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "NORM_TYPE": "rmsnorm",
         "ACTIVATION_TYPE": "swiglu"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T09:03:19.573693"
       }
     },
     {
@@ -106,10 +110,14 @@
       "description": "Combine multiple temporal encoders and vote on predictions",
       "hypothesis": "Ensemble reduces variance and improves reliability",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "ENSEMBLE_MODE": "1",
         "ENSEMBLE_ENCODERS": "tcn,transformer,lstm"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T09:03:19.573693"
       }
     },
     {
@@ -121,12 +129,16 @@
       "description": "Require all three to agree before trading",
       "hypothesis": "Triple confirmation = highest quality trades only",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "REQUIRE_HMM_CONFIRM": "1",
         "REQUIRE_NEURAL_CONFIRM": "1",
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.60"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T09:03:19.573693"
       }
     },
     {
@@ -138,10 +150,14 @@
       "description": "Only trade when Bayesian uncertainty is low (high certainty)",
       "hypothesis": "Low uncertainty predictions should be more accurate",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "MAX_UNCERTAINTY": "0.15",
         "USE_BAYESIAN_GATE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T09:03:19.573693"
       }
     },
     {
@@ -541,5 +557,5 @@
     }
   ],
   "next_id": 121,
-  "last_updated": "2026-01-02T09:02:18.200870"
+  "last_updated": "2026-01-02T09:03:19.573693"
 }
