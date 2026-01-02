@@ -4849,3 +4849,59 @@ The P&L calculation bug (fixed in Phase 29) was:
 | Trades | 61 | TBD | TBD |
 | Per-Trade P&L | +$339 | TBD | TBD |
 
+---
+
+## Phase 36b: Skew-Optimized Exits Validation (2026-01-02) ✅ VALIDATED
+
+### Summary
+
+Testing skew-optimized exit strategy (partial TP + trailing runner) to capture fat-tail winners.
+
+### 5K Experiment Results
+
+| Experiment | P&L | Trades | $/Trade | vs Baseline |
+|------------|-----|--------|---------|-------------|
+| **v4_skew_partial** 🏆 | **$8,817 (+176%)** | 66 | **$133.60** | **+69%** |
+| v4_baseline (control) | $6,340 (+127%) | 80 | $79.25 | - |
+| v4_skew_trailing | $5,568 (+111%) | 88 | $63.27 | -20% |
+| v4_skew_trend_adaptive | $4,246 (+85%) | 72 | $58.98 | -26% |
+| v4_ev_gate | -$1 | 5 | -$0.17 | ❌ too restrictive |
+| v4_combined | -$83 | 69 | -$1.20 | ❌ |
+
+### 20K Validation Results ✅
+
+| Metric | 5K Test | 20K Validation |
+|--------|---------|----------------|
+| **P&L** | +$8,817 (+176%) | **+$21,549 (+431%)** ✅ |
+| **Trades** | 66 | 586 |
+| **$/Trade** | $133.60 | $36.77 |
+| **Win Rate** | 42.0% | 31.6% |
+
+### Key Insights
+
+1. **Win rate dropped from 42% to 31.6%, but P&L stayed strongly positive** - validates skew hypothesis
+2. **Edge comes from fat-tail winners, not win rate** - partial TP + trailing runner captures outliers
+3. **EV gate too restrictive** - only 5 trades in 5K cycles at -2% min threshold
+4. **IDEA-134 filters didn't help** - inverted confidence + consensus produced -$22 (44 trades)
+
+### Winning Configuration
+
+```bash
+SKEW_EXIT_ENABLED=1
+SKEW_EXIT_MODE=partial
+PARTIAL_TP_PCT=0.10          # Take 50% at 10% gain
+PARTIAL_TAKE_FRACTION=0.50   # Take half
+RUNNER_TRAIL_ACTIVATION=0.15 # Activate trailing at 15%
+RUNNER_TRAIL_DISTANCE=0.05   # 5% trailing stop
+```
+
+### Components Reference
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Skew Exit Manager | `backend/skew_exit_manager.py` | Partial TP + trailing runner |
+| EV Gate | `backend/ev_gate.py` | EV gating (disabled - too restrictive) |
+| Test Suite | `tests/test_architecture_v4.py` | Component tests |
+| Presets | `configs/winning_presets.sh` | Pre-configured environments |
+| Documentation | `docs/ARCHITECTURE_IMPROVEMENTS_V4.md` | Full docs |
+
