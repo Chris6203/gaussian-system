@@ -153,6 +153,32 @@ All configuration via `config.json` (single source of truth). **Note: config.jso
 | Max Hold | 45 min | Prevent theta decay |
 | Expiry | <30 min | Exit before expiration |
 
+### Architecture V4 Improvements (2026-01-02)
+
+**Key Finding:** Edge comes from skew (fat-tail winners), not win rate. One +584% trade = 1293% of P&L.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| EV Gate | `backend/ev_gate.py` | Gate on positive EV with Bayesian prior |
+| Regime Calibration | `backend/regime_calibration.py` | Per-regime confidence calibrators |
+| Regime Attribution | `backend/regime_attribution.py` | Track & auto-disable bad regimes |
+| Greeks-Aware Exits | `backend/greeks_aware_exits.py` | VIX/delta-adjusted stops |
+| Skew Exit Manager | `backend/skew_exit_manager.py` | Partial TP + trailing runner |
+
+**Skew-Optimized Exits** (capture big winners):
+```bash
+SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python scripts/train_time_travel.py
+```
+
+**Winning Presets** (use pre-configured environments):
+```bash
+source configs/winning_presets.sh
+use_skew_optimized  # Partial TP + trailing runner
+run_experiment my_test
+```
+
+See `docs/ARCHITECTURE_IMPROVEMENTS_V4.md` for full documentation.
+
 ## Neural Network Details
 
 ### UnifiedOptionsPredictor

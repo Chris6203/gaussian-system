@@ -48,6 +48,18 @@ except ImportError:
     except ImportError:
         OnlineLearningSystem = None
 
+# Greeks-aware exit system
+try:
+    from .greeks_aware_exits import get_greeks_exit_manager, GreeksAwareExitManager
+    GREEKS_AWARE_AVAILABLE = True
+except ImportError:
+    try:
+        from greeks_aware_exits import get_greeks_exit_manager, GreeksAwareExitManager
+        GREEKS_AWARE_AVAILABLE = True
+    except ImportError:
+        GREEKS_AWARE_AVAILABLE = False
+        get_greeks_exit_manager = None
+
 # Import XGBoost Exit Policy (fast, trainable, doesn't collapse)
 try:
     from .xgboost_exit_policy import XGBoostExitPolicy, XGBoostExitConfig
@@ -2243,16 +2255,50 @@ class PaperTradingSystem:
         # ============= COMBINE ADJUSTMENTS =============
         final_stop = base_stop * vol_stop_mult * trend_stop_mult * liq_stop_mult
         final_take = base_take * vol_take_mult * trend_stop_mult * liq_stop_mult
-        
+
+        # ============= GREEKS-AWARE ADJUSTMENT (if available) =============
+        # Use MC uncertainty and VIX for additional volatility-aware adjustments
+        if GREEKS_AWARE_AVAILABLE and get_greeks_exit_manager is not None:
+            try:
+                greeks_mgr = get_greeks_exit_manager()
+                if greeks_mgr.enabled:
+                    # Get available Greeks-related data
+                    vix_level = prediction_data.get('vix_level', prediction_data.get('vix', None))
+                    mc_uncertainty = prediction_data.get('mc_uncertainty', prediction_data.get('uncertainty', None))
+                    delta = prediction_data.get('delta', None)
+                    theta = prediction_data.get('theta', None)
+
+                    # Calculate Greeks-aware levels
+                    greeks_levels = greeks_mgr.calculate_exit_levels(
+                        delta=delta,
+                        theta=theta,
+                        vix_level=vix_level,
+                        mc_uncertainty=mc_uncertainty,
+                    )
+
+                    # Blend with regime-based stops (50/50 average)
+                    # Convert greeks_levels (percentages) to decimals
+                    greeks_stop = greeks_levels.stop_loss_pct / 100.0
+                    greeks_take = greeks_levels.take_profit_pct / 100.0
+
+                    # Blend: average of regime-based and Greeks-aware
+                    final_stop = (final_stop + greeks_stop) / 2.0
+                    final_take = (final_take + greeks_take) / 2.0
+
+                    self.logger.debug(f"📊 [GREEKS] Blended: SL={final_stop:.1%}, TP={final_take:.1%} "
+                                     f"(greeks: {greeks_levels.reason})")
+            except Exception as e:
+                self.logger.debug(f"[GREEKS] Error in greeks-aware adjustment: {e}")
+
         # Clamp to reasonable ranges
         # Stop: Min 1.5% (tight), Max 8% (allows some room)
         # Take: Min 3% (minimum viable profit), Max 15% (let winners run)
         final_stop = max(0.015, min(0.08, final_stop))
         final_take = max(0.03, min(0.15, final_take))  # Let winners run!
-        
+
         self.logger.info(f"📊 [REGIME-STOPS] Vol={volatility}, Trend={trend}, Liq={liquidity} → "
                         f"SL={final_stop:.0%} (base={base_stop:.0%}), TP={final_take:.0%}")
-        
+
         return final_stop, final_take
 
     def _calculate_optimal_hold_time(self, prediction_data: Dict) -> float:
