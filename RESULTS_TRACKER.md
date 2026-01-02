@@ -2663,6 +2663,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0062: Balanced 1:1 risk/reward (-8%/+8%) (2026-01-02 01:55)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 300 |
+| Run Dir | `models/EXP-0062_IDEA-105` |
+
+**Source**: TUNING_ANALYZER
+**Category**: exit
+**Hypothesis**: If win rate > 50%, symmetric R:R is profitable
+**Result**: ERROR
+
+---
+
+### EXP-0061: Only trade in low volatility (VIX < 20) (2026-01-02 01:55)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.8% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 325 |
+| Run Dir | `models/EXP-0061_IDEA-104` |
+
+**Source**: TUNING_ANALYZER
+**Category**: entry
+**Hypothesis**: High VIX = unpredictable markets = random outcomes
+**Result**: ERROR
+
+---
+
+
 ### EXP-0058: Trailing stop activation at 5% gain (2026-01-02 01:32)
 
 | Metric | Quick Test (5K) |
