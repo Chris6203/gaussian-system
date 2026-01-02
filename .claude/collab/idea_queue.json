@@ -272,9 +272,13 @@
       "description": "Avoid trading when VIX is elevated.",
       "hypothesis": "High VIX = unpredictable markets = random outcomes",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "MAX_VIX_FOR_ENTRY": "20"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T01:33:51.126121"
       }
     },
     {
@@ -286,13 +290,17 @@
       "description": "Equal stop and take profit for symmetric outcomes.",
       "hypothesis": "If win rate > 50%, symmetric R:R is profitable",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "8",
         "HARD_TAKE_PROFIT_PCT": "8"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T01:33:51.126121"
       }
     }
   ],
   "next_id": 107,
-  "last_updated": "2026-01-02T01:32:49.408381"
+  "last_updated": "2026-01-02T01:33:51.126121"
 }
