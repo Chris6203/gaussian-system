@@ -173,10 +173,14 @@
       "description": "Train for 50K cycles to get conservative neural network outputs like the 60% win rate model had.",
       "hypothesis": "Longer training leads to more conservative predictions, higher selectivity, better win rate",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TT_MAX_CYCLES": "50000",
         "TT_PRINT_EVERY": "5000"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T09:28:37.663704"
       }
     },
     {
@@ -188,10 +192,14 @@
       "description": "Only trade when calibrated P(profit) >= 90%",
       "hypothesis": "Extreme selectivity should dramatically improve win rate",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PNL_CAL_MIN_PROB": "0.90",
         "PNL_CAL_GATE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T09:28:37.663704"
       }
     },
     {
@@ -203,11 +211,15 @@
       "description": "Use both calibration gate AND RSI/MACD confirmation",
       "hypothesis": "Double filtering should catch only best trades",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PNL_CAL_MIN_PROB": "0.60",
         "PNL_CAL_GATE": "1",
         "RSI_MACD_FILTER": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T09:28:37.663704"
       }
     },
     {
@@ -219,10 +231,14 @@
       "description": "Smaller stop loss with larger take profit for 5:1 R:R",
       "hypothesis": "Even with lower win rate, 5:1 R:R should be profitable",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "HARD_STOP_LOSS_PCT": "4",
         "HARD_TAKE_PROFIT_PCT": "20"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T09:28:37.663704"
       }
     },
     {
@@ -561,5 +577,5 @@
     }
   ],
   "next_id": 121,
-  "last_updated": "2026-01-02T09:27:36.266667"
+  "last_updated": "2026-01-02T09:28:37.663704"
 }
