@@ -346,11 +346,15 @@
       "description": "Only trade when calibrated P(profit) >= 70%. Target 2-5% trade rate.",
       "hypothesis": "Extreme selectivity via calibration = 60%+ win rate",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.70",
         "PNL_CAL_MIN_SAMPLES": "30"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T14:37:47.850837"
       }
     },
     {
@@ -362,10 +366,14 @@
       "description": "Load the saved unified_rl.pth from dec_validation_v2 and test with calibration gate.",
       "hypothesis": "RL weights + calibration = replicate 60% behavior",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "LOAD_RL_WEIGHTS": "models/dec_validation_v2/unified_rl.pth",
         "PNL_CAL_GATE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T14:37:47.850837"
       }
     },
     {
@@ -377,12 +385,16 @@
       "description": "Require very strong HMM trend (>0.85 or <0.15) AND calibrated confidence >65%.",
       "hypothesis": "Double extreme filtering = highest quality trades only",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "HMM_STRONG_BULLISH": "0.85",
         "HMM_STRONG_BEARISH": "0.15",
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.65"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T14:37:47.850837"
       }
     },
     {
@@ -394,11 +406,15 @@
       "description": "Longer training period on 4 months of data for better pattern learning.",
       "hypothesis": "More training data + longer training = better generalization",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TT_MAX_CYCLES": "30000",
         "START_DATE": "2025-09-01",
         "END_DATE": "2025-12-15"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T14:37:47.850837"
       }
     },
     {
@@ -450,5 +466,5 @@
     }
   ],
   "next_id": 143,
-  "last_updated": "2026-01-02T12:36:43.419255"
+  "last_updated": "2026-01-02T14:37:47.850837"
 }
