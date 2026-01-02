@@ -4342,3 +4342,30 @@ The original 59.8% win rate was achieved through:
 
 **Implication:** Must validate all strategies on out-of-sample period before deployment.
 
+
+### 20K Pretrain Results
+
+| Metric | Training (Sept-Nov) | December (OOS) |
+|--------|---------------------|----------------|
+| P&L | +$187,664 (+3753%) | **-$198 (-3.95%)** |
+| Win Rate | 38.0% | **18.4%** |
+| Trades | 5,190 | 38 |
+
+**Critical Finding:** 20K training produces selective model (38 trades from 3412 signals = 1.1%) but predictions are WRONG (18.4% WR).
+
+### Complete Phase 35 Comparison
+
+| Model | Training P&L | Dec P&L | Dec WR | Dec Trades | Status |
+|-------|--------------|---------|--------|------------|--------|
+| Transformer (10K) | +2777% | **+32.65%** | 27.4% | 61 | ✅ **BEST OOS** |
+| V3 Multi-Horizon (10K) | +3119% | -3.34% | 28.0% | 50 | ❌ |
+| 20K Pretrain | +3753% | -3.95% | 18.4% | 38 | ❌ |
+
+**Conclusion:** 
+1. **The 59.8% win rate from dec_validation_v2 is NOT reproducible** - those specific learned weights are lost
+2. **Transformer encoder generalizes best** - only model profitable on December (+32.65%)
+3. **Higher training P&L does NOT mean better generalization** - V3 had 3119% training but lost on Dec
+4. **20K training made model too selective with wrong predictions** - 18.4% WR is worse than random
+
+**Recommendation:** Use Transformer temporal encoder for production - it shows real generalization ability.
+
