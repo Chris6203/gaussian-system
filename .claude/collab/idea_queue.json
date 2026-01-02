@@ -1,6 +1,239 @@
 {
   "ideas": [
     {
+      "id": "IDEA-113",
+      "source": "claude",
+      "timestamp": "2026-01-02T07:00:42.633990",
+      "category": "architecture",
+      "title": "Pretrain 3 months (Sept-Nov) then fine-tune",
+      "description": "Train on 3 months of data like the 60% win rate model. Use longer training period.",
+      "hypothesis": "Longer pretraining creates conservative, selective neural network outputs",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TT_MAX_CYCLES": "30000",
+        "START_DATE": "2025-09-01",
+        "END_DATE": "2025-11-30"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T07:02:16.229476"
+      }
+    },
+    {
+      "id": "IDEA-114",
+      "source": "claude",
+      "timestamp": "2026-01-02T07:00:42.634002",
+      "category": "architecture",
+      "title": "Larger hidden dim (128 -> 256)",
+      "description": "Increase neural network capacity for better pattern recognition",
+      "hypothesis": "More capacity = better feature learning = better predictions",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "HIDDEN_DIM": "256",
+        "TCN_CHANNELS": "128"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T07:02:16.229476"
+      }
+    },
+    {
+      "id": "IDEA-115",
+      "source": "claude",
+      "timestamp": "2026-01-02T07:00:42.634008",
+      "category": "architecture",
+      "title": "Deeper TCN (6 layers instead of 4)",
+      "description": "More temporal layers for longer-range pattern detection",
+      "hypothesis": "Deeper TCN captures more complex temporal patterns",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "TCN_NUM_LAYERS": "6",
+        "TCN_KERNEL_SIZE": "5"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T07:02:16.229476"
+      }
+    },
+    {
+      "id": "IDEA-116",
+      "source": "claude",
+      "timestamp": "2026-01-02T07:00:42.634013",
+      "category": "architecture",
+      "title": "Attention pooling + calibration",
+      "description": "Use attention mechanism for feature aggregation with calibration gate",
+      "hypothesis": "Attention focuses on most relevant features for prediction",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_ATTENTION_POOLING": "1",
+        "PNL_CAL_GATE": "1",
+        "PNL_CAL_MIN_PROB": "0.55"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T07:02:16.229476"
+      }
+    },
+    {
+      "id": "IDEA-117",
+      "source": "claude",
+      "timestamp": "2026-01-02T07:00:42.634023",
+      "category": "architecture",
+      "title": "RMSNorm + SwiGLU (LLaMA-style)",
+      "description": "Use modern LLaMA-style normalization and activation",
+      "hypothesis": "Modern architecture components improve gradient flow",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "NORM_TYPE": "rmsnorm",
+        "ACTIVATION_TYPE": "swiglu"
+      }
+    },
+    {
+      "id": "IDEA-118",
+      "source": "claude",
+      "timestamp": "2026-01-02T07:00:42.634028",
+      "category": "architecture",
+      "title": "Ensemble: TCN + Transformer + LSTM vote",
+      "description": "Combine multiple temporal encoders and vote on predictions",
+      "hypothesis": "Ensemble reduces variance and improves reliability",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "ENSEMBLE_MODE": "1",
+        "ENSEMBLE_ENCODERS": "tcn,transformer,lstm"
+      }
+    },
+    {
+      "id": "IDEA-119",
+      "source": "claude",
+      "timestamp": "2026-01-02T07:00:42.634033",
+      "category": "entry",
+      "title": "Triple confirmation: HMM + Neural + Calibration",
+      "description": "Require all three to agree before trading",
+      "hypothesis": "Triple confirmation = highest quality trades only",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "REQUIRE_HMM_CONFIRM": "1",
+        "REQUIRE_NEURAL_CONFIRM": "1",
+        "PNL_CAL_GATE": "1",
+        "PNL_CAL_MIN_PROB": "0.60"
+      }
+    },
+    {
+      "id": "IDEA-120",
+      "source": "claude",
+      "timestamp": "2026-01-02T07:00:42.634038",
+      "category": "architecture",
+      "title": "Bayesian uncertainty threshold",
+      "description": "Only trade when Bayesian uncertainty is low (high certainty)",
+      "hypothesis": "Low uncertainty predictions should be more accurate",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "MAX_UNCERTAINTY": "0.15",
+        "USE_BAYESIAN_GATE": "1"
+      }
+    },
+    {
+      "id": "IDEA-107",
+      "source": "claude",
+      "timestamp": "2026-01-02T06:58:26.835668",
+      "category": "architecture",
+      "title": "Long pretrain (50K cycles) for conservative outputs",
+      "description": "Train for 50K cycles to get conservative neural network outputs like the 60% win rate model had.",
+      "hypothesis": "Longer training leads to more conservative predictions, higher selectivity, better win rate",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TT_MAX_CYCLES": "50000",
+        "TT_PRINT_EVERY": "5000"
+      }
+    },
+    {
+      "id": "IDEA-108",
+      "source": "claude",
+      "timestamp": "2026-01-02T06:58:26.835678",
+      "category": "entry",
+      "title": "Ultra-selective: 90% calibrated confidence gate",
+      "description": "Only trade when calibrated P(profit) >= 90%",
+      "hypothesis": "Extreme selectivity should dramatically improve win rate",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "PNL_CAL_MIN_PROB": "0.90",
+        "PNL_CAL_GATE": "1"
+      }
+    },
+    {
+      "id": "IDEA-109",
+      "source": "claude",
+      "timestamp": "2026-01-02T06:58:26.835682",
+      "category": "entry",
+      "title": "Combined: Calibration 60% + RSI/MACD filter",
+      "description": "Use both calibration gate AND RSI/MACD confirmation",
+      "hypothesis": "Double filtering should catch only best trades",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "PNL_CAL_MIN_PROB": "0.60",
+        "PNL_CAL_GATE": "1",
+        "RSI_MACD_FILTER": "1"
+      }
+    },
+    {
+      "id": "IDEA-110",
+      "source": "claude",
+      "timestamp": "2026-01-02T06:58:26.835685",
+      "category": "exit",
+      "title": "Asymmetric exits: -4% stop, +20% take profit",
+      "description": "Smaller stop loss with larger take profit for 5:1 R:R",
+      "hypothesis": "Even with lower win rate, 5:1 R:R should be profitable",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "HARD_STOP_LOSS_PCT": "4",
+        "HARD_TAKE_PROFIT_PCT": "20"
+      }
+    },
+    {
+      "id": "IDEA-111",
+      "source": "claude",
+      "timestamp": "2026-01-02T06:58:26.835692",
+      "category": "architecture",
+      "title": "V3 + Transformer + Calibration gate",
+      "description": "Combine best architecture (V3) with transformer encoder and calibration",
+      "hypothesis": "Best architecture + best filtering = best results",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer",
+        "PNL_CAL_GATE": "1"
+      }
+    },
+    {
+      "id": "IDEA-112",
+      "source": "claude",
+      "timestamp": "2026-01-02T06:58:26.835698",
+      "category": "entry",
+      "title": "HMM pure mode with strict thresholds",
+      "description": "Only use HMM signals, ignore neural network entirely",
+      "hypothesis": "HMM was profitable in bandit mode - test pure HMM",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "HMM_PURE_MODE": "1",
+        "HMM_STRONG_BULLISH": "0.80",
+        "HMM_STRONG_BEARISH": "0.20"
+      }
+    },
+    {
       "id": "IDEA-091",
       "source": "claude",
       "timestamp": "2026-01-01T19:15:00.000000",
@@ -303,6 +536,6 @@
       }
     }
   ],
-  "next_id": 107,
-  "last_updated": "2026-01-02T01:55:16.768389"
+  "next_id": 121,
+  "last_updated": "2026-01-02T07:02:16.229476"
 }
