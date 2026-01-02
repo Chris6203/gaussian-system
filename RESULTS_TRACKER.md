@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0058: Trailing stop activation at 5% gain (2026-01-02 01:32)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 47.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 91 |
+| Run Dir | `models/EXP-0058_IDEA-101` |
+
+**Source**: TUNING_ANALYZER
+**Category**: exit
+**Hypothesis**: Earlier profit protection prevents winners from becoming losers
+**Result**: ERROR
+
+---
+
+### EXP-0057: Momentum filter + high confidence (2026-01-02 01:32)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 41.7% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 55 |
+| Run Dir | `models/EXP-0057_IDEA-100` |
+
+**Source**: TUNING_ANALYZER
+**Category**: entry
+**Hypothesis**: Active momentum + high confidence should catch real moves
+**Result**: ERROR
+
+---
+
+### EXP-0060: V3 + short hold (20 min) (2026-01-02 01:32)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 381 |
+| Run Dir | `models/EXP-0060_IDEA-103` |
+
+**Source**: TUNING_ANALYZER
+**Category**: architecture
+**Hypothesis**: V3's 5m/15m predictions are most accurate; match hold time to horizon
+**Result**: ERROR
+
+---
+
+### EXP-0059: V3 predictor + 75% confidence (2026-01-02 01:32)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 29.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 565 |
+| Run Dir | `models/EXP-0059_IDEA-102` |
+
+**Source**: TUNING_ANALYZER
+**Category**: architecture
+**Hypothesis**: V3's multi-horizon prediction + high confidence should find best entries
+**Result**: ERROR
+
+---
+
+
 ### EXP-0054: Tight stop with quick take-profit (-5%/+10%) (2026-01-02 01:07)
 
 | Metric | Quick Test (5K) |
@@ -4218,4 +4287,23 @@ The original 59.8% win rate was achieved through:
 1. Confidence threshold variations (15%, 25%, 30%)
 2. Exit configuration (tighter: -6%/+10%, wider: -10%/+15%)
 3. Max hold time variations (30, 45, 60 minutes)
+
+
+### December Validation Results (Out-of-Sample)
+
+**Key Finding: Training P&L does NOT predict out-of-sample performance!**
+
+| Model | Training P&L (Sept-Nov) | December P&L | Dec WR | Dec Trades |
+|-------|------------------------|--------------|--------|------------|
+| V3 Multi-Horizon | +3119% | **-3.34%** | 28.0% | 50 |
+| Transformer | +2777% | **+32.65%** | 27.4% | 61 |
+
+**Insights:**
+1. V3 had 2x higher training P&L but LOST money on December
+2. Transformer generalizes better despite lower training P&L
+3. Win rates dropped ~8% from training to out-of-sample (35% → 27%)
+4. Both models became very selective (50-61 trades in 3K cycles)
+5. The +32.65% December P&L from Transformer suggests some edge exists
+
+**Implication:** Must validate all strategies on out-of-sample period before deployment.
 

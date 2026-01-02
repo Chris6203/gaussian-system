@@ -192,14 +192,15 @@
       "description": "Only trade when 5m momentum > 0.002 (0.2%) AND confidence > 70%.",
       "hypothesis": "Active momentum + high confidence should catch real moves",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "MIN_CONFIDENCE_TO_TRADE": "0.70",
         "MIN_MOMENTUM_5M": "0.002"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T01:08:06.012746"
+      "last_result": {
+        "exp_id": "EXP-0057",
+        "per_trade_pnl": null,
+        "win_rate": 41.7
       }
     },
     {
@@ -211,14 +212,15 @@
       "description": "Activate trailing stop earlier (5% vs 8%) to lock in profits.",
       "hypothesis": "Earlier profit protection prevents winners from becoming losers",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TRAILING_STOP_ACTIVATION_PCT": "5",
         "TRAILING_STOP_PCT": "3"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T01:08:06.012746"
+      "last_result": {
+        "exp_id": "EXP-0058",
+        "per_trade_pnl": null,
+        "win_rate": 47.1
       }
     },
     {
@@ -230,14 +232,15 @@
       "description": "Use best predictor (V3) with strict confidence filter.",
       "hypothesis": "V3's multi-horizon prediction + high confidence should find best entries",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "MIN_CONFIDENCE_TO_TRADE": "0.75"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T01:08:06.012746"
+      "last_result": {
+        "exp_id": "EXP-0059",
+        "per_trade_pnl": null,
+        "win_rate": 29.3
       }
     },
     {
@@ -249,14 +252,15 @@
       "description": "V3 predictor optimized for shorter prediction horizons.",
       "hypothesis": "V3's 5m/15m predictions are most accurate; match hold time to horizon",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TT_MAX_HOLD_MINUTES": "20"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T01:08:06.012746"
+      "last_result": {
+        "exp_id": "EXP-0060",
+        "per_trade_pnl": null,
+        "win_rate": 38.1
       }
     },
     {
@@ -290,5 +294,5 @@
     }
   ],
   "next_id": 107,
-  "last_updated": "2026-01-02T01:08:06.012746"
+  "last_updated": "2026-01-02T01:32:49.408381"
 }
