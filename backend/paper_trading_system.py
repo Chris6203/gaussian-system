@@ -4670,6 +4670,56 @@ class PaperTradingSystem:
             
             if should_exit:
                 self.logger.warning(f"⚡ Emergency exit bypasses all other logic")
+            # ============= SKEW EXIT INTEGRATION (if enabled) =============
+            elif os.environ.get('SKEW_EXIT_ENABLED', '0') == '1':
+                try:
+                    from backend.skew_exit_manager import get_skew_exit_manager
+                    skew_mgr = get_skew_exit_manager()
+
+                    # Calculate current P&L and time held
+                    current_pnl_pct = ((current_premium / trade.premium_paid) - 1.0) if trade.premium_paid > 0 else 0.0
+                    peak_pnl_pct = getattr(trade, 'max_gain_pct', current_pnl_pct * 100) / 100.0
+
+                    # Get time held
+                    from datetime import datetime
+                    if isinstance(trade.timestamp, str):
+                        trade_ts = datetime.fromisoformat(trade.timestamp.replace('Z', '+00:00'))
+                    else:
+                        trade_ts = trade.timestamp
+                    if hasattr(trade_ts, 'tzinfo') and trade_ts.tzinfo is not None:
+                        trade_ts = trade_ts.replace(tzinfo=None)
+                    market_time = self.get_market_time()
+                    if hasattr(market_time, 'tzinfo') and market_time.tzinfo is not None:
+                        market_time = market_time.replace(tzinfo=None)
+                    time_held_minutes = max(0, (market_time - trade_ts).total_seconds() / 60.0)
+
+                    # Get HMM trend (if available)
+                    hmm_trend = getattr(trade, 'hmm_trend', 0.5)
+                    max_hold_minutes = (trade.max_hold_hours or 1.0) * 60
+
+                    skew_decision = skew_mgr.evaluate_exit(
+                        trade_id=trade.id,
+                        current_pnl_pct=current_pnl_pct,
+                        peak_pnl_pct=peak_pnl_pct,
+                        hmm_trend=hmm_trend,
+                        minutes_held=time_held_minutes,
+                        max_hold_minutes=max_hold_minutes,
+                    )
+
+                    if skew_decision.should_exit:
+                        exit_reason = f"SKEW_EXIT: {skew_decision.exit_reason}"
+                        self.logger.info(f"🎯 {exit_reason} (fraction={skew_decision.exit_fraction:.0%})")
+                        should_exit = True
+                        reason_code = 'skew_exit'
+                        # Store exit fraction for potential partial exit handling
+                        trade._skew_exit_fraction = skew_decision.exit_fraction
+                    else:
+                        self.logger.debug(f"⏳ Skew exit: HOLD ({skew_decision.exit_reason})")
+
+                except Exception as e:
+                    self.logger.warning(f"Skew exit evaluation failed: {e}")
+                    import traceback
+                    self.logger.debug(traceback.format_exc())
             elif hasattr(self, 'rl_exit_policy') and self.rl_exit_policy is not None:
                 # ============= RL EXIT POLICY INTEGRATION =============
                 # Let RL decide when to exit (prediction-aware strategy)
