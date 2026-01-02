@@ -269,10 +269,14 @@
       "description": "Extend V3 training to 20K cycles for better learning.",
       "hypothesis": "Longer training on V3 will improve per-trade P&L further",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TT_MAX_CYCLES": "20000"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T12:36:43.419255"
       }
     },
     {
@@ -284,11 +288,15 @@
       "description": "V3 Multi-Horizon with stricter HMM regime filtering.",
       "hypothesis": "V3 predictions + strong HMM trend = higher quality entries",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T12:36:43.419255"
       }
     },
     {
@@ -300,10 +308,14 @@
       "description": "V3 architecture starting from pretrained/trained_model.pth weights.",
       "hypothesis": "Pretrained weights + V3 architecture = faster convergence",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "LOAD_PRETRAINED": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T12:36:43.419255"
       }
     },
     {
@@ -315,10 +327,14 @@
       "description": "Train for 50K cycles to get very conservative neural network outputs like dec_validation_v2. The key is extreme selectivity.",
       "hypothesis": "Long training = conservative predictions = 2% trade rate = 60%+ win rate",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TT_MAX_CYCLES": "50000",
         "TT_PRINT_EVERY": "5000"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T12:36:43.419255"
       }
     },
     {
@@ -434,5 +450,5 @@
     }
   ],
   "next_id": 143,
-  "last_updated": "2026-01-02T12:35:41.987661"
+  "last_updated": "2026-01-02T12:36:43.419255"
 }
