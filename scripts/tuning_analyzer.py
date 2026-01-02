@@ -59,6 +59,79 @@ def sync_experiments_db():
         logger.warning(f"[DB SYNC] Failed to sync: {e}")
 
 
+def git_commit_and_push():
+    """Commit and push results to GitHub."""
+    try:
+        # Check for changes in key files
+        result = subprocess.run(
+            ["git", "status", "--porcelain",
+             "RESULTS_TRACKER.md",
+             ".claude/collab/idea_queue.json",
+             "data/experiments.db"],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        if not result.stdout.strip():
+            logger.debug("[GIT] No changes to commit")
+            return False
+
+        # Add the files
+        subprocess.run(
+            ["git", "add",
+             "RESULTS_TRACKER.md",
+             "data/experiments.db"],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            timeout=30
+        )
+
+        # Create commit with timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        commit_msg = f"[auto] Update experiment results ({timestamp})"
+
+        result = subprocess.run(
+            ["git", "commit", "-m", commit_msg],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        if result.returncode != 0:
+            if "nothing to commit" in result.stdout or "nothing to commit" in result.stderr:
+                return False
+            logger.warning(f"[GIT] Commit failed: {result.stderr}")
+            return False
+
+        logger.info(f"[GIT] Committed: {commit_msg}")
+
+        # Push to remote
+        result = subprocess.run(
+            ["git", "push"],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+
+        if result.returncode == 0:
+            logger.info("[GIT] Pushed to GitHub successfully")
+            return True
+        else:
+            logger.warning(f"[GIT] Push failed: {result.stderr}")
+            return False
+
+    except subprocess.TimeoutExpired:
+        logger.warning("[GIT] Git operation timed out")
+        return False
+    except Exception as e:
+        logger.warning(f"[GIT] Error: {e}")
+        return False
+
+
 def analyze_tuning_data():
     """Analyze trades with tuning data to find improvement opportunities."""
     insights = []
@@ -324,6 +397,9 @@ def monitor_and_improve():
 
             # Sync experiments to database for dashboard visibility
             sync_experiments_db()
+
+            # Commit and push results to GitHub every cycle
+            git_commit_and_push()
 
             # Status update
             logger.info(f"Ideas submitted this session: {ideas_submitted}")
