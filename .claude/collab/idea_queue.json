@@ -13,6 +13,18 @@
       "notes": "Fixed - missing placeholder in SQL VALUES clause causing trades to never save, then be credited multiple times."
     },
     {
+      "id": "IDEA-106",
+      "source": "tuning_analyzer",
+      "timestamp": "2026-01-02T00:42:54.632818",
+      "category": "architecture",
+      "title": "FIX: Confidence calibration broken",
+      "description": "CRITICAL: Tuning data shows confidence does NOT predict outcomes!\n    \nAnalysis of 1,596 trades:\n- 0.2 confidence: 38.8% win rate\n- 0.3 confidence: 37.5% win rate  \n- 0.4 confidence: 36.6% win rate\n\nWin rate DECREASES as confidence increases! The confidence head is not calibrated.\n\nRoot cause in rl_enhancements.py:\n- Only penalizes overconfidence > 0.7 (most trades are 0.2-0.4)\n- No reward for correct calibration\n- No BCE loss against actual outcomes\n\nFix options:\n1. Add BCE loss: confidence should predict P(profit > 0)\n2. Add bidirectional calibration reward\n3. Post-hoc Platt scaling calibration",
+      "hypothesis": "Properly calibrated confidence will enable effective trade filtering",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {}
+    },
+    {
       "id": "IDEA-092",
       "source": "tuning_analyzer",
       "timestamp": "2026-01-02T00:30:00.000000",
@@ -21,13 +33,14 @@
       "description": "Only trade when ML confidence is above 75%. Based on tuning data showing high-conf trades have better win rates.",
       "hypothesis": "Higher confidence trades should have better outcomes",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "MIN_CONFIDENCE_TO_TRADE": "0.75"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T00:26:14.072337"
+      "last_result": {
+        "exp_id": "EXP-0049",
+        "per_trade_pnl": null,
+        "win_rate": 43.3
       }
     },
     {
@@ -39,13 +52,14 @@
       "description": "Only trade when ML confidence is above 80%. Fewer trades but higher quality.",
       "hypothesis": "Top 20% confidence predictions should have significantly better win rates",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "MIN_CONFIDENCE_TO_TRADE": "0.80"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T00:26:14.072337"
+      "last_result": {
+        "exp_id": "EXP-0050",
+        "per_trade_pnl": null,
+        "win_rate": 47.3
       }
     },
     {
@@ -57,15 +71,16 @@
       "description": "Only trade in strong trending regimes - HMM trend > 0.75 for calls, < 0.25 for puts.",
       "hypothesis": "Trades aligned with strong HMM trends should perform better",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25",
         "HMM_MIN_CONFIDENCE": "0.70"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T00:26:14.072337"
+      "last_result": {
+        "exp_id": "EXP-0051",
+        "per_trade_pnl": null,
+        "win_rate": 40.4
       }
     },
     {
@@ -77,13 +92,14 @@
       "description": "Reduce max hold time to 15 minutes to limit theta decay exposure.",
       "hypothesis": "Short-duration trades have better risk/reward as theta decay is minimal",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TT_MAX_HOLD_MINUTES": "15"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T00:26:14.072337"
+      "last_result": {
+        "exp_id": "EXP-0052",
+        "per_trade_pnl": null,
+        "win_rate": 40.5
       }
     },
     {
@@ -236,6 +252,6 @@
       }
     }
   ],
-  "next_id": 106,
-  "last_updated": "2026-01-02T00:26:14.072337"
+  "next_id": 107,
+  "last_updated": "2026-01-02T00:48:30.591419"
 }

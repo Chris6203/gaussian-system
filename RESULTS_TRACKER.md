@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0052: Short max hold (15 min) (2026-01-02 00:48)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 240 |
+| Run Dir | `models/EXP-0052_IDEA-095` |
+
+**Source**: TUNING_ANALYZER
+**Category**: exit
+**Hypothesis**: Short-duration trades have better risk/reward as theta decay is minimal
+**Result**: ERROR
+
+---
+
+### EXP-0050: Very high confidence threshold (80%) (2026-01-02 00:48)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 47.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 104 |
+| Run Dir | `models/EXP-0050_IDEA-093` |
+
+**Source**: TUNING_ANALYZER
+**Category**: entry
+**Hypothesis**: Top 20% confidence predictions should have significantly better win rates
+**Result**: ERROR
+
+---
+
+### EXP-0051: Strict HMM regime filter (0.75/0.25) (2026-01-02 00:48)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.4% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 123 |
+| Run Dir | `models/EXP-0051_IDEA-094` |
+
+**Source**: TUNING_ANALYZER
+**Category**: entry
+**Hypothesis**: Trades aligned with strong HMM trends should perform better
+**Result**: ERROR
+
+---
+
+### EXP-0049: High confidence threshold (75%) (2026-01-02 00:48)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 43.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 263 |
+| Run Dir | `models/EXP-0049_IDEA-092` |
+
+**Source**: TUNING_ANALYZER
+**Category**: entry
+**Hypothesis**: Higher confidence trades should have better outcomes
+**Result**: ERROR
+
+---
+
+
 ### EXP-0047: V3 + Jerry Features + Filter (best combo) (2026-01-01 16:53)
 
 | Metric | Quick Test (5K) |
