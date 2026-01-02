@@ -3135,7 +3135,12 @@ for idx, sim_time in enumerate(common_times):
                         # Phase 26 optimization: Higher thresholds dramatically reduce losses
                         skip_gates = os.environ.get('SKIP_QUALITY_GATES', '0') == '1'
                         train_min_conf = 0.0 if skip_gates else 0.30  # 30% conf (Phase 26: -1.8% vs -62%)
+                        train_max_conf = 1.0  # Default: no max (set TRAIN_MAX_CONF to enable inverted filter)
                         train_min_abs_ret = 0.0 if skip_gates else 0.0013  # 0.13% edge (Phase 26 optimal)
+                        # Inverted confidence filter: Data shows LOW conf = better WR for intraday
+                        max_conf_env = os.environ.get('TRAIN_MAX_CONF', '')
+                        if max_conf_env:
+                            train_max_conf = float(max_conf_env)
                         if not hmm_decision_made:
                             try:
                                 if bot_config and hasattr(bot_config, "config") and not skip_gates:
@@ -3148,7 +3153,7 @@ for idx, sim_time in enumerate(common_times):
                             # Require predicted edge consistent with direction
                             is_call = action == 'BUY_CALLS'
                             edge_ok = (predicted_return >= train_min_abs_ret) if is_call else (predicted_return <= -train_min_abs_ret)
-                            conf_ok = confidence >= train_min_conf
+                            conf_ok = confidence >= train_min_conf and confidence <= train_max_conf
 
                             # MARKET OPEN FILTER: Big wins happen at market open (09:31)
                             # Set MARKET_OPEN_MINUTES=30 to only trade in first 30 min after open
@@ -3178,7 +3183,10 @@ for idx, sim_time in enumerate(common_times):
                                 composite_score = confidence
                                 why = []
                                 if not conf_ok:
-                                    why.append(f"conf<{train_min_conf:.0%}")
+                                    if confidence < train_min_conf:
+                                        why.append(f"conf<{train_min_conf:.0%}")
+                                    if confidence > train_max_conf:
+                                        why.append(f"conf>{train_max_conf:.0%} (inverted)")
                                 if not edge_ok:
                                     why.append(f"|ret|<{train_min_abs_ret*100:.2f}%")
                                 if not time_ok:

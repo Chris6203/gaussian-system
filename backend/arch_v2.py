@@ -125,6 +125,7 @@ class ArchV2:
                     can_veto=self.config.safety_filter.can_veto,
                     can_downgrade_size=self.config.safety_filter.can_downgrade_size,
                     veto_min_confidence=self.config.safety_filter.veto_min_confidence,
+                    veto_max_confidence=self.config.safety_filter.veto_max_confidence,
                     veto_max_vix=self.config.safety_filter.veto_max_vix,
                     tradability_gate_enabled=self.config.tradability_gate.enabled,
                     tradability_gate_checkpoint_path=self.config.tradability_gate.checkpoint_path,

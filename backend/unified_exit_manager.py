@@ -305,20 +305,56 @@ class UnifiedExitManager:
             except Exception:
                 pass
 
-        # Rule 5: Trailing Stop
-        if position.high_water_mark_pct >= self.trailing_stop_activation_pct:
-            trailing_level = position.high_water_mark_pct - self.trailing_stop_distance_pct
-            if pnl <= trailing_level:
-                return self._hard_exit(
-                    f"TRAILING STOP: P&L {pnl:.1f}% fell below {trailing_level:.1f}% "
-                    f"(high was {position.high_water_mark_pct:.1f}%)",
-                    pnl, position.trade_id
+        # Rule 5: Trailing Stop (skip if skew exit is handling trailing)
+        if not skew_exit_enabled:
+            if position.high_water_mark_pct >= self.trailing_stop_activation_pct:
+                trailing_level = position.high_water_mark_pct - self.trailing_stop_distance_pct
+                if pnl <= trailing_level:
+                    return self._hard_exit(
+                        f"TRAILING STOP: P&L {pnl:.1f}% fell below {trailing_level:.1f}% "
+                        f"(high was {position.high_water_mark_pct:.1f}%)",
+                        pnl, position.trade_id
+                    )
+
+        # =================================================================
+        # PHASE 1b: SKEW EXIT (if enabled - replaces model-based TP logic)
+        # =================================================================
+        if skew_exit_enabled:
+            try:
+                from backend.skew_exit_manager import get_skew_exit_manager
+                skew_mgr = get_skew_exit_manager()
+                skew_decision = skew_mgr.evaluate_exit(
+                    trade_id=position.trade_id,
+                    current_pnl_pct=pnl / 100.0,  # Convert to decimal
+                    peak_pnl_pct=position.high_water_mark_pct / 100.0,
+                    hmm_trend=market_state.hmm_trend,
+                    minutes_held=minutes_held,
+                    max_hold_minutes=self.hard_max_hold_minutes,
                 )
-        
+                if skew_decision.should_exit:
+                    self.stats['model_exits'] += 1
+                    reason = f"SKEW_EXIT: {skew_decision.exit_reason}"
+                    self._record_reason("SKEW_EXIT")
+                    logger.info(f"🎯 SKEW EXIT ({position.trade_id}): {reason} "
+                               f"(fraction={skew_decision.exit_fraction:.0%})")
+                    return ExitDecision(
+                        should_exit=True,
+                        exit_score=0.9,
+                        reason=reason,
+                        rule_type="model_based",
+                        details={
+                            'pnl_pct': pnl,
+                            'exit_fraction': skew_decision.exit_fraction,
+                            'runner_active': skew_decision.runner_active,
+                        }
+                    )
+            except Exception as e:
+                logger.warning(f"Skew exit evaluation failed: {e}")
+
         # =================================================================
         # PHASE 2: MODEL-BASED EXIT (single configured model)
         # =================================================================
-        
+
         model_decision = self._evaluate_model_exit(position, market_state)
         if model_decision.should_exit:
             self.stats['model_exits'] += 1

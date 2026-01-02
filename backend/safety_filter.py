@@ -23,6 +23,7 @@ Usage:
 """
 
 import logging
+import os
 from dataclasses import dataclass
 from typing import Dict, Optional, Any, Tuple
 from enum import Enum
@@ -62,6 +63,7 @@ class SafetyFilterConfig:
     
     # Veto conditions
     veto_min_confidence: float = 0.40
+    veto_max_confidence: float = 1.0  # Inverted: veto HIGH confidence (data shows low conf = better)
     veto_max_vix: float = 35.0
     veto_conflicting_regime: bool = True
     veto_max_drawdown_pct: float = 0.10  # Veto if account drawdown > 10%
@@ -98,6 +100,17 @@ class EntrySafetyFilter:
     def __init__(self, config: SafetyFilterConfig = None):
         self.config = config or SafetyFilterConfig()
 
+        # Environment variable overrides for testing
+        max_conf_env = os.environ.get('VETO_MAX_CONFIDENCE')
+        if max_conf_env:
+            self.config.veto_max_confidence = float(max_conf_env)
+            logger.info(f"🛡️ VETO_MAX_CONFIDENCE override: {self.config.veto_max_confidence}")
+
+        min_conf_env = os.environ.get('VETO_MIN_CONFIDENCE')
+        if min_conf_env:
+            self.config.veto_min_confidence = float(min_conf_env)
+            logger.info(f"🛡️ VETO_MIN_CONFIDENCE override: {self.config.veto_min_confidence}")
+
         # Lazy-loaded tradability gate model (optional)
         self._tradability_gate = None
         
@@ -119,7 +132,7 @@ class EntrySafetyFilter:
             logger.info("🛡️ Entry Safety Filter initialized")
             logger.info(f"   Can veto: {self.config.can_veto}")
             logger.info(f"   Can downgrade: {self.config.can_downgrade_size}")
-            logger.info(f"   Veto thresholds: conf<{self.config.veto_min_confidence}, VIX>{self.config.veto_max_vix}")
+            logger.info(f"   Veto thresholds: conf<{self.config.veto_min_confidence}, conf>{self.config.veto_max_confidence}, VIX>{self.config.veto_max_vix}")
             if self.config.tradability_gate_enabled:
                 logger.info(f"   Tradability gate: ENABLED (ckpt={self.config.tradability_gate_checkpoint_path}, "
                             f"veto<{self.config.tradability_veto_threshold:.2f}, "
@@ -247,7 +260,15 @@ class EntrySafetyFilter:
                     proposed_action, proposed_size,
                     f"Confidence too low: {confidence:.1%} < {self.config.veto_min_confidence:.1%}"
                 )
-            
+
+            # Check 1b: Maximum confidence (inverted filter - data shows low conf = better WR)
+            # Only apply if max_confidence is set below 1.0
+            if self.config.veto_max_confidence < 1.0 and confidence > self.config.veto_max_confidence:
+                return self._veto(
+                    proposed_action, proposed_size,
+                    f"Confidence too high: {confidence:.1%} > {self.config.veto_max_confidence:.1%}"
+                )
+
             # Check 2: Maximum VIX
             if vix_level > self.config.veto_max_vix:
                 return self._veto(

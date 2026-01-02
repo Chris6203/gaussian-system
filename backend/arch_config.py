@@ -97,6 +97,7 @@ class SafetyFilterConfig:
     
     # Veto conditions
     veto_min_confidence: float = 0.40  # Veto if below this
+    veto_max_confidence: float = 1.0   # Veto if above this (inverted filter: low conf = better)
     veto_max_vix: float = 35.0  # Veto if VIX above this
     veto_conflicting_regime: bool = True  # Veto if signal conflicts with HMM trend
     
