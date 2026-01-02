@@ -76,6 +76,27 @@ MEGACAP_SYMBOLS = {
     'META': 'Meta Platforms Inc.',
 }
 
+# Defense/Military stocks (government spending proxy)
+DEFENSE_SYMBOLS = {
+    'LMT': 'Lockheed Martin Corporation',
+    'RTX': 'RTX Corporation (Raytheon)',
+    'NOC': 'Northrop Grumman Corporation',
+    'GD': 'General Dynamics Corporation',
+    'BA': 'Boeing Company',
+}
+
+# Major energy stocks (beyond XLE ETF)
+ENERGY_MAJORS_SYMBOLS = {
+    'XOM': 'Exxon Mobil Corporation',
+    'CVX': 'Chevron Corporation',
+    'COP': 'ConocoPhillips',
+}
+
+# Volatility products (fear gauge)
+VOLATILITY_SYMBOLS = {
+    'UVXY': 'ProShares Ultra VIX Short-Term Futures ETF',
+}
+
 # Combined extended symbols (all new symbols)
 EXTENDED_MACRO_SYMBOLS = {
     **INDEX_PROXY_SYMBOLS,
@@ -83,6 +104,9 @@ EXTENDED_MACRO_SYMBOLS = {
     **CREDIT_SYMBOLS,
     **COMMODITY_SYMBOLS,
     **MEGACAP_SYMBOLS,
+    **DEFENSE_SYMBOLS,
+    **ENERGY_MAJORS_SYMBOLS,
+    **VOLATILITY_SYMBOLS,
 }
 
 # All symbols needed for macro features
@@ -662,6 +686,184 @@ def compute_index_proxy_features(
 # MAIN ENTRY POINT
 # =============================================================================
 
+def compute_defense_features(
+    data: Dict[str, pd.DataFrame],
+    horizons: List[int] = [1, 5, 20]
+) -> Dict[str, float]:
+    """
+    Compute defense/military sector features.
+
+    Features:
+    - defense_avg_ret_{h}: Average defense stock return
+    - defense_dispersion: Std dev of defense returns
+    - defense_breadth: % of defense stocks positive
+    - lmt_leadership: LMT relative strength (largest defense)
+    - defense_momentum: Defense sector momentum signal
+    - defense_vs_spy: Defense relative to SPY
+    """
+    features = {
+        'defense_avg_ret_1': 0.0,
+        'defense_avg_ret_5': 0.0,
+        'defense_avg_ret_20': 0.0,
+        'defense_dispersion': 0.0,
+        'defense_breadth': 0.0,
+        'lmt_leadership': 0.0,
+        'defense_momentum': 0.0,
+        'defense_vs_spy': 0.0,
+    }
+
+    defense_stocks = list(DEFENSE_SYMBOLS.keys())
+
+    try:
+        for h in horizons:
+            rets = []
+            for sym in defense_stocks:
+                ret = _get_return(data, sym, h)
+                if ret is not None:
+                    rets.append(ret)
+
+            if rets:
+                features[f'defense_avg_ret_{h}'] = float(np.mean(rets))
+
+                if h == 5:
+                    features['defense_dispersion'] = float(np.std(rets))
+                    features['defense_breadth'] = sum(1 for r in rets if r > 0) / len(rets)
+
+        # LMT leadership (vs defense average)
+        lmt_ret = _get_return(data, 'LMT', 5)
+        avg_ret = features['defense_avg_ret_5']
+
+        if lmt_ret is not None:
+            features['lmt_leadership'] = (lmt_ret - avg_ret) * 100
+
+        # Defense momentum
+        features['defense_momentum'] = 1.0 if features['defense_avg_ret_5'] > 0 else -1.0
+
+        # Defense vs SPY
+        spy_ret = _get_return(data, 'SPY', 5)
+        if spy_ret is not None:
+            features['defense_vs_spy'] = (features['defense_avg_ret_5'] - spy_ret) * 100
+
+    except Exception as e:
+        logger.warning(f"Error computing defense features: {e}")
+
+    return features
+
+
+def compute_energy_majors_features(
+    data: Dict[str, pd.DataFrame],
+    horizons: List[int] = [1, 5, 20]
+) -> Dict[str, float]:
+    """
+    Compute major energy stock features.
+
+    Features:
+    - energy_majors_avg_ret_{h}: Average energy major return
+    - energy_majors_dispersion: Std dev of energy major returns
+    - energy_majors_breadth: % of energy majors positive
+    - xom_leadership: XOM relative strength (largest)
+    - energy_momentum: Energy sector momentum signal
+    - energy_vs_uso: Energy stocks vs crude oil
+    - energy_vs_spy: Energy relative to SPY
+    """
+    features = {
+        'energy_majors_avg_ret_1': 0.0,
+        'energy_majors_avg_ret_5': 0.0,
+        'energy_majors_avg_ret_20': 0.0,
+        'energy_majors_dispersion': 0.0,
+        'energy_majors_breadth': 0.0,
+        'xom_leadership': 0.0,
+        'energy_momentum': 0.0,
+        'energy_vs_uso': 0.0,
+        'energy_vs_spy': 0.0,
+    }
+
+    energy_stocks = list(ENERGY_MAJORS_SYMBOLS.keys())
+
+    try:
+        for h in horizons:
+            rets = []
+            for sym in energy_stocks:
+                ret = _get_return(data, sym, h)
+                if ret is not None:
+                    rets.append(ret)
+
+            if rets:
+                features[f'energy_majors_avg_ret_{h}'] = float(np.mean(rets))
+
+                if h == 5:
+                    features['energy_majors_dispersion'] = float(np.std(rets))
+                    features['energy_majors_breadth'] = sum(1 for r in rets if r > 0) / len(rets)
+
+        # XOM leadership (vs energy average)
+        xom_ret = _get_return(data, 'XOM', 5)
+        avg_ret = features['energy_majors_avg_ret_5']
+
+        if xom_ret is not None:
+            features['xom_leadership'] = (xom_ret - avg_ret) * 100
+
+        # Energy momentum
+        features['energy_momentum'] = 1.0 if features['energy_majors_avg_ret_5'] > 0 else -1.0
+
+        # Energy vs USO (crude oil)
+        uso_ret = _get_return(data, 'USO', 5)
+        if uso_ret is not None:
+            features['energy_vs_uso'] = (features['energy_majors_avg_ret_5'] - uso_ret) * 100
+
+        # Energy vs SPY
+        spy_ret = _get_return(data, 'SPY', 5)
+        if spy_ret is not None:
+            features['energy_vs_spy'] = (features['energy_majors_avg_ret_5'] - spy_ret) * 100
+
+    except Exception as e:
+        logger.warning(f"Error computing energy majors features: {e}")
+
+    return features
+
+
+def compute_volatility_features(
+    data: Dict[str, pd.DataFrame],
+) -> Dict[str, float]:
+    """
+    Compute volatility product features.
+
+    Features:
+    - uvxy_ret_1/5/20: UVXY returns at different horizons
+    - uvxy_spike: Whether UVXY is spiking
+    - fear_gauge: UVXY momentum as fear indicator
+    """
+    features = {
+        'uvxy_ret_1': 0.0,
+        'uvxy_ret_5': 0.0,
+        'uvxy_ret_20': 0.0,
+        'uvxy_spike': 0.0,
+        'fear_gauge': 0.0,
+    }
+
+    try:
+        for h in [1, 5, 20]:
+            ret = _get_return(data, 'UVXY', h)
+            if ret is not None:
+                features[f'uvxy_ret_{h}'] = ret
+
+        # UVXY spike detection (>5% move in 5 bars)
+        ret_5 = features['uvxy_ret_5']
+        features['uvxy_spike'] = 1.0 if ret_5 > 0.05 else 0.0
+
+        # Fear gauge (-1 to 1)
+        if ret_5 > 0.02:
+            features['fear_gauge'] = 1.0  # Fear rising
+        elif ret_5 < -0.02:
+            features['fear_gauge'] = -1.0  # Fear falling
+        else:
+            features['fear_gauge'] = 0.0  # Neutral
+
+    except Exception as e:
+        logger.warning(f"Error computing volatility features: {e}")
+
+    return features
+
+
 def compute_extended_macro_features(
     data: Dict[str, pd.DataFrame],
     include_original: bool = True,
@@ -671,6 +873,9 @@ def compute_extended_macro_features(
     include_commodities: bool = True,
     include_megacaps: bool = True,
     include_index_proxies: bool = True,
+    include_defense: bool = True,
+    include_energy_majors: bool = True,
+    include_volatility: bool = True,
 ) -> Dict[str, float]:
     """
     Compute all macro proxy features.
@@ -713,6 +918,18 @@ def compute_extended_macro_features(
     # Mega-cap features
     if include_megacaps:
         features.update(compute_megacap_features(data))
+
+    # Defense/military features
+    if include_defense:
+        features.update(compute_defense_features(data))
+
+    # Energy majors features
+    if include_energy_majors:
+        features.update(compute_energy_majors_features(data))
+
+    # Volatility features
+    if include_volatility:
+        features.update(compute_volatility_features(data))
 
     return features
 

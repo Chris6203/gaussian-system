@@ -2,6 +2,79 @@
 
 Track configuration changes and their impact on performance.
 
+---
+
+## ⚠️ CRITICAL BUG FOUND: P&L Calculation Error (2026-01-01)
+
+### Summary
+**All historical backtests showing massive gains (+284,618%, +1327%, etc.) are INVALID due to a P&L tracking bug.**
+
+### Evidence
+During validation of EXP-0039 (-4%/+32% config):
+- Logged trade P&L sum: **-$5,600** (losses)
+- Actual balance change: **+$45,000** (gains)
+- **~$50,000 phantom profit**
+
+### Specific Example (Cycle 94→95)
+| Metric | Before | After | Expected | Actual |
+|--------|--------|-------|----------|--------|
+| Balance | $405.84 | $981.23 | ~$384 | +$575 gain |
+| Trade P&L | | -$21.42 | | |
+| Positions | 9 | 8 | | |
+
+A cycle with ONE trade losing -$21.42 showed a +$575 balance INCREASE.
+
+### Root Cause Analysis (2026-01-01)
+
+#### Code Flow Traced
+1. `update_positions()` in `paper_trading_system.py`:
+   - Lines 4952-4983: Time-based exit via `planned_exit_time`
+   - Lines 4899-4904: Emergency 2-hour max hold exit
+   - Line 5251: Adds `exit_value` to balance
+   - Line 5309: Removes trade from `active_trades`
+
+2. `FORCE_CLOSE` in `train_time_travel.py` (lines 1899-1927):
+   - Uses separate `TT_MAX_HOLD_MINUTES` env var
+   - Calls `_close_trade()` directly (line 1924)
+   - Has `except Exception: pass` silencing errors (line 1927)
+
+3. Balance modification points:
+   - Entry: `balance -= premium * qty * 100 + entry_fees` (line 3813)
+   - Exit in `update_positions()`: `balance += current_premium * qty * 100 - exit_fees` (line 5251)
+   - Exit in `_close_trade()`: `balance += exit_price * qty * 100 - exit_fees` (line 1587)
+
+#### Suspected Issues
+1. **Multiple time-based exit mechanisms** - Both `update_positions()` AND `FORCE_CLOSE` can close based on hold time
+2. **Type mismatch anomaly**: `[FORCE_CLOSE] OrderType.PUT` logs but `[TRADE] Closed CALL trade` appears
+3. **`get_recent_closed_trades()` query mismatch**: Returns by `exit_timestamp DESC` which may not match just-closed trades
+4. **Silent exception handling**: FORCE_CLOSE swallows all errors with `except Exception: pass`
+
+#### Math Verification (Correct)
+The balance math IS correct when traced:
+- Entry: `-premium*qty*100 - entry_fees`
+- Exit: `+exit_premium*qty*100 - exit_fees`
+- Net = `profit_loss` ✓
+
+The bug is likely in **which trades** get credited, not **how** they're credited.
+
+### Impact
+- ALL prior backtests need to be re-evaluated after fixing the bug
+- The bot is NOT actually profitable - phantom balance gains create illusion of profits
+- EXP-0039's +284,618% result was NOT real
+
+### Next Steps
+1. Add debug logging to trace exact balance changes per trade
+2. Check for duplicate trade processing between `update_positions()` and `FORCE_CLOSE`
+3. Verify `get_recent_closed_trades()` returns correct trades
+4. Consider consolidating all exit logic into one place
+
+### Status
+🔴 **BLOCKING** - Must fix before any further testing
+
+**Investigation Progress**: Code flow traced, math verified correct, suspected issue is trade attribution not calculation.
+
+---
+
 ## Baseline Results
 
 | Run | Date | Entry Controller | Win Rate | P&L | Trades | Cycles | Notes |
@@ -3806,8 +3879,12 @@ Integrate concepts from Jerry's Quantor-MTFuzz research to improve trading perfo
 | **test_baseline_v3** | 39.3% | +$75,306 (+1506%) | 1,274 | +$59.11 |
 | test_core_only (no extended macro) | 35.0% | +$62,470 (+1249%) | 1,194 | +$52.32 |
 | test_5m_horizon | 39.5% | +$35,215 (+704%) | 1,620 | +$21.74 |
+| **V3 + Jerry Features** | 27.8% | +$22,532 (+451%) | 269 | **+$83.76** |
 
-**Finding:** V3 baseline with all features performs best (+1506% P&L).
+**Findings:**
+- V3 baseline with all features performs best (+1506% P&L)
+- V3 + Jerry Features has highest per-trade P&L (+$83.76) but fewer trades
+- Jerry filter makes model 5x more selective (269 vs 1,274 trades)
 
 ### Jerry Features Experiment (5K cycles)
 

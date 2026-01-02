@@ -1,6 +1,18 @@
 {
   "ideas": [
     {
+      "id": "IDEA-091",
+      "source": "claude",
+      "timestamp": "2026-01-01T19:15:00.000000",
+      "category": "bug",
+      "title": "FIX: P&L Calculation Bug (BLOCKING)",
+      "description": "Critical bug causing ~$50K phantom profits in backtests. Balance increases don't match logged trade P&L. Must fix before any further testing.",
+      "hypothesis": "Duplicate trade crediting between update_positions() and FORCE_CLOSE, or get_recent_closed_trades() returning wrong trades",
+      "priority": "critical",
+      "status": "in_progress",
+      "notes": "See RESULTS_TRACKER.md for full analysis. Math is correct, issue is trade attribution."
+    },
+    {
       "id": "IDEA-087",
       "source": "claude",
       "timestamp": "2026-01-01T16:22:00.000000",
@@ -78,6 +90,6 @@
       "status": "already_tested"
     }
   ],
-  "next_id": 91,
-  "last_updated": "2026-01-01T16:53:49.160299"
+  "next_id": 92,
+  "last_updated": "2026-01-01T19:05:15.041464"
 }
