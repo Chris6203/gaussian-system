@@ -106,10 +106,14 @@
       "description": "Express stops in ATR/sigma units, not fixed %. Account for delta/gamma. Reduces wiggle stop-outs.",
       "hypothesis": "Vol-adjusted stops reduce premature exits in high-gamma regimes",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "GREEKS_AWARE_STOPS": "1",
         "STOP_ATR_MULTIPLE": "1.5"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T11:52:30.021489"
       }
     },
     {
@@ -121,10 +125,14 @@
       "description": "Freeze predictor weights during session, only update calibrators + thresholds online.",
       "hypothesis": "Frequent retraining destabilizes calibration - freeze for stability",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "FREEZE_PREDICTOR": "1",
         "ONLY_TRAIN_THRESHOLDS": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T11:52:30.021489"
       }
     },
     {
@@ -136,11 +144,15 @@
       "description": "Analysis shows 40-50% calibrated confidence has 41.2% WR vs 31-33% for 60%+. Trade when model is UNCERTAIN, not confident.",
       "hypothesis": "Model overconfidence predicts LOSING trades. Lower confidence = better.",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.40",
         "PNL_CAL_MAX_PROB": "0.55"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T11:52:30.021489"
       }
     },
     {
@@ -152,9 +164,13 @@
       "description": "Signal reasoning analysis shows consensus strength >=0.28 has 50-67% WR vs 27% for lower strength.",
       "hypothesis": "Multi-timeframe agreement strength is a strong win predictor",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "MIN_CONSENSUS_STRENGTH": "0.28"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T11:52:30.021489"
       }
     },
     {
@@ -394,5 +410,5 @@
     }
   ],
   "next_id": 143,
-  "last_updated": "2026-01-02T11:51:28.546902"
+  "last_updated": "2026-01-02T11:52:30.021489"
 }
