@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0072: Ultra-selective: 90% calibrated confidence gate (2026-01-02 11:28)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.8% |
+| P&L | -0.42% |
+| Per-Trade P&L | $-0.57 |
+| Trades | 37 |
+| Run Dir | `models/EXP-0072_IDEA-108` |
+
+**Source**: CLAUDE
+**Category**: entry
+**Hypothesis**: Extreme selectivity should dramatically improve win rate
+**Result**: FAIL
+
+---
+
+### EXP-0074: Asymmetric exits: -4% stop, +20% take profit (2026-01-02 11:28)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.9% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 175 |
+| Run Dir | `models/EXP-0074_IDEA-110` |
+
+**Source**: CLAUDE
+**Category**: exit
+**Hypothesis**: Even with lower win rate, 5:1 R:R should be profitable
+**Result**: ERROR
+
+---
+
+### EXP-0073: Combined: Calibration 60% + RSI/MACD filter (2026-01-02 11:28)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 499 |
+| Run Dir | `models/EXP-0073_IDEA-109` |
+
+**Source**: CLAUDE
+**Category**: entry
+**Hypothesis**: Double filtering should catch only best trades
+**Result**: ERROR
+
+---
+
+### EXP-0071: Long pretrain (50K cycles) for conservative outputs (2026-01-02 11:28)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0071_IDEA-107` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Longer training leads to more conservative predictions, higher selectivity, better win rate
+**Result**: ERROR
+
+---
+
+
 ### EXP-0070: Bayesian uncertainty threshold (2026-01-02 09:27)
 
 | Metric | Quick Test (5K) |

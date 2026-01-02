@@ -1,244 +1,327 @@
 {
   "ideas": [
     {
-      "id": "IDEA-113",
-      "source": "claude",
-      "timestamp": "2026-01-02T07:00:42.633990",
+      "id": "IDEA-136",
+      "source": "architecture_review",
+      "timestamp": "2026-01-02T11:23:55.017121",
       "category": "architecture",
-      "title": "Pretrain 3 months (Sept-Nov) then fine-tune",
-      "description": "Train on 3 months of data like the 60% win rate model. Use longer training period.",
-      "hypothesis": "Longer pretraining creates conservative, selective neural network outputs",
+      "title": "ARCH: EV Gate (expected value after costs)",
+      "description": "Gate on positive EV accounting for spread, slippage, theta decay. Eliminates high-confidence negative EV trades.",
+      "hypothesis": "High confidence doesn't mean positive EV when costs dominate",
       "priority": "critical",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
-        "TT_MAX_CYCLES": "30000",
-        "START_DATE": "2025-09-01",
-        "END_DATE": "2025-11-30"
-      },
-      "last_result": {
-        "exp_id": "EXP-0063",
-        "per_trade_pnl": null,
-        "win_rate": null
+        "EV_GATE_ENABLED": "1",
+        "EV_MIN_RATIO": "0.1"
       }
     },
     {
-      "id": "IDEA-114",
-      "source": "claude",
-      "timestamp": "2026-01-02T07:00:42.634002",
+      "id": "IDEA-137",
+      "source": "architecture_review",
+      "timestamp": "2026-01-02T11:23:55.017134",
       "category": "architecture",
-      "title": "Larger hidden dim (128 -> 256)",
-      "description": "Increase neural network capacity for better pattern recognition",
-      "hypothesis": "More capacity = better feature learning = better predictions",
+      "title": "ARCH: Per-regime calibration",
+      "description": "Separate calibrators per HMM regime + time-of-day. 70% confidence in low-vol open != 70% in high-vol close.",
+      "hypothesis": "Regime-specific calibration improves ECE and confidence usefulness",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
-        "HIDDEN_DIM": "256",
-        "TCN_CHANNELS": "128"
-      },
-      "last_result": {
-        "exp_id": "EXP-0064",
-        "per_trade_pnl": null,
-        "win_rate": 39.3
+        "REGIME_CALIBRATION": "1"
       }
     },
     {
-      "id": "IDEA-115",
-      "source": "claude",
-      "timestamp": "2026-01-02T07:00:42.634008",
-      "category": "architecture",
-      "title": "Deeper TCN (6 layers instead of 4)",
-      "description": "More temporal layers for longer-range pattern detection",
-      "hypothesis": "Deeper TCN captures more complex temporal patterns",
+      "id": "IDEA-138",
+      "source": "architecture_review",
+      "timestamp": "2026-01-02T11:23:55.017154",
+      "category": "risk",
+      "title": "ARCH: Auto-disable underperforming regimes",
+      "description": "Track performance per regime, auto-disable trading in regimes with negative expectancy.",
+      "hypothesis": "Some regimes consistently lose - stop trading them",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
-        "TCN_NUM_LAYERS": "6",
-        "TCN_KERNEL_SIZE": "5"
-      },
-      "last_result": {
-        "exp_id": "EXP-0065",
-        "per_trade_pnl": null,
-        "win_rate": 35.1
+        "REGIME_AUTO_DISABLE": "1",
+        "REGIME_DISABLE_WR": "0.30"
       }
     },
     {
-      "id": "IDEA-116",
-      "source": "claude",
-      "timestamp": "2026-01-02T07:00:42.634013",
+      "id": "IDEA-139",
+      "source": "architecture_review",
+      "timestamp": "2026-01-02T11:23:55.017160",
       "category": "architecture",
-      "title": "Attention pooling + calibration",
-      "description": "Use attention mechanism for feature aggregation with calibration gate",
-      "hypothesis": "Attention focuses on most relevant features for prediction",
-      "priority": "high",
-      "status": "rejected",
+      "title": "ARCH: Combined - EV Gate + Regime Attribution",
+      "description": "Use EV gate AND per-regime tracking with auto-disable together.",
+      "hypothesis": "Multiple filters working together = highest quality trades",
+      "priority": "critical",
+      "status": "pending",
       "env_vars": {
-        "USE_ATTENTION_POOLING": "1",
+        "EV_GATE_ENABLED": "1",
+        "EV_MIN_RATIO": "0.1",
+        "REGIME_AUTO_DISABLE": "1",
+        "REGIME_CALIBRATION": "1"
+      }
+    },
+    {
+      "id": "IDEA-140",
+      "source": "architecture_review",
+      "timestamp": "2026-01-02T11:23:55.017164",
+      "category": "exit",
+      "title": "ARCH: Greeks-aware stops (vol-adjusted)",
+      "description": "Express stops in ATR/sigma units, not fixed %. Account for delta/gamma. Reduces wiggle stop-outs.",
+      "hypothesis": "Vol-adjusted stops reduce premature exits in high-gamma regimes",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "GREEKS_AWARE_STOPS": "1",
+        "STOP_ATR_MULTIPLE": "1.5"
+      }
+    },
+    {
+      "id": "IDEA-141",
+      "source": "architecture_review",
+      "timestamp": "2026-01-02T11:23:55.017170",
+      "category": "training",
+      "title": "ARCH: Freeze NN weights (stable calibration)",
+      "description": "Freeze predictor weights during session, only update calibrators + thresholds online.",
+      "hypothesis": "Frequent retraining destabilizes calibration - freeze for stability",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "FREEZE_PREDICTOR": "1",
+        "ONLY_TRAIN_THRESHOLDS": "1"
+      }
+    },
+    {
+      "id": "IDEA-131",
+      "source": "decision_analysis",
+      "timestamp": "2026-01-02T11:12:29.250216",
+      "category": "entry",
+      "title": "DATA: Inverted confidence (40-50% sweet spot)",
+      "description": "Analysis shows 40-50% calibrated confidence has 41.2% WR vs 31-33% for 60%+. Trade when model is UNCERTAIN, not confident.",
+      "hypothesis": "Model overconfidence predicts LOSING trades. Lower confidence = better.",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PNL_CAL_GATE": "1",
+        "PNL_CAL_MIN_PROB": "0.40",
+        "PNL_CAL_MAX_PROB": "0.55"
+      }
+    },
+    {
+      "id": "IDEA-132",
+      "source": "decision_analysis",
+      "timestamp": "2026-01-02T11:12:29.250229",
+      "category": "entry",
+      "title": "DATA: High consensus strength filter (>=0.28)",
+      "description": "Signal reasoning analysis shows consensus strength >=0.28 has 50-67% WR vs 27% for lower strength.",
+      "hypothesis": "Multi-timeframe agreement strength is a strong win predictor",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "MIN_CONSENSUS_STRENGTH": "0.28"
+      }
+    },
+    {
+      "id": "IDEA-133",
+      "source": "decision_analysis",
+      "timestamp": "2026-01-02T11:12:29.250232",
+      "category": "exit",
+      "title": "DATA: Strict 30-minute max hold (not 31+)",
+      "description": "30-min exit has 41.3% WR, 31-min drops to 32%, 32-min to 12.5%. Force exact 30-min exit.",
+      "hypothesis": "Extra minutes after 30 hurt performance significantly",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TT_MAX_HOLD_MINUTES": "30",
+        "FORCE_EXIT_AT_MAX_HOLD": "1"
+      }
+    },
+    {
+      "id": "IDEA-134",
+      "source": "decision_analysis",
+      "timestamp": "2026-01-02T11:12:29.250236",
+      "category": "entry",
+      "title": "DATA: Combined - Inverted conf + High consensus",
+      "description": "Combine both winning signals: 40-50% confidence AND consensus strength >= 0.28",
+      "hypothesis": "Uncertain model + strong consensus = highest quality trades",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PNL_CAL_GATE": "1",
+        "PNL_CAL_MIN_PROB": "0.40",
+        "PNL_CAL_MAX_PROB": "0.55",
+        "MIN_CONSENSUS_STRENGTH": "0.28"
+      }
+    },
+    {
+      "id": "IDEA-135",
+      "source": "decision_analysis",
+      "timestamp": "2026-01-02T11:12:29.250239",
+      "category": "entry",
+      "title": "DATA: Disable confidence gate entirely",
+      "description": "Since higher confidence = worse WR, try disabling confidence filtering completely",
+      "hypothesis": "Confidence filter is counterproductive - removing it may help",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "PNL_CAL_GATE": "0",
+        "REQUIRE_NEURAL_CONFIRM": "0"
+      }
+    },
+    {
+      "id": "IDEA-127",
+      "source": "claude",
+      "timestamp": "2026-01-02T10:52:12.153949",
+      "category": "architecture",
+      "title": "BEST: V3 Multi-Horizon + Calibration Gate",
+      "description": "Build on exp35_v3_multi (+3118% P&L) by adding calibration gate for higher win rate.",
+      "hypothesis": "V3 architecture + calibrated confidence = best of both worlds",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.55"
-      },
-      "last_result": {
-        "exp_id": "EXP-0066",
-        "per_trade_pnl": null,
-        "win_rate": 42.1
       }
     },
     {
-      "id": "IDEA-117",
+      "id": "IDEA-128",
       "source": "claude",
-      "timestamp": "2026-01-02T07:00:42.634023",
+      "timestamp": "2026-01-02T10:52:12.153960",
       "category": "architecture",
-      "title": "RMSNorm + SwiGLU (LLaMA-style)",
-      "description": "Use modern LLaMA-style normalization and activation",
-      "hypothesis": "Modern architecture components improve gradient flow",
-      "priority": "medium",
-      "status": "rejected",
+      "title": "V3 Multi-Horizon 20K training",
+      "description": "Extend V3 training to 20K cycles for better learning.",
+      "hypothesis": "Longer training on V3 will improve per-trade P&L further",
+      "priority": "high",
+      "status": "pending",
       "env_vars": {
-        "NORM_TYPE": "rmsnorm",
-        "ACTIVATION_TYPE": "swiglu"
-      },
-      "last_result": {
-        "exp_id": "EXP-0067",
-        "per_trade_pnl": null,
-        "win_rate": 33.3
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TT_MAX_CYCLES": "20000"
       }
     },
     {
-      "id": "IDEA-118",
+      "id": "IDEA-129",
       "source": "claude",
-      "timestamp": "2026-01-02T07:00:42.634028",
-      "category": "architecture",
-      "title": "Ensemble: TCN + Transformer + LSTM vote",
-      "description": "Combine multiple temporal encoders and vote on predictions",
-      "hypothesis": "Ensemble reduces variance and improves reliability",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "ENSEMBLE_MODE": "1",
-        "ENSEMBLE_ENCODERS": "tcn,transformer,lstm"
-      },
-      "last_result": {
-        "exp_id": "EXP-0068",
-        "per_trade_pnl": null,
-        "win_rate": 35.4
-      }
-    },
-    {
-      "id": "IDEA-119",
-      "source": "claude",
-      "timestamp": "2026-01-02T07:00:42.634033",
+      "timestamp": "2026-01-02T10:52:12.153963",
       "category": "entry",
-      "title": "Triple confirmation: HMM + Neural + Calibration",
-      "description": "Require all three to agree before trading",
-      "hypothesis": "Triple confirmation = highest quality trades only",
+      "title": "V3 + Strict HMM (0.75/0.25)",
+      "description": "V3 Multi-Horizon with stricter HMM regime filtering.",
+      "hypothesis": "V3 predictions + strong HMM trend = higher quality entries",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
-        "REQUIRE_HMM_CONFIRM": "1",
-        "REQUIRE_NEURAL_CONFIRM": "1",
-        "PNL_CAL_GATE": "1",
-        "PNL_CAL_MIN_PROB": "0.60"
-      },
-      "last_result": {
-        "exp_id": "EXP-0069",
-        "per_trade_pnl": null,
-        "win_rate": 42.3
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "HMM_STRONG_BULLISH": "0.75",
+        "HMM_STRONG_BEARISH": "0.25"
       }
     },
     {
-      "id": "IDEA-120",
+      "id": "IDEA-130",
       "source": "claude",
-      "timestamp": "2026-01-02T07:00:42.634038",
+      "timestamp": "2026-01-02T10:52:12.153971",
       "category": "architecture",
-      "title": "Bayesian uncertainty threshold",
-      "description": "Only trade when Bayesian uncertainty is low (high certainty)",
-      "hypothesis": "Low uncertainty predictions should be more accurate",
+      "title": "V3 + Pretrained weights",
+      "description": "V3 architecture starting from pretrained/trained_model.pth weights.",
+      "hypothesis": "Pretrained weights + V3 architecture = faster convergence",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
-        "MAX_UNCERTAINTY": "0.15",
-        "USE_BAYESIAN_GATE": "1"
-      },
-      "last_result": {
-        "exp_id": "EXP-0070",
-        "per_trade_pnl": null,
-        "win_rate": 26.1
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "LOAD_PRETRAINED": "1"
       }
     },
     {
-      "id": "IDEA-107",
+      "id": "IDEA-121",
       "source": "claude",
-      "timestamp": "2026-01-02T06:58:26.835668",
+      "timestamp": "2026-01-02T10:50:06.598282",
       "category": "architecture",
-      "title": "Long pretrain (50K cycles) for conservative outputs",
-      "description": "Train for 50K cycles to get conservative neural network outputs like the 60% win rate model had.",
-      "hypothesis": "Longer training leads to more conservative predictions, higher selectivity, better win rate",
-      "priority": "high",
-      "status": "in_progress",
+      "title": "PRIORITY: 50K pretrain for conservative NN",
+      "description": "Train for 50K cycles to get very conservative neural network outputs like dec_validation_v2. The key is extreme selectivity.",
+      "hypothesis": "Long training = conservative predictions = 2% trade rate = 60%+ win rate",
+      "priority": "critical",
+      "status": "pending",
       "env_vars": {
         "TT_MAX_CYCLES": "50000",
         "TT_PRINT_EVERY": "5000"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T09:28:37.663704"
       }
     },
     {
-      "id": "IDEA-108",
+      "id": "IDEA-122",
       "source": "claude",
-      "timestamp": "2026-01-02T06:58:26.835678",
+      "timestamp": "2026-01-02T10:50:06.598295",
       "category": "entry",
-      "title": "Ultra-selective: 90% calibrated confidence gate",
-      "description": "Only trade when calibrated P(profit) >= 90%",
-      "hypothesis": "Extreme selectivity should dramatically improve win rate",
-      "priority": "high",
-      "status": "in_progress",
+      "title": "PRIORITY: 70% calibrated confidence gate",
+      "description": "Only trade when calibrated P(profit) >= 70%. Target 2-5% trade rate.",
+      "hypothesis": "Extreme selectivity via calibration = 60%+ win rate",
+      "priority": "critical",
+      "status": "pending",
       "env_vars": {
-        "PNL_CAL_MIN_PROB": "0.90",
-        "PNL_CAL_GATE": "1"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T09:28:37.663704"
-      }
-    },
-    {
-      "id": "IDEA-109",
-      "source": "claude",
-      "timestamp": "2026-01-02T06:58:26.835682",
-      "category": "entry",
-      "title": "Combined: Calibration 60% + RSI/MACD filter",
-      "description": "Use both calibration gate AND RSI/MACD confirmation",
-      "hypothesis": "Double filtering should catch only best trades",
-      "priority": "high",
-      "status": "in_progress",
-      "env_vars": {
-        "PNL_CAL_MIN_PROB": "0.60",
         "PNL_CAL_GATE": "1",
-        "RSI_MACD_FILTER": "1"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T09:28:37.663704"
+        "PNL_CAL_MIN_PROB": "0.70",
+        "PNL_CAL_MIN_SAMPLES": "30"
       }
     },
     {
-      "id": "IDEA-110",
+      "id": "IDEA-123",
       "source": "claude",
-      "timestamp": "2026-01-02T06:58:26.835685",
-      "category": "exit",
-      "title": "Asymmetric exits: -4% stop, +20% take profit",
-      "description": "Smaller stop loss with larger take profit for 5:1 R:R",
-      "hypothesis": "Even with lower win rate, 5:1 R:R should be profitable",
-      "priority": "medium",
-      "status": "in_progress",
+      "timestamp": "2026-01-02T10:50:06.598299",
+      "category": "entry",
+      "title": "PRIORITY: Load dec_validation_v2 RL weights",
+      "description": "Load the saved unified_rl.pth from dec_validation_v2 and test with calibration gate.",
+      "hypothesis": "RL weights + calibration = replicate 60% behavior",
+      "priority": "critical",
+      "status": "pending",
       "env_vars": {
-        "HARD_STOP_LOSS_PCT": "4",
-        "HARD_TAKE_PROFIT_PCT": "20"
-      },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T09:28:37.663704"
+        "LOAD_RL_WEIGHTS": "models/dec_validation_v2/unified_rl.pth",
+        "PNL_CAL_GATE": "1"
+      }
+    },
+    {
+      "id": "IDEA-124",
+      "source": "claude",
+      "timestamp": "2026-01-02T10:50:06.598302",
+      "category": "entry",
+      "title": "Ultra-strict: HMM 0.85 + Calibration 65%",
+      "description": "Require very strong HMM trend (>0.85 or <0.15) AND calibrated confidence >65%.",
+      "hypothesis": "Double extreme filtering = highest quality trades only",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "HMM_STRONG_BULLISH": "0.85",
+        "HMM_STRONG_BEARISH": "0.15",
+        "PNL_CAL_GATE": "1",
+        "PNL_CAL_MIN_PROB": "0.65"
+      }
+    },
+    {
+      "id": "IDEA-125",
+      "source": "claude",
+      "timestamp": "2026-01-02T10:50:06.598305",
+      "category": "architecture",
+      "title": "30K training on Sept-Dec data",
+      "description": "Longer training period on 4 months of data for better pattern learning.",
+      "hypothesis": "More training data + longer training = better generalization",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TT_MAX_CYCLES": "30000",
+        "START_DATE": "2025-09-01",
+        "END_DATE": "2025-12-15"
+      }
+    },
+    {
+      "id": "IDEA-126",
+      "source": "claude",
+      "timestamp": "2026-01-02T10:50:06.598308",
+      "category": "entry",
+      "title": "Minimum edge threshold 0.5%",
+      "description": "Only trade when predicted return > 0.5% (higher bar for entry).",
+      "hypothesis": "Higher edge requirement = fewer but better trades",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "MIN_PREDICTED_RETURN": "0.005",
+        "PNL_CAL_GATE": "1"
       }
     },
     {
@@ -272,310 +355,8 @@
         "HMM_STRONG_BULLISH": "0.80",
         "HMM_STRONG_BEARISH": "0.20"
       }
-    },
-    {
-      "id": "IDEA-091",
-      "source": "claude",
-      "timestamp": "2026-01-01T19:15:00.000000",
-      "category": "bug",
-      "title": "FIX: P&L Calculation Bug (BLOCKING)",
-      "description": "Critical bug causing ~$50K phantom profits in backtests. Balance increases don't match logged trade P&L. Must fix before any further testing.",
-      "hypothesis": "Duplicate trade crediting between update_positions() and FORCE_CLOSE, or get_recent_closed_trades() returning wrong trades",
-      "priority": "critical",
-      "status": "completed",
-      "notes": "Fixed - missing placeholder in SQL VALUES clause causing trades to never save, then be credited multiple times."
-    },
-    {
-      "id": "IDEA-106",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:42:54.632818",
-      "category": "architecture",
-      "title": "FIX: Confidence calibration broken",
-      "description": "CRITICAL: Tuning data shows confidence does NOT predict outcomes!\n    \nAnalysis of 1,596 trades:\n- 0.2 confidence: 38.8% win rate\n- 0.3 confidence: 37.5% win rate  \n- 0.4 confidence: 36.6% win rate\n\nWin rate DECREASES as confidence increases! The confidence head is not calibrated.\n\nRoot cause in rl_enhancements.py:\n- Only penalizes overconfidence > 0.7 (most trades are 0.2-0.4)\n- No reward for correct calibration\n- No BCE loss against actual outcomes\n\nFix options:\n1. Add BCE loss: confidence should predict P(profit > 0)\n2. Add bidirectional calibration reward\n3. Post-hoc Platt scaling calibration",
-      "hypothesis": "Properly calibrated confidence will enable effective trade filtering",
-      "priority": "critical",
-      "status": "completed",
-      "env_vars": {},
-      "notes": "Implemented in Phase 14: enabled PNL_CAL_GATE by default, added calibrated_confidence tracking"
-    },
-    {
-      "id": "IDEA-092",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "entry",
-      "title": "High confidence threshold (75%)",
-      "description": "Only trade when ML confidence is above 75%. Based on tuning data showing high-conf trades have better win rates.",
-      "hypothesis": "Higher confidence trades should have better outcomes",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "MIN_CONFIDENCE_TO_TRADE": "0.75"
-      },
-      "last_result": {
-        "exp_id": "EXP-0049",
-        "per_trade_pnl": null,
-        "win_rate": 43.3
-      }
-    },
-    {
-      "id": "IDEA-093",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "entry",
-      "title": "Very high confidence threshold (80%)",
-      "description": "Only trade when ML confidence is above 80%. Fewer trades but higher quality.",
-      "hypothesis": "Top 20% confidence predictions should have significantly better win rates",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "MIN_CONFIDENCE_TO_TRADE": "0.80"
-      },
-      "last_result": {
-        "exp_id": "EXP-0050",
-        "per_trade_pnl": null,
-        "win_rate": 47.3
-      }
-    },
-    {
-      "id": "IDEA-094",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "entry",
-      "title": "Strict HMM regime filter (0.75/0.25)",
-      "description": "Only trade in strong trending regimes - HMM trend > 0.75 for calls, < 0.25 for puts.",
-      "hypothesis": "Trades aligned with strong HMM trends should perform better",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "HMM_STRONG_BULLISH": "0.75",
-        "HMM_STRONG_BEARISH": "0.25",
-        "HMM_MIN_CONFIDENCE": "0.70"
-      },
-      "last_result": {
-        "exp_id": "EXP-0051",
-        "per_trade_pnl": null,
-        "win_rate": 40.4
-      }
-    },
-    {
-      "id": "IDEA-095",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "exit",
-      "title": "Short max hold (15 min)",
-      "description": "Reduce max hold time to 15 minutes to limit theta decay exposure.",
-      "hypothesis": "Short-duration trades have better risk/reward as theta decay is minimal",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "TT_MAX_HOLD_MINUTES": "15"
-      },
-      "last_result": {
-        "exp_id": "EXP-0052",
-        "per_trade_pnl": null,
-        "win_rate": 40.5
-      }
-    },
-    {
-      "id": "IDEA-096",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "exit",
-      "title": "Very short max hold (10 min)",
-      "description": "Very short trades to capture quick moves without theta exposure.",
-      "hypothesis": "Ultra-short trades are scalping momentum which should be more predictable",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "TT_MAX_HOLD_MINUTES": "10"
-      },
-      "last_result": {
-        "exp_id": "EXP-0053",
-        "per_trade_pnl": -0.35387387387387387,
-        "win_rate": 38.3
-      }
-    },
-    {
-      "id": "IDEA-097",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "exit",
-      "title": "Tight stop with quick take-profit (-5%/+10%)",
-      "description": "Quick 2:1 risk/reward - take small profits quickly before reversal.",
-      "hypothesis": "Smaller, more frequent wins beat larger, rarer wins",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "HARD_STOP_LOSS_PCT": "5",
-        "HARD_TAKE_PROFIT_PCT": "10"
-      },
-      "last_result": {
-        "exp_id": "EXP-0054",
-        "per_trade_pnl": -1.4065934065934067,
-        "win_rate": 17.6
-      }
-    },
-    {
-      "id": "IDEA-098",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "exit",
-      "title": "Very tight stop with moderate TP (-3%/+15%)",
-      "description": "5:1 risk/reward - small stops, let winners run.",
-      "hypothesis": "High R:R ratio should be profitable even with low win rate",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "HARD_STOP_LOSS_PCT": "3",
-        "HARD_TAKE_PROFIT_PCT": "15"
-      },
-      "last_result": {
-        "exp_id": "EXP-0055",
-        "per_trade_pnl": null,
-        "win_rate": 22.2
-      }
-    },
-    {
-      "id": "IDEA-099",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "entry",
-      "title": "Combined: High conf + strict HMM",
-      "description": "Only trade when both confidence > 75% AND HMM shows strong trend.",
-      "hypothesis": "Double confirmation should filter out noise trades",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "MIN_CONFIDENCE_TO_TRADE": "0.75",
-        "HMM_STRONG_BULLISH": "0.75",
-        "HMM_STRONG_BEARISH": "0.25"
-      },
-      "last_result": {
-        "exp_id": "EXP-0056",
-        "per_trade_pnl": null,
-        "win_rate": 37.1
-      }
-    },
-    {
-      "id": "IDEA-100",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "entry",
-      "title": "Momentum filter + high confidence",
-      "description": "Only trade when 5m momentum > 0.002 (0.2%) AND confidence > 70%.",
-      "hypothesis": "Active momentum + high confidence should catch real moves",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "MIN_CONFIDENCE_TO_TRADE": "0.70",
-        "MIN_MOMENTUM_5M": "0.002"
-      },
-      "last_result": {
-        "exp_id": "EXP-0057",
-        "per_trade_pnl": null,
-        "win_rate": 41.7
-      }
-    },
-    {
-      "id": "IDEA-101",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "exit",
-      "title": "Trailing stop activation at 5% gain",
-      "description": "Activate trailing stop earlier (5% vs 8%) to lock in profits.",
-      "hypothesis": "Earlier profit protection prevents winners from becoming losers",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "TRAILING_STOP_ACTIVATION_PCT": "5",
-        "TRAILING_STOP_PCT": "3"
-      },
-      "last_result": {
-        "exp_id": "EXP-0058",
-        "per_trade_pnl": null,
-        "win_rate": 47.1
-      }
-    },
-    {
-      "id": "IDEA-102",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "architecture",
-      "title": "V3 predictor + 75% confidence",
-      "description": "Use best predictor (V3) with strict confidence filter.",
-      "hypothesis": "V3's multi-horizon prediction + high confidence should find best entries",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "PREDICTOR_ARCH": "v3_multi_horizon",
-        "MIN_CONFIDENCE_TO_TRADE": "0.75"
-      },
-      "last_result": {
-        "exp_id": "EXP-0059",
-        "per_trade_pnl": null,
-        "win_rate": 29.3
-      }
-    },
-    {
-      "id": "IDEA-103",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "architecture",
-      "title": "V3 + short hold (20 min)",
-      "description": "V3 predictor optimized for shorter prediction horizons.",
-      "hypothesis": "V3's 5m/15m predictions are most accurate; match hold time to horizon",
-      "priority": "high",
-      "status": "rejected",
-      "env_vars": {
-        "PREDICTOR_ARCH": "v3_multi_horizon",
-        "TT_MAX_HOLD_MINUTES": "20"
-      },
-      "last_result": {
-        "exp_id": "EXP-0060",
-        "per_trade_pnl": null,
-        "win_rate": 38.1
-      }
-    },
-    {
-      "id": "IDEA-104",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "entry",
-      "title": "Only trade in low volatility (VIX < 20)",
-      "description": "Avoid trading when VIX is elevated.",
-      "hypothesis": "High VIX = unpredictable markets = random outcomes",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "MAX_VIX_FOR_ENTRY": "20"
-      },
-      "last_result": {
-        "exp_id": "EXP-0061",
-        "per_trade_pnl": null,
-        "win_rate": 37.8
-      }
-    },
-    {
-      "id": "IDEA-105",
-      "source": "tuning_analyzer",
-      "timestamp": "2026-01-02T00:30:00.000000",
-      "category": "exit",
-      "title": "Balanced 1:1 risk/reward (-8%/+8%)",
-      "description": "Equal stop and take profit for symmetric outcomes.",
-      "hypothesis": "If win rate > 50%, symmetric R:R is profitable",
-      "priority": "medium",
-      "status": "rejected",
-      "env_vars": {
-        "HARD_STOP_LOSS_PCT": "8",
-        "HARD_TAKE_PROFIT_PCT": "8"
-      },
-      "last_result": {
-        "exp_id": "EXP-0062",
-        "per_trade_pnl": null,
-        "win_rate": 40.3
-      }
     }
   ],
-  "next_id": 121,
-  "last_updated": "2026-01-02T09:28:37.663704"
+  "next_id": 142,
+  "last_updated": "2026-01-02T11:28:39.367132"
 }
