@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0065: Deeper TCN (6 layers instead of 4) (2026-01-02 09:02)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 35.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 383 |
+| Run Dir | `models/EXP-0065_IDEA-115` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Deeper TCN captures more complex temporal patterns
+**Result**: ERROR
+
+---
+
+### EXP-0064: Larger hidden dim (128 -> 256) (2026-01-02 09:02)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 363 |
+| Run Dir | `models/EXP-0064_IDEA-114` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: More capacity = better feature learning = better predictions
+**Result**: ERROR
+
+---
+
+### EXP-0066: Attention pooling + calibration (2026-01-02 09:02)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 42.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 117 |
+| Run Dir | `models/EXP-0066_IDEA-116` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Attention focuses on most relevant features for prediction
+**Result**: ERROR
+
+---
+
+### EXP-0063: Pretrain 3 months (Sept-Nov) then fine-tune (2026-01-02 09:02)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | N/A% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | N/A |
+| Run Dir | `models/EXP-0063_IDEA-113` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Longer pretraining creates conservative, selective neural network outputs
+**Result**: ERROR
+
+---
+
+
 ### EXP-0062: Balanced 1:1 risk/reward (-8%/+8%) (2026-01-02 01:55)
 
 | Metric | Quick Test (5K) |

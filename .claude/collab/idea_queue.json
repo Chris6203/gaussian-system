@@ -9,15 +9,16 @@
       "description": "Train on 3 months of data like the 60% win rate model. Use longer training period.",
       "hypothesis": "Longer pretraining creates conservative, selective neural network outputs",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TT_MAX_CYCLES": "30000",
         "START_DATE": "2025-09-01",
         "END_DATE": "2025-11-30"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T07:02:16.229476"
+      "last_result": {
+        "exp_id": "EXP-0063",
+        "per_trade_pnl": null,
+        "win_rate": null
       }
     },
     {
@@ -29,14 +30,15 @@
       "description": "Increase neural network capacity for better pattern recognition",
       "hypothesis": "More capacity = better feature learning = better predictions",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "HIDDEN_DIM": "256",
         "TCN_CHANNELS": "128"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T07:02:16.229476"
+      "last_result": {
+        "exp_id": "EXP-0064",
+        "per_trade_pnl": null,
+        "win_rate": 39.3
       }
     },
     {
@@ -48,14 +50,15 @@
       "description": "More temporal layers for longer-range pattern detection",
       "hypothesis": "Deeper TCN captures more complex temporal patterns",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TCN_NUM_LAYERS": "6",
         "TCN_KERNEL_SIZE": "5"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T07:02:16.229476"
+      "last_result": {
+        "exp_id": "EXP-0065",
+        "per_trade_pnl": null,
+        "win_rate": 35.1
       }
     },
     {
@@ -67,15 +70,16 @@
       "description": "Use attention mechanism for feature aggregation with calibration gate",
       "hypothesis": "Attention focuses on most relevant features for prediction",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_ATTENTION_POOLING": "1",
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.55"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T07:02:16.229476"
+      "last_result": {
+        "exp_id": "EXP-0066",
+        "per_trade_pnl": null,
+        "win_rate": 42.1
       }
     },
     {
@@ -537,5 +541,5 @@
     }
   ],
   "next_id": 121,
-  "last_updated": "2026-01-02T07:02:16.229476"
+  "last_updated": "2026-01-02T09:02:18.200870"
 }
