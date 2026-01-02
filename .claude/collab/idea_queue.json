@@ -9,10 +9,14 @@
       "description": "Gate on positive EV accounting for spread, slippage, theta decay. Eliminates high-confidence negative EV trades.",
       "hypothesis": "High confidence doesn't mean positive EV when costs dominate",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "EV_GATE_ENABLED": "1",
         "EV_MIN_RATIO": "0.1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T11:29:40.882380"
       }
     },
     {
@@ -24,9 +28,13 @@
       "description": "Separate calibrators per HMM regime + time-of-day. 70% confidence in low-vol open != 70% in high-vol close.",
       "hypothesis": "Regime-specific calibration improves ECE and confidence usefulness",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "REGIME_CALIBRATION": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T11:29:40.882380"
       }
     },
     {
@@ -38,10 +46,14 @@
       "description": "Track performance per regime, auto-disable trading in regimes with negative expectancy.",
       "hypothesis": "Some regimes consistently lose - stop trading them",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "REGIME_AUTO_DISABLE": "1",
         "REGIME_DISABLE_WR": "0.30"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T11:29:40.882380"
       }
     },
     {
@@ -53,12 +65,16 @@
       "description": "Use EV gate AND per-regime tracking with auto-disable together.",
       "hypothesis": "Multiple filters working together = highest quality trades",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "EV_GATE_ENABLED": "1",
         "EV_MIN_RATIO": "0.1",
         "REGIME_AUTO_DISABLE": "1",
         "REGIME_CALIBRATION": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-02T11:29:40.882380"
       }
     },
     {
@@ -358,5 +374,5 @@
     }
   ],
   "next_id": 142,
-  "last_updated": "2026-01-02T11:28:39.367132"
+  "last_updated": "2026-01-02T11:29:40.882380"
 }
