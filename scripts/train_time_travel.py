@@ -1357,15 +1357,15 @@ except Exception as e:
     logger.warning(f"[WARN] Could not initialize PnL CalibrationTracker: {e}")
     PNL_CAL_GATE_ENABLED = False
 
-# FULL RESET - Delete ALL old trades and reset statistics
-logger.info("[RESET] Clearing all old data...")
+# PARTIAL RESET - Only delete trades from THIS run, preserve history from other runs
+logger.info(f"[RESET] Clearing old data for run: {run_name}...")
 conn = sqlite3.connect(bot.paper_trader.db_path)
 cursor = conn.cursor()
 
-# Delete ALL trades (not just close them)
-cursor.execute("DELETE FROM trades")
+# Delete only trades from THIS run (preserve other runs for dashboard history)
+cursor.execute("DELETE FROM trades WHERE run_id = ?", (run_name,))
 deleted_trades = cursor.rowcount
-logger.info(f"   Deleted {deleted_trades} old trades")
+logger.info(f"   Deleted {deleted_trades} old trades from run {run_name}")
 
 # Reset account state
 cursor.execute("""
