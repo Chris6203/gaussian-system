@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0075: ARCH: EV Gate (expected value after costs) (2026-01-02 11:51)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 0.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 0 |
+| Run Dir | `models/EXP-0075_IDEA-136` |
+
+**Source**: ARCHITECTURE_REVIEW
+**Category**: architecture
+**Hypothesis**: High confidence doesn't mean positive EV when costs dominate
+**Result**: ERROR
+
+---
+
+### EXP-0078: ARCH: Combined - EV Gate + Regime Attribution (2026-01-02 11:51)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 0.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 0 |
+| Run Dir | `models/EXP-0078_IDEA-139` |
+
+**Source**: ARCHITECTURE_REVIEW
+**Category**: architecture
+**Hypothesis**: Multiple filters working together = highest quality trades
+**Result**: ERROR
+
+---
+
+### EXP-0077: ARCH: Auto-disable underperforming regimes (2026-01-02 11:51)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 29.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 235 |
+| Run Dir | `models/EXP-0077_IDEA-138` |
+
+**Source**: ARCHITECTURE_REVIEW
+**Category**: risk
+**Hypothesis**: Some regimes consistently lose - stop trading them
+**Result**: ERROR
+
+---
+
+### EXP-0076: ARCH: Per-regime calibration (2026-01-02 11:51)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 165 |
+| Run Dir | `models/EXP-0076_IDEA-137` |
+
+**Source**: ARCHITECTURE_REVIEW
+**Category**: architecture
+**Hypothesis**: Regime-specific calibration improves ECE and confidence usefulness
+**Result**: ERROR
+
+---
+
+
 ### EXP-0072: Ultra-selective: 90% calibrated confidence gate (2026-01-02 11:28)
 
 | Metric | Quick Test (5K) |
