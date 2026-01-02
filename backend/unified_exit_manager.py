@@ -259,8 +259,10 @@ class UnifiedExitManager:
                 pnl, position.trade_id
             )
         
-        # Rule 2: Hard Take Profit
-        if pnl >= self.hard_take_profit_pct:
+        # Rule 2: Hard Take Profit (skip if skew exits are handling TP)
+        import os
+        skew_exit_enabled = os.environ.get('SKEW_EXIT_ENABLED', '0') == '1'
+        if not skew_exit_enabled and pnl >= self.hard_take_profit_pct:
             return self._hard_exit(
                 f"TAKE PROFIT: P&L {pnl:.1f}% >= {self.hard_take_profit_pct}%",
                 pnl, position.trade_id
