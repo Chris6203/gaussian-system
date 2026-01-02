@@ -21,14 +21,17 @@ A P&L calculation bug was discovered and fixed. **All results before this date s
 ### Training & Simulation
 
 ```bash
-# BEST CONFIGURATION - Transformer encoder (+32.65% OOS profit, validated post-bug-fix)
+# BEST IN-SAMPLE - TCN + Skew Exits (+431% in 20K validation, $36.77/trade)
+SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python scripts/train_time_travel.py
+
+# BEST OOS POTENTIAL - Transformer + Skew Exits (+88% 5K, 2.5x improvement over transformer alone)
+TEMPORAL_ENCODER=transformer SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python scripts/train_time_travel.py
+
+# Transformer only (+32.65% OOS profit, validated post-bug-fix)
 TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
 
-# Alternative - V3 Multi-Horizon Predictor (experimental, needs validation)
+# V3 Multi-Horizon Predictor (experimental, needs validation)
 PREDICTOR_ARCH=v3_multi_horizon python scripts/train_time_travel.py
-
-# Combined (experimental)
-PREDICTOR_ARCH=v3_multi_horizon TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
 
 # Standard time-travel training (default V2 predictor)
 python scripts/train_time_travel.py

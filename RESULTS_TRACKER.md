@@ -5170,3 +5170,76 @@ RUNNER_TRAIL_DISTANCE=0.05   # 5% trailing stop
 | Presets | `configs/winning_presets.sh` | Pre-configured environments |
 | Documentation | `docs/ARCHITECTURE_IMPROVEMENTS_V4.md` | Full docs |
 
+---
+
+## Phase 38: Transformer + Skew Exits Combined (2026-01-02)
+
+### Goal
+
+Test combining the two validated improvements:
+1. **Transformer encoder** - Best OOS generalization (+32.65% on Dec 2025, Phase 35)
+2. **Skew exits (partial)** - Best in-sample performance (+431% in 20K, Phase 36b)
+
+### Test Results (5K cycles each)
+
+| Configuration | P&L | Trades | $/Trade | Win Rate |
+|---------------|-----|--------|---------|----------|
+| **Transformer + Skew** | **+$4,399 (+88%)** | 115 | **$38.25** | 26.1% |
+| Transformer only | +$1,772 (+35%) | 130 | $13.63 | 47.0% |
+
+### Key Finding: Skew Exits Improve Transformer by 2.5x
+
+- $/Trade increased from $13.63 to $38.25 (+180%)
+- Total P&L increased from +35% to +88% (+151%)
+- Win rate dropped from 47% to 26% (expected with skew strategy)
+
+### Comparison with TCN Architecture
+
+| Architecture | + Skew Exits | P&L | $/Trade |
+|--------------|--------------|-----|---------|
+| TCN (default) | Yes | +$8,817 (+176%) | $133.60 |
+| **Transformer** | **Yes** | +$4,399 (+88%) | $38.25 |
+| TCN (default) | No | +$6,340 (+127%) | $79.25 |
+| Transformer | No | +$1,772 (+35%) | $13.63 |
+
+### Insights
+
+1. **TCN + Skew still leads** in absolute in-sample performance
+2. **Skew exits improve BOTH architectures** - TCN by 69%, Transformer by 180%
+3. **Transformer may generalize better OOS** - Phase 35 showed +32.65% OOS vs TCN's untested OOS
+4. **Win rate is not the goal** - 26% WR with $38/trade beats 47% WR with $14/trade
+
+### Recommended Configurations
+
+**For In-Sample Performance (TCN + Skew):**
+```bash
+SKEW_EXIT_ENABLED=1
+SKEW_EXIT_MODE=partial
+python scripts/train_time_travel.py
+```
+
+**For OOS Generalization (Transformer + Skew):**
+```bash
+TEMPORAL_ENCODER=transformer
+SKEW_EXIT_ENABLED=1
+SKEW_EXIT_MODE=partial
+python scripts/train_time_travel.py
+```
+
+### Next Steps
+
+1. Run 20K validation of transformer + skew to confirm OOS behavior
+2. Test on truly out-of-sample data (January 2026)
+3. Consider live paper trading test with best configuration
+
+---
+
+## Current Best Configurations Summary
+
+| Rank | Configuration | Validated P&L | $/Trade | Best For |
+|------|---------------|---------------|---------|----------|
+| 1 | TCN + Skew Partial | +431% (20K) | $36.77 | In-sample |
+| 2 | Transformer + Skew | +88% (5K) | $38.25 | OOS potential |
+| 3 | Transformer Only | +32.65% OOS | $13.63 | Generalization |
+| 4 | TCN Baseline | +127% (5K) | $79.25 | Simplicity |
+
