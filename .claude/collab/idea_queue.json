@@ -430,14 +430,15 @@
       "description": "Only trade when predicted return > 0.5% (higher bar for entry).",
       "hypothesis": "Higher edge requirement = fewer but better trades",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "MIN_PREDICTED_RETURN": "0.005",
         "PNL_CAL_GATE": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T16:38:51.862763"
+      "last_result": {
+        "exp_id": "EXP-0091",
+        "per_trade_pnl": null,
+        "win_rate": 34.4
       }
     },
     {
@@ -449,15 +450,16 @@
       "description": "Combine best architecture (V3) with transformer encoder and calibration",
       "hypothesis": "Best architecture + best filtering = best results",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
         "PNL_CAL_GATE": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T16:38:51.862763"
+      "last_result": {
+        "exp_id": "EXP-0092",
+        "per_trade_pnl": null,
+        "win_rate": 34.7
       }
     },
     {
@@ -469,18 +471,19 @@
       "description": "Only use HMM signals, ignore neural network entirely",
       "hypothesis": "HMM was profitable in bandit mode - test pure HMM",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "HMM_PURE_MODE": "1",
         "HMM_STRONG_BULLISH": "0.80",
         "HMM_STRONG_BEARISH": "0.20"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T16:38:51.862763"
+      "last_result": {
+        "exp_id": "EXP-0093",
+        "per_trade_pnl": null,
+        "win_rate": 0.0
       }
     }
   ],
   "next_id": 143,
-  "last_updated": "2026-01-02T16:38:51.862763"
+  "last_updated": "2026-01-02T17:01:34.211986"
 }

@@ -2663,6 +2663,58 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0093: HMM pure mode with strict thresholds (2026-01-02 17:01)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 0.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 0 |
+| Run Dir | `models/EXP-0093_IDEA-112` |
+
+**Source**: CLAUDE
+**Category**: entry
+**Hypothesis**: HMM was profitable in bandit mode - test pure HMM
+**Result**: ERROR
+
+---
+
+### EXP-0091: Minimum edge threshold 0.5% (2026-01-02 17:01)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.4% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1035 |
+| Run Dir | `models/EXP-0091_IDEA-126` |
+
+**Source**: CLAUDE
+**Category**: entry
+**Hypothesis**: Higher edge requirement = fewer but better trades
+**Result**: ERROR
+
+---
+
+### EXP-0092: V3 + Transformer + Calibration gate (2026-01-02 17:01)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.7% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 1237 |
+| Run Dir | `models/EXP-0092_IDEA-111` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Best architecture + best filtering = best results
+**Result**: ERROR
+
+---
+
+
 ### EXP-0087: PRIORITY: 70% calibrated confidence gate (2026-01-02 16:37)
 
 | Metric | Quick Test (5K) |
