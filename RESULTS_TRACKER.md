@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0070: Bayesian uncertainty threshold (2026-01-02 09:27)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 26.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 61 |
+| Run Dir | `models/EXP-0070_IDEA-120` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Low uncertainty predictions should be more accurate
+**Result**: ERROR
+
+---
+
+### EXP-0069: Triple confirmation: HMM + Neural + Calibration (2026-01-02 09:27)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 42.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 291 |
+| Run Dir | `models/EXP-0069_IDEA-119` |
+
+**Source**: CLAUDE
+**Category**: entry
+**Hypothesis**: Triple confirmation = highest quality trades only
+**Result**: ERROR
+
+---
+
+### EXP-0068: Ensemble: TCN + Transformer + LSTM vote (2026-01-02 09:27)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 35.4% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 931 |
+| Run Dir | `models/EXP-0068_IDEA-118` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Ensemble reduces variance and improves reliability
+**Result**: ERROR
+
+---
+
+### EXP-0067: RMSNorm + SwiGLU (LLaMA-style) (2026-01-02 09:27)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 33.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 965 |
+| Run Dir | `models/EXP-0067_IDEA-117` |
+
+**Source**: CLAUDE
+**Category**: architecture
+**Hypothesis**: Modern architecture components improve gradient flow
+**Result**: ERROR
+
+---
+
+
 ### EXP-0065: Deeper TCN (6 layers instead of 4) (2026-01-02 09:02)
 
 | Metric | Quick Test (5K) |

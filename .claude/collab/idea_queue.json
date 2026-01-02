@@ -91,14 +91,15 @@
       "description": "Use modern LLaMA-style normalization and activation",
       "hypothesis": "Modern architecture components improve gradient flow",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "NORM_TYPE": "rmsnorm",
         "ACTIVATION_TYPE": "swiglu"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T09:03:19.573693"
+      "last_result": {
+        "exp_id": "EXP-0067",
+        "per_trade_pnl": null,
+        "win_rate": 33.3
       }
     },
     {
@@ -110,14 +111,15 @@
       "description": "Combine multiple temporal encoders and vote on predictions",
       "hypothesis": "Ensemble reduces variance and improves reliability",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "ENSEMBLE_MODE": "1",
         "ENSEMBLE_ENCODERS": "tcn,transformer,lstm"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T09:03:19.573693"
+      "last_result": {
+        "exp_id": "EXP-0068",
+        "per_trade_pnl": null,
+        "win_rate": 35.4
       }
     },
     {
@@ -129,16 +131,17 @@
       "description": "Require all three to agree before trading",
       "hypothesis": "Triple confirmation = highest quality trades only",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "REQUIRE_HMM_CONFIRM": "1",
         "REQUIRE_NEURAL_CONFIRM": "1",
         "PNL_CAL_GATE": "1",
         "PNL_CAL_MIN_PROB": "0.60"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T09:03:19.573693"
+      "last_result": {
+        "exp_id": "EXP-0069",
+        "per_trade_pnl": null,
+        "win_rate": 42.3
       }
     },
     {
@@ -150,14 +153,15 @@
       "description": "Only trade when Bayesian uncertainty is low (high certainty)",
       "hypothesis": "Low uncertainty predictions should be more accurate",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "MAX_UNCERTAINTY": "0.15",
         "USE_BAYESIAN_GATE": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-02T09:03:19.573693"
+      "last_result": {
+        "exp_id": "EXP-0070",
+        "per_trade_pnl": null,
+        "win_rate": 26.1
       }
     },
     {
@@ -557,5 +561,5 @@
     }
   ],
   "next_id": 121,
-  "last_updated": "2026-01-02T09:03:19.573693"
+  "last_updated": "2026-01-02T09:27:36.266667"
 }
