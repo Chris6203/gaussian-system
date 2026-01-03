@@ -5591,9 +5591,22 @@ GEX_SIGNALS_ENABLED=1 python scripts/train_time_travel.py
 ORDER_FLOW_ENABLED=1 python scripts/train_time_travel.py
 ```
 
+### Ensemble Stacking Results (Added 2026-01-03)
+
+| Configuration | Win Rate | P&L | Trades | Notes |
+|---------------|----------|-----|--------|-------|
+| Ensemble v1 (not integrated) | 29.2% | -$16.27 | 24 | Code initialized but not used |
+| Ensemble v2 (integrated) | 35.5% | -$9.69 | 31 | Untrained weights = noise |
+
+**Why Ensemble Failed**: The TCN+LSTM+XGBoost models have random/untrained weights. Without pre-training on historical data, they just add noise to predictions.
+
+**Next Step**: Pre-train ensemble on historical data before using as signal filter.
+
 ### Conclusion
 
 Multi-indicator stacking shows promise but variance between runs is too high to draw firm conclusions. The 50% win rate is better than the 36.1% baseline but worse than Phase 42's 65% (same config, different run).
+
+**Ensemble not useful without pre-training** - Random neural network weights add noise, not signal.
 
 Recommendation: Run longer 10K-20K cycle tests to get reliable metrics before declaring any improvement.
 

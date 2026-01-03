@@ -3362,6 +3362,30 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception:
                                     pass
 
+                            # Ensemble Predictor: Use combined model predictions
+                            if filter_ok and phase44_ensemble is not None:
+                                try:
+                                    # Get feature buffer from bot
+                                    if hasattr(bot, 'feature_buffer') and len(bot.feature_buffer) >= 30:
+                                        # Get last 30 timesteps of features
+                                        feature_seq = np.array(list(bot.feature_buffer)[-30:])
+                                        feature_tensor = torch.tensor(feature_seq, dtype=torch.float32)
+
+                                        # Get ensemble prediction
+                                        ensemble_result = phase44_ensemble.predict_ensemble(feature_tensor)
+                                        ensemble_pred = ensemble_result.get('ensemble_avg', 0)
+
+                                        is_call = action == 'BUY_CALLS'
+                                        # Ensemble predicts direction: positive = bullish, negative = bearish
+                                        if (is_call and ensemble_pred > 0.1) or (not is_call and ensemble_pred < -0.1):
+                                            phase44_boost += 0.06  # Strong agreement boost
+                                        elif (is_call and ensemble_pred < -0.2) or (not is_call and ensemble_pred > 0.2):
+                                            phase44_veto = True
+                                            filter_ok = False
+                                            filter_reason = f"ensemble_veto (pred={ensemble_pred:.3f})"
+                                except Exception as e:
+                                    pass  # Silently continue if ensemble fails
+
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
                                 print(f"   [PHASE44] Signal boost: +{phase44_boost:.1%}")
