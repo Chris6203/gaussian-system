@@ -35,6 +35,17 @@ import logging
 from pathlib import Path
 import time as real_time
 import builtins
+import random
+import numpy as np
+import torch
+
+# Set random seeds for reproducibility (override with RANDOM_SEED env var)
+RANDOM_SEED = int(os.environ.get('RANDOM_SEED', '42'))
+random.seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
+torch.manual_seed(RANDOM_SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(RANDOM_SEED)
 
 # Technical indicators for consensus entry controller (Signal 5)
 try:
@@ -1124,6 +1135,16 @@ run_name = os.path.basename(run_dir)
 if hasattr(bot, "paper_trader") and bot.paper_trader is not None:
     bot.paper_trader.set_run_id(run_name)
     logger.info(f"[TRAIN] Paper trader run_id set to: {run_name}")
+
+    # Override stop_loss and take_profit from env vars (takes precedence over config.json)
+    if os.environ.get('TT_STOP_LOSS_PCT'):
+        sl_pct = float(os.environ['TT_STOP_LOSS_PCT']) / 100.0
+        bot.paper_trader.stop_loss_pct = sl_pct
+        logger.info(f"[TRAIN] Forced stop_loss to {sl_pct:.1%} from TT_STOP_LOSS_PCT")
+    if os.environ.get('TT_TAKE_PROFIT_PCT'):
+        tp_pct = float(os.environ['TT_TAKE_PROFIT_PCT']) / 100.0
+        bot.paper_trader.take_profit_pct = tp_pct
+        logger.info(f"[TRAIN] Forced take_profit to {tp_pct:.1%} from TT_TAKE_PROFIT_PCT")
 
 # Phase 44: Initialize ensemble predictor and signal generators
 phase44_ensemble = None
