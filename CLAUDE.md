@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Gaussian Options Trading Bot** - an algorithmic SPY options trading system combining:
 - Bayesian neural networks with Gaussian kernel processors for price/volatility prediction
-- **Transformer temporal encoder** - **VALIDATED BEST: +32.65% OOS profit** (Phase 35)
+- **65% win rate achieved** with combo_dow configuration (Phase 42)
 - Multi-dimensional HMM (3×3×3 = 27 states) for market regime detection
 - Multiple entry controllers: bandit (default), RL (PPO), Q-Scorer, consensus
 - Paper trading and live execution via Tradier API
@@ -21,10 +21,18 @@ A P&L calculation bug was discovered and fixed. **All results before this date s
 ### Training & Simulation
 
 ```bash
-# BEST IN-SAMPLE - TCN + Skew Exits (+431% in 20K validation, $36.77/trade)
+# BEST WIN RATE (65%) - Phase 42 combo_dow configuration
+HARD_STOP_LOSS_PCT=50 HARD_TAKE_PROFIT_PCT=10 TRAIN_MAX_CONF=0.25 \
+DAY_OF_WEEK_FILTER=1 SKIP_MONDAY=1 SKIP_FRIDAY=1 \
+python scripts/train_time_travel.py
+
+# BEST P&L (+54.8%) - Wide stops + small TP
+HARD_STOP_LOSS_PCT=50 HARD_TAKE_PROFIT_PCT=10 python scripts/train_time_travel.py
+
+# TCN + Skew Exits (+431% in 20K validation, $36.77/trade)
 SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python scripts/train_time_travel.py
 
-# BEST OOS POTENTIAL - Transformer + Skew Exits (+88% 5K, 2.5x improvement over transformer alone)
+# Transformer + Skew Exits (+88% 5K, 2.5x improvement over transformer alone)
 TEMPORAL_ENCODER=transformer SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python scripts/train_time_travel.py
 
 # Transformer only (+32.65% OOS profit, validated post-bug-fix)
