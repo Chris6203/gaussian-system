@@ -3169,7 +3169,76 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception:
                                     time_ok = True  # Default to allowing if time calc fails
 
-                            if conf_ok and edge_ok and time_ok:
+                            # ================================================================
+                            # PHASE 41: NEW QUALITY FILTERS FOR 60%+ WIN RATE
+                            # ================================================================
+                            filter_ok = True
+                            filter_reason = None
+
+                            # TIME ZONE FILTER: Avoid first hour and last 30 min
+                            if os.environ.get('TIME_ZONE_FILTER', '0') == '1':
+                                try:
+                                    market_open_time = sim_time.replace(hour=9, minute=30, second=0, microsecond=0)
+                                    market_close_time = sim_time.replace(hour=16, minute=0, second=0, microsecond=0)
+                                    mins_since_open = (sim_time - market_open_time).total_seconds() / 60
+                                    mins_to_close = (market_close_time - sim_time).total_seconds() / 60
+                                    start_threshold = int(os.environ.get('TIME_ZONE_START_MINUTES', '60'))
+                                    end_threshold = int(os.environ.get('TIME_ZONE_END_MINUTES', '30'))
+                                    if mins_since_open < start_threshold:
+                                        filter_ok = False
+                                        filter_reason = f"time_zone_start ({mins_since_open:.0f}m < {start_threshold}m)"
+                                    elif mins_to_close < end_threshold:
+                                        filter_ok = False
+                                        filter_reason = f"time_zone_end ({mins_to_close:.0f}m to close)"
+                                except Exception:
+                                    pass
+
+                            # VIX GOLDILOCKS: Only trade VIX 15-22
+                            if filter_ok and os.environ.get('VIX_GOLDILOCKS_FILTER', '0') == '1':
+                                try:
+                                    vix_min = float(os.environ.get('VIX_GOLDILOCKS_MIN', '15.0'))
+                                    vix_max = float(os.environ.get('VIX_GOLDILOCKS_MAX', '22.0'))
+                                    current_vix = signal.get('vix_level', 0.0) if isinstance(signal, dict) else 20.0
+                                    if current_vix < vix_min:
+                                        filter_ok = False
+                                        filter_reason = f"vix_low ({current_vix:.1f} < {vix_min})"
+                                    elif current_vix > vix_max:
+                                        filter_ok = False
+                                        filter_reason = f"vix_high ({current_vix:.1f} > {vix_max})"
+                                except Exception:
+                                    pass
+
+                            # MOMENTUM CONFIRMATION: Price must be moving in trade direction
+                            if filter_ok and os.environ.get('MOMENTUM_CONFIRM_FILTER', '0') == '1':
+                                try:
+                                    mom_threshold = float(os.environ.get('MOMENTUM_MIN_STRENGTH', '0.001'))
+                                    mom_5m = signal.get('momentum_5m', 0.0) if isinstance(signal, dict) else 0.0
+                                    is_call = action == 'BUY_CALLS'
+                                    if is_call and mom_5m < mom_threshold:
+                                        filter_ok = False
+                                        filter_reason = f"momentum_against_call ({mom_5m:.4f})"
+                                    elif not is_call and mom_5m > -mom_threshold:
+                                        filter_ok = False
+                                        filter_reason = f"momentum_against_put ({mom_5m:.4f})"
+                                except Exception:
+                                    pass
+
+                            # DAY OF WEEK FILTER: Skip Monday and Friday
+                            if filter_ok and os.environ.get('DAY_OF_WEEK_FILTER', '0') == '1':
+                                try:
+                                    weekday = sim_time.weekday()  # 0=Mon, 4=Fri
+                                    skip_monday = os.environ.get('SKIP_MONDAY', '1') == '1'
+                                    skip_friday = os.environ.get('SKIP_FRIDAY', '1') == '1'
+                                    if skip_monday and weekday == 0:
+                                        filter_ok = False
+                                        filter_reason = "skip_monday"
+                                    elif skip_friday and weekday == 4:
+                                        filter_ok = False
+                                        filter_reason = "skip_friday"
+                                except Exception:
+                                    pass
+
+                            if conf_ok and edge_ok and time_ok and filter_ok:
                                 should_trade = True
                                 composite_score = confidence
                                 rl_details = {'reason': f'bandit_follow_signal ({action})', 'mode': 'bandit'}
@@ -3191,6 +3260,8 @@ for idx, sim_time in enumerate(common_times):
                                     why.append(f"|ret|<{train_min_abs_ret*100:.2f}%")
                                 if not time_ok:
                                     why.append(f"outside market open ({market_open_minutes}m)")
+                                if not filter_ok and filter_reason:
+                                    why.append(filter_reason)
                                 rl_details = {'reason': f"bandit_gate ({', '.join(why)})", 'mode': 'bandit'}
                                 print(f"   [UNIFIED BANDIT] Skipping: {', '.join(why)} (conf={confidence:.1%}, edge={predicted_return:+.2%})")
                                 try:

@@ -83,6 +83,25 @@ class SafetyFilterConfig:
     tradability_veto_threshold: float = 0.45
     tradability_downgrade_threshold: float = 0.55
 
+    # Time Zone Filter - avoid first hour and last 30 min
+    time_zone_filter_enabled: bool = False
+    time_zone_start_minutes: int = 60  # Minutes after open to start trading
+    time_zone_end_minutes: int = 30    # Minutes before close to stop trading
+
+    # VIX Goldilocks Zone - only trade in moderate volatility
+    vix_goldilocks_enabled: bool = False
+    vix_goldilocks_min: float = 15.0
+    vix_goldilocks_max: float = 22.0
+
+    # Momentum Confirmation - require price moving in trade direction
+    momentum_confirm_enabled: bool = False
+    momentum_min_strength: float = 0.001  # 0.1% minimum 5m move
+
+    # Day of Week Filter - skip noisy days
+    day_of_week_filter_enabled: bool = False
+    skip_monday: bool = True
+    skip_friday: bool = True
+
 
 class EntrySafetyFilter:
     """
@@ -110,6 +129,33 @@ class EntrySafetyFilter:
         if min_conf_env:
             self.config.veto_min_confidence = float(min_conf_env)
             logger.info(f"🛡️ VETO_MIN_CONFIDENCE override: {self.config.veto_min_confidence}")
+
+        # Time Zone Filter overrides
+        if os.environ.get('TIME_ZONE_FILTER', '0') == '1':
+            self.config.time_zone_filter_enabled = True
+            self.config.time_zone_start_minutes = int(os.environ.get('TIME_ZONE_START_MINUTES', '60'))
+            self.config.time_zone_end_minutes = int(os.environ.get('TIME_ZONE_END_MINUTES', '30'))
+            logger.info(f"🛡️ TIME_ZONE_FILTER enabled: skip first {self.config.time_zone_start_minutes}m, last {self.config.time_zone_end_minutes}m")
+
+        # VIX Goldilocks Zone overrides
+        if os.environ.get('VIX_GOLDILOCKS_FILTER', '0') == '1':
+            self.config.vix_goldilocks_enabled = True
+            self.config.vix_goldilocks_min = float(os.environ.get('VIX_GOLDILOCKS_MIN', '15.0'))
+            self.config.vix_goldilocks_max = float(os.environ.get('VIX_GOLDILOCKS_MAX', '22.0'))
+            logger.info(f"🛡️ VIX_GOLDILOCKS enabled: VIX {self.config.vix_goldilocks_min}-{self.config.vix_goldilocks_max}")
+
+        # Momentum Confirmation overrides
+        if os.environ.get('MOMENTUM_CONFIRM_FILTER', '0') == '1':
+            self.config.momentum_confirm_enabled = True
+            self.config.momentum_min_strength = float(os.environ.get('MOMENTUM_MIN_STRENGTH', '0.001'))
+            logger.info(f"🛡️ MOMENTUM_CONFIRM enabled: min {self.config.momentum_min_strength:.4f}")
+
+        # Day of Week Filter overrides
+        if os.environ.get('DAY_OF_WEEK_FILTER', '0') == '1':
+            self.config.day_of_week_filter_enabled = True
+            self.config.skip_monday = os.environ.get('SKIP_MONDAY', '1') == '1'
+            self.config.skip_friday = os.environ.get('SKIP_FRIDAY', '1') == '1'
+            logger.info(f"🛡️ DAY_OF_WEEK_FILTER enabled: skip_monday={self.config.skip_monday}, skip_friday={self.config.skip_friday}")
 
         # Lazy-loaded tradability gate model (optional)
         self._tradability_gate = None
@@ -166,6 +212,8 @@ class EntrySafetyFilter:
         account_drawdown_pct: float = 0.0,
         daily_trade_count: int = 0,
         position_direction: Optional[str] = None,  # "CALL" or "PUT"
+        momentum_5m: float = 0.0,  # 5-minute momentum for confirmation
+        current_weekday: int = -1,  # 0=Monday, 4=Friday, -1=unknown
     ) -> FilterDecision:
         """
         Evaluate a proposed entry action.
@@ -250,6 +298,65 @@ class EntrySafetyFilter:
                         f"Tradability gate downgrade: p={p_tradable:.2f} < {self.config.tradability_downgrade_threshold:.2f}"
                     )
         
+        # =====================================================================
+        # NEW FILTERS FOR WIN RATE IMPROVEMENT (Phase 41)
+        # =====================================================================
+        if self.config.can_veto:
+            # Time Zone Filter - avoid first hour and last 30 min
+            if self.config.time_zone_filter_enabled:
+                minutes_since_open = 390 - minutes_to_close  # 390 = 6.5 hours trading day
+                if minutes_since_open < self.config.time_zone_start_minutes:
+                    return self._veto(
+                        proposed_action, proposed_size,
+                        f"Time zone: {minutes_since_open}m since open < {self.config.time_zone_start_minutes}m threshold"
+                    )
+                if minutes_to_close < self.config.time_zone_end_minutes:
+                    return self._veto(
+                        proposed_action, proposed_size,
+                        f"Time zone: {minutes_to_close}m to close < {self.config.time_zone_end_minutes}m threshold"
+                    )
+
+            # VIX Goldilocks Zone - only trade in moderate volatility
+            if self.config.vix_goldilocks_enabled:
+                if vix_level < self.config.vix_goldilocks_min:
+                    return self._veto(
+                        proposed_action, proposed_size,
+                        f"VIX too low: {vix_level:.1f} < {self.config.vix_goldilocks_min:.1f} (no edge)"
+                    )
+                if vix_level > self.config.vix_goldilocks_max:
+                    return self._veto(
+                        proposed_action, proposed_size,
+                        f"VIX too high: {vix_level:.1f} > {self.config.vix_goldilocks_max:.1f} (too chaotic)"
+                    )
+
+            # Momentum Confirmation - price must be moving in trade direction
+            if self.config.momentum_confirm_enabled and momentum_5m != 0.0:
+                is_bullish_action = "CALL" in proposed_action
+                min_strength = self.config.momentum_min_strength
+                if is_bullish_action and momentum_5m < min_strength:
+                    return self._veto(
+                        proposed_action, proposed_size,
+                        f"Momentum against CALL: {momentum_5m:.4f} < {min_strength:.4f}"
+                    )
+                if not is_bullish_action and momentum_5m > -min_strength:
+                    return self._veto(
+                        proposed_action, proposed_size,
+                        f"Momentum against PUT: {momentum_5m:.4f} > {-min_strength:.4f}"
+                    )
+
+            # Day of Week Filter - skip Monday and Friday
+            if self.config.day_of_week_filter_enabled and current_weekday >= 0:
+                if self.config.skip_monday and current_weekday == 0:
+                    return self._veto(
+                        proposed_action, proposed_size,
+                        "Monday skip - weekend gap risk"
+                    )
+                if self.config.skip_friday and current_weekday == 4:
+                    return self._veto(
+                        proposed_action, proposed_size,
+                        "Friday skip - 0DTE theta acceleration"
+                    )
+
         # =====================================================================
         # VETO CHECKS (if enabled)
         # =====================================================================
