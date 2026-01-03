@@ -5680,25 +5680,27 @@ torch.manual_seed(RANDOM_SEED)
 
 | Run | Seed | Cycles | P&L | Win Rate | Trades | Notes |
 |-----|------|--------|-----|----------|--------|-------|
-| **combo_dow_10k** | 42 | 10,000 | **+48.8%** | 25.5% | 46 (13W/38L) | **COMPLETE** |
-| seed123_test | 123 | ~4100 | -1.5% | TBD | 58 | In progress |
+| **combo_dow_10k** | 42 | 10,000 | **+48.8%** | 25.5% | 46 (13W/38L) | Best P&L |
+| **seed123_test** | 123 | 5,000 | **-1.8%** | 40.3% | 67 (27W/40L) | More wins, lost money |
 
 ### Critical Insight: Win Rate vs P&L
 
-| Metric | Phase 42 (5K) | 10K Test (seed 42) |
-|--------|---------------|---------------------|
-| P&L | +11.5% | **+48.8%** |
-| Win Rate | 65.0% | 25.5% |
-| Trades | 19 (13W/7L) | 46 (13W/38L) |
-| **Wins** | **13** | **13** |
+| Metric | Seed 42 (10K) | Seed 123 (5K) |
+|--------|---------------|---------------|
+| **P&L** | **+48.8%** | -1.8% |
+| Win Rate | 25.5% | 40.3% |
+| Wins | 13 | **27** |
+| Losses | 38 | 40 |
 
-**Same 13 wins!** The 10K test had 31 more losses but made 4x more P&L.
+**Counterintuitive!** Seed 123 had:
+- **2x more wins** (27 vs 13)
+- **Higher win rate** (40% vs 25%)
+- But **LOST money** (-1.8%) while seed 42 made +48.8%
 
-This proves:
-1. **Win rate is misleading** - 25% win rate can be very profitable
-2. **50% stop loss works** - Losses are capped small, wins run big
-3. **Longer tests capture more opportunities** - More trades = more wins
-4. **Phase 42's 65% was sample bias** - Only 19 trades, lucky sequence
+This proves **win SIZE matters more than win COUNT**:
+1. Seed 42's 13 wins were likely large (trending moves)
+2. Seed 123's 27 wins were likely small (choppy market)
+3. Win rate alone tells you NOTHING about profitability
 
 ### Key Findings
 
