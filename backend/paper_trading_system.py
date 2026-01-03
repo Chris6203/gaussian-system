@@ -4676,9 +4676,13 @@ class PaperTradingSystem:
                     from backend.skew_exit_manager import get_skew_exit_manager
                     skew_mgr = get_skew_exit_manager()
 
-                    # Calculate current P&L and time held
-                    current_pnl_pct = ((current_premium / trade.premium_paid) - 1.0) if trade.premium_paid > 0 else 0.0
-                    peak_pnl_pct = getattr(trade, 'max_gain_pct', current_pnl_pct * 100) / 100.0
+                    # Calculate current P&L and time held (handle None values)
+                    if current_premium is not None and trade.premium_paid and trade.premium_paid > 0:
+                        current_pnl_pct = (current_premium / trade.premium_paid) - 1.0
+                    else:
+                        current_pnl_pct = 0.0
+                    max_gain = getattr(trade, 'max_gain_pct', None)
+                    peak_pnl_pct = (max_gain / 100.0) if max_gain is not None else current_pnl_pct
 
                     # Get time held
                     from datetime import datetime
