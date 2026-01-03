@@ -5243,3 +5243,85 @@ python scripts/train_time_travel.py
 | 3 | Transformer Only | +32.65% OOS | $13.63 | Generalization |
 | 4 | TCN Baseline | +127% (5K) | $79.25 | Simplicity |
 
+---
+
+## Phase 39: Inverted Confidence Filter & Skew Exit Integration (2026-01-02)
+
+### Key Finding: ML Confidence is Anti-Predictive
+
+Analysis of confidence data from recent runs revealed a counter-intuitive pattern:
+
+| Confidence Bucket | Trades | Win Rate | Avg P&L |
+|-------------------|--------|----------|---------|
+| Low (<0.3) | 294 | **38.4%** | **+$5.61** |
+| Med-Low (0.3-0.5) | 301 | 25.2% | -$2.85 |
+
+**Higher ML confidence = LOWER win rate and NEGATIVE P&L**
+
+The model's high-confidence predictions are actually anti-predictive for intraday trades.
+
+### Implementation: Inverted Confidence Filter
+
+Added `TRAIN_MAX_CONF` environment variable to filter OUT high-confidence trades:
+
+```bash
+# Filter out trades with confidence > 35%
+TRAIN_MAX_CONF=0.35 python scripts/train_time_travel.py
+```
+
+### Test Results (5K cycles)
+
+| Configuration | P&L | Trades | $/Trade |
+|---------------|-----|--------|---------|
+| **Inverted (max=0.35)** | **+990%** | 813 | $60.90 |
+| Baseline (no max) | +962% | 730 | $65.89 |
+
+The inverted confidence filter shows a **+28 percentage point improvement** in total P&L while generating more trades.
+
+### Skew Exit Integration Fix
+
+Fixed the skew exit manager integration:
+- **Issue**: SkewExitManager existed but was not wired into actual exit flow
+- **Previous location**: `unified_exit_manager.py` (not used during training)
+- **Fixed location**: `backend/paper_trading_system.py` (actual exit processing)
+
+Changes:
+1. Integrated skew exit check before XGBoost exit policy
+2. Fixed None value handling for `current_premium` and `max_gain_pct`
+3. Skew exit now properly evaluates partial TP + trailing runner logic
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `backend/safety_filter.py` | Added `veto_max_confidence` option + env override |
+| `backend/arch_config.py` | Added `veto_max_confidence` config |
+| `backend/arch_v2.py` | Pass `veto_max_confidence` to filter |
+| `scripts/train_time_travel.py` | Added `TRAIN_MAX_CONF` quality gate |
+| `backend/paper_trading_system.py` | Integrated SkewExitManager properly |
+| `backend/unified_exit_manager.py` | Added skew exit (backup integration) |
+
+### Commits
+
+- `095d56d` - Add inverted confidence filter and proper skew exit integration
+- `08198e2` - Fix skew exit integration - wire into paper_trading_system.py
+- `4f12fe2` - Fix None value handling in skew exit integration
+
+### Recommended Usage
+
+```bash
+# Best configuration: Inverted confidence filter
+TRAIN_MAX_CONF=0.35 python scripts/train_time_travel.py
+
+# Combined with skew exits (experimental)
+TRAIN_MAX_CONF=0.35 SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python scripts/train_time_travel.py
+```
+
+### Next Steps
+
+1. Test combined: inverted confidence + skew exits
+2. Run 20K validation of inverted confidence filter
+3. Consider setting `TRAIN_MAX_CONF=0.35` as default
+
+---
+
