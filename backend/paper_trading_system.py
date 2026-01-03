@@ -5579,43 +5579,70 @@ class PaperTradingSystem:
             'return_pct': (total_value - self.initial_balance) / self.initial_balance
         }
     
-    def get_recent_closed_trades(self, limit: int = 10) -> list:
+    def get_recent_closed_trades(self, limit: int = 10, run_id: Optional[str] = None) -> list:
         """
         Get recent closed trades from the database
-        
+
         Args:
             limit: Maximum number of trades to return
-            
+            run_id: If provided, filter to only this run's trades (critical for calibration)
+
         Returns:
             List of trade dictionaries with trade details and P&L
         """
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
+            # Use current_run_id if available and no explicit run_id provided
+            effective_run_id = run_id or getattr(self, 'current_run_id', None)
+
             # Query for closed trades with all details
             # Note: Closed trades have status PROFIT_TAKEN or STOPPED_OUT, not 'CLOSED'
-            cursor.execute('''
-                SELECT 
-                    id, timestamp, symbol, option_type, strike_price,
-                    premium_paid, quantity, entry_price, exit_price,
-                    exit_timestamp, profit_loss, status
-                FROM trades
-                WHERE status IN ('PROFIT_TAKEN', 'STOPPED_OUT', 'CLOSED', 'EXPIRED_ITM', 'EXPIRED_OTM') 
-                AND exit_timestamp IS NOT NULL
-                ORDER BY exit_timestamp DESC
-                LIMIT ?
-            ''', (limit,))
+            if effective_run_id:
+                # Filter by run_id to get only this run's trades (fixes calibration bug)
+                cursor.execute('''
+                    SELECT
+                        id, timestamp, symbol, option_type, strike_price,
+                        premium_paid, quantity, entry_price, exit_price,
+                        exit_timestamp, profit_loss, status
+                    FROM trades
+                    WHERE status IN ('PROFIT_TAKEN', 'STOPPED_OUT', 'CLOSED', 'EXPIRED_ITM', 'EXPIRED_OTM')
+                    AND exit_timestamp IS NOT NULL
+                    AND run_id = ?
+                    ORDER BY exit_timestamp DESC
+                    LIMIT ?
+                ''', (effective_run_id, limit,))
+            else:
+                cursor.execute('''
+                    SELECT
+                        id, timestamp, symbol, option_type, strike_price,
+                        premium_paid, quantity, entry_price, exit_price,
+                        exit_timestamp, profit_loss, status
+                    FROM trades
+                    WHERE status IN ('PROFIT_TAKEN', 'STOPPED_OUT', 'CLOSED', 'EXPIRED_ITM', 'EXPIRED_OTM')
+                    AND exit_timestamp IS NOT NULL
+                    ORDER BY exit_timestamp DESC
+                    LIMIT ?
+                ''', (limit,))
             
             rows = cursor.fetchall()
             conn.close()
             
             trades = []
             for row in rows:
+                entry_time = datetime.fromisoformat(row[1])
+                exit_time = datetime.fromisoformat(row[9]) if row[9] else None
+                # Calculate hold time in minutes
+                if exit_time and entry_time:
+                    hold_minutes = (exit_time - entry_time).total_seconds() / 60.0
+                else:
+                    hold_minutes = 45.0  # Default assumption
+
                 trade_dict = {
                     'id': row[0],
                     'timestamp': row[1],
-                    'entry_time': datetime.fromisoformat(row[1]),
+                    'entry_time': entry_time,
                     'symbol': row[2],
                     'option_type': row[3],
                     'strike_price': row[4],
@@ -5624,10 +5651,11 @@ class PaperTradingSystem:
                     'entry_price': row[7],
                     'exit_price': row[8],
                     'exit_timestamp': row[9],
-                    'exit_time': datetime.fromisoformat(row[9]) if row[9] else None,
+                    'exit_time': exit_time,
                     'pnl': row[10] if row[10] is not None else 0,
                     'profit_loss': row[10] if row[10] is not None else 0,
-                    'status': row[11]
+                    'status': row[11],
+                    'hold_time_minutes': hold_minutes,
                 }
                 trades.append(trade_dict)
             
