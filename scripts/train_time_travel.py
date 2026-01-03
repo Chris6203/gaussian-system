@@ -1134,7 +1134,26 @@ phase44_multi_indicator = None
 if ENSEMBLE_AVAILABLE and os.environ.get('ENSEMBLE_ENABLED', '0') == '1':
     try:
         phase44_ensemble = create_ensemble_predictor(feature_dim=50)
-        logger.info("[PHASE44] Ensemble predictor initialized")
+        # Load pre-trained weights if available
+        if os.environ.get('ENSEMBLE_PRETRAINED', '0') == '1':
+            pretrained_path = os.environ.get('ENSEMBLE_MODEL_PATH', 'models/pretrained_ensemble.pkl')
+            if os.path.exists(pretrained_path):
+                import pickle
+                with open(pretrained_path, 'rb') as f:
+                    saved = pickle.load(f)
+                phase44_ensemble.tcn.load_state_dict(saved['tcn_state'])
+                phase44_ensemble.lstm.load_state_dict(saved['lstm_state'])
+                phase44_ensemble.attention.load_state_dict(saved['attention_state'])
+                phase44_ensemble.xgb_model = saved['xgb_model']
+                phase44_ensemble.xgb_scaler = saved['xgb_scaler']
+                phase44_ensemble.meta_learner = saved['meta_learner']
+                phase44_ensemble.meta_scaler = saved['meta_scaler']
+                phase44_ensemble.is_fitted = saved['is_fitted']
+                logger.info(f"[PHASE44] Loaded pre-trained ensemble from {pretrained_path}")
+            else:
+                logger.warning(f"[PHASE44] Pre-trained ensemble not found at {pretrained_path}")
+        else:
+            logger.info("[PHASE44] Ensemble predictor initialized (untrained)")
     except Exception as e:
         logger.warning(f"[PHASE44] Failed to create ensemble predictor: {e}")
 

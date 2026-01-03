@@ -5595,19 +5595,39 @@ ORDER_FLOW_ENABLED=1 python scripts/train_time_travel.py
 
 | Configuration | Win Rate | P&L | Trades | Notes |
 |---------------|----------|-----|--------|-------|
-| Ensemble v1 (not integrated) | 29.2% | -$16.27 | 24 | Code initialized but not used |
+| **Pre-trained Ensemble** | **50.0%** | -$23.56 | 38 | Trained on 1.5M samples |
 | Ensemble v2 (integrated) | 35.5% | -$9.69 | 31 | Untrained weights = noise |
+| Ensemble v1 (not integrated) | 29.2% | -$16.27 | 24 | Code initialized but not used |
 
-**Why Ensemble Failed**: The TCN+LSTM+XGBoost models have random/untrained weights. Without pre-training on historical data, they just add noise to predictions.
+**Pre-training Details**:
+- Loaded decision records from 200+ past experiments (1.5M samples)
+- Trained TCN, LSTM, and XGBoost on feature sequences
+- Labels: 15-minute momentum (actual price movement)
+- Meta-learner combines all three predictions
 
-**Next Step**: Pre-train ensemble on historical data before using as signal filter.
+**Result**: Pre-trained ensemble achieved 50% win rate - same as multi-indicator stack.
+
+**Usage**:
+```bash
+# First pre-train (one-time)
+python scripts/train_ensemble.py
+
+# Then use pre-trained ensemble
+ENSEMBLE_ENABLED=1 ENSEMBLE_PRETRAINED=1 python scripts/train_time_travel.py
+```
+
+### Variance Investigation
+
+**Critical Finding**: Same combo_dow config produced vastly different results:
+- Phase 42: 65% win rate (13W/7L, 19 trades)
+- Phase 44: 36% win rate (13W/23L, 36 trades)
+
+Same 13 wins, but 16 extra losses! The 65% may have been a favorable sample. 5K cycle tests show high variance.
 
 ### Conclusion
 
-Multi-indicator stacking shows promise but variance between runs is too high to draw firm conclusions. The 50% win rate is better than the 36.1% baseline but worse than Phase 42's 65% (same config, different run).
+Both multi-indicator stacking and pre-trained ensemble achieved **50% win rate** - a 14pp improvement over the Phase 44 baseline (36.1%). However, there's high variance between runs.
 
-**Ensemble not useful without pre-training** - Random neural network weights add noise, not signal.
-
-Recommendation: Run longer 10K-20K cycle tests to get reliable metrics before declaring any improvement.
+Recommendation: Run 10K-20K cycle tests to get reliable metrics and investigate why Phase 42 had fewer total trades.
 
 ---
