@@ -2663,6 +2663,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0094: Phase 45: Low conf + High volume (data-driven) (2026-01-03 17:42)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 41.5% |
+| P&L | -0.2% |
+| Per-Trade P&L | $-0.19 |
+| Trades | 53 |
+| Run Dir | `models/EXP-0094_IDEA-143` |
+
+**Source**: PHASE45_ANALYSIS
+**Category**: entry
+**Hypothesis**: Low confidence + high volume = model uncertain but market active = best entries
+**Result**: FAIL
+
+---
+
+
 ### EXP-0093: HMM pure mode with strict thresholds (2026-01-02 17:01)
 
 | Metric | Quick Test (5K) |

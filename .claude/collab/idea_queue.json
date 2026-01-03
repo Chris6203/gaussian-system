@@ -9,7 +9,7 @@
       "description": "Analysis of 19K signals shows: conf<0.22 AND vol_spike>1.2 gives 7.9% signal win rate (+52% vs baseline). Combined with combo_dow base config (50% SL, 10% TP, skip Mon/Fri).",
       "hypothesis": "Low confidence + high volume = model uncertain but market active = best entries",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TT_STOP_LOSS_PCT": "50",
         "TT_TAKE_PROFIT_PCT": "10",
@@ -19,9 +19,10 @@
         "SKIP_MONDAY": "1",
         "SKIP_FRIDAY": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-03T17:22:12.185667"
+      "last_result": {
+        "exp_id": "EXP-0094",
+        "per_trade_pnl": -0.1932075471698113,
+        "win_rate": 41.5
       }
     },
     {
@@ -509,5 +510,5 @@
     }
   ],
   "next_id": 144,
-  "last_updated": "2026-01-03T17:22:12.185667"
+  "last_updated": "2026-01-03T17:42:23.932209"
 }
