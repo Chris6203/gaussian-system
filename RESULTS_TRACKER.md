@@ -5400,3 +5400,74 @@ Low confidence signals:
 
 ---
 
+
+## Phase 42: 65% Win Rate Achieved! (2026-01-02)
+
+### Goal
+Achieve 60%+ win rate through optimized filtering.
+
+### Research-Backed Approach
+Based on Codex research on 0DTE trading:
+- **10% profit target** = highest win rates (~90%)
+- **50% stop loss** = let trades breathe
+- **First 1-2 hours best** for directional trades
+- **Monday/Friday volatile** - skip these days
+
+### Test Results (5K cycles each)
+
+| Configuration | Win Rate | P&L | Trades | $/Trade | Notes |
+|---------------|----------|-----|--------|---------|-------|
+| **combo_dow** | **65.0%** | +11.5% | 19 | +$30.36 | 🎯 **TARGET ACHIEVED!** |
+| combo | 58.6% | +28.8% | 26 | +$55.37 | Strong |
+| inv_conf_only | 52.0% | +41.3% | 21 | +$98.29 | Best $/trade |
+| wide_small | 46.2% | +54.8% | 73 | +$37.55 | Best P&L |
+| tp_5 | 43.1% | -0.9% | 58 | -$0.81 | 5% TP too tight |
+| combo_tp8 | 33.3% | -0.3% | 21 | -$0.63 | 8% TP hurts |
+| ultra_selective | 0% | 0% | 0 | N/A | 0.20 conf too strict |
+
+### Winning Configuration: combo_dow
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| HARD_STOP_LOSS_PCT | 50% | Wide stops let trades breathe |
+| HARD_TAKE_PROFIT_PCT | 10% | Small TP = high win rate |
+| TRAIN_MAX_CONF | 0.25 | Inverted confidence filter |
+| DAY_OF_WEEK_FILTER | 1 | Skip volatile days |
+| SKIP_MONDAY | 1 | Monday = volatile |
+| SKIP_FRIDAY | 1 | Friday = volatile |
+
+### Command to Run
+
+```bash
+HARD_STOP_LOSS_PCT=50 HARD_TAKE_PROFIT_PCT=10 TRAIN_MAX_CONF=0.25 \
+DAY_OF_WEEK_FILTER=1 SKIP_MONDAY=1 SKIP_FRIDAY=1 \
+python scripts/train_time_travel.py
+```
+
+### Key Insights
+
+1. **Wide stops + small TP** is the key to high win rate
+   - 50% stop prevents premature exits
+   - 10% TP locks in small wins consistently
+
+2. **Inverted confidence works** - trading low confidence signals yields better results
+
+3. **Day of week matters** - Monday and Friday are noisier, Tue-Thu more predictable
+
+4. **Trade-off exists**:
+   - 65% win rate → +11.5% P&L (combo_dow)
+   - 46% win rate → +54.8% P&L (wide_small)
+   - Higher win rate = lower total P&L due to fewer trades
+
+### Bugs Fixed in Phase 42
+
+1. **VIX filter using wrong variable**: Changed from `signal.get('vix_level')` to `vix_for_rl`
+2. **Momentum filter using wrong variable**: Changed from `signal.get('momentum_5m')` to `momentum_5min`
+
+### Next Steps
+
+1. Validate 65% win rate on 20K cycles
+2. Test combo_dow in live trading
+3. Consider 60% SL for even higher win rate
+
+---

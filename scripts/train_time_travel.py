@@ -3198,7 +3198,8 @@ for idx, sim_time in enumerate(common_times):
                                 try:
                                     vix_min = float(os.environ.get('VIX_GOLDILOCKS_MIN', '15.0'))
                                     vix_max = float(os.environ.get('VIX_GOLDILOCKS_MAX', '22.0'))
-                                    current_vix = signal.get('vix_level', 0.0) if isinstance(signal, dict) else 20.0
+                                    # Use vix_for_rl which is already calculated earlier in this scope
+                                    current_vix = vix_for_rl if 'vix_for_rl' in dir() else (vix_price if vix_price else 18.0)
                                     if current_vix < vix_min:
                                         filter_ok = False
                                         filter_reason = f"vix_low ({current_vix:.1f} < {vix_min})"
@@ -3212,7 +3213,8 @@ for idx, sim_time in enumerate(common_times):
                             if filter_ok and os.environ.get('MOMENTUM_CONFIRM_FILTER', '0') == '1':
                                 try:
                                     mom_threshold = float(os.environ.get('MOMENTUM_MIN_STRENGTH', '0.001'))
-                                    mom_5m = signal.get('momentum_5m', 0.0) if isinstance(signal, dict) else 0.0
+                                    # Use momentum_5min which is already calculated in this scope
+                                    mom_5m = momentum_5min if 'momentum_5min' in dir() else 0.0
                                     is_call = action == 'BUY_CALLS'
                                     if is_call and mom_5m < mom_threshold:
                                         filter_ok = False
