@@ -5471,3 +5471,59 @@ python scripts/train_time_travel.py
 3. Consider 60% SL for even higher win rate
 
 ---
+
+## Phase 43: Attempts to Improve 65% Win Rate (2026-01-02)
+
+### Goal
+Improve beyond the 65% win rate achieved by combo_dow configuration.
+
+### Test Results (5K cycles each)
+
+| Configuration | Win Rate | P&L | Trades | Change |
+|---------------|----------|-----|--------|--------|
+| **combo_dow (baseline)** | **65.0%** | +11.5% | 19 | - |
+| tp12 (12% TP) | 47.1% | +22.1% | 17 | -18% |
+| vix_filter (+VIX 12-28) | 46.7% | -0.01% | 30 | -18% |
+| momentum (+momentum) | 46.2% | -5.7% | 13 | -19% |
+| tue_wed (Tue-Wed only) | 42.4% | +20.8% | 33 | -23% |
+| conf22 (conf<0.22) | 42.1% | +67.9% | 19 | -23% |
+| tp6_sl40 (6%TP/40%SL) | 40.0% | +2.9% | 10 | -25% |
+| tp15 (15% TP) | 30.4% | +43.9% | 23 | -35% |
+| tp8 (8% TP) | 28.6% | +47.7% | 29 | -36% |
+| wider_60 (60% SL) | 12.5% | +24.1% | 21 | -53% |
+
+### Key Findings
+
+1. **65% win rate is a local optimum** - No configuration tested improved on it
+2. **Higher TP hurts win rate** - 12% and 15% TP both reduced win rate
+3. **Lower TP also hurts** - 8% and 6% TP reduced win rate even more
+4. **Additional filters hurt** - VIX and momentum filters reduced win rate
+5. **More restrictive days hurt** - Tue-Wed only was worse than Tue-Wed-Thu
+6. **Stricter confidence hurts** - 0.22 max worse than 0.25 max
+7. **Wider stops hurt dramatically** - 60% SL was catastrophic (12.5% WR)
+
+### Optimal Configuration Confirmed
+
+```bash
+# Best Win Rate (65%) - combo_dow
+HARD_STOP_LOSS_PCT=50 HARD_TAKE_PROFIT_PCT=10 TRAIN_MAX_CONF=0.25 \
+DAY_OF_WEEK_FILTER=1 SKIP_MONDAY=1 SKIP_FRIDAY=1 \
+python scripts/train_time_travel.py
+```
+
+### Trade-off Analysis
+
+| Goal | Configuration | Win Rate | P&L |
+|------|---------------|----------|-----|
+| Max Win Rate | combo_dow | 65% | +11.5% |
+| Max P&L | conf22 | 42% | +67.9% |
+| Balanced | wide_small | 46% | +54.8% |
+
+### Next Steps
+
+To improve beyond 65% would require:
+1. Fundamental model improvements (better prediction accuracy)
+2. Different market/asset (not 0DTE SPY options)
+3. Different strategy (selling premium instead of buying)
+
+---
