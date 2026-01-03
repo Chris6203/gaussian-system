@@ -497,6 +497,13 @@ class UnifiedRLPolicy:
                 gate_tracker['high_volatility'] += 1
                 return self.HOLD, 0.85, {**details, 'reason': f'high_volatility ({state.hmm_volatility:.2f} >= {HMM_MAX_VOLATILITY})'}
 
+            # === VOLUME FILTER (Phase 45): Require active market ===
+            # Analysis shows vol_spike > 1.2 gives +14.5% higher win rate
+            MIN_VOLUME_SPIKE = float(os.environ.get('MIN_VOLUME_SPIKE', '0.5'))  # Default low, set to 1.2 for strict
+            if state.volume_spike < MIN_VOLUME_SPIKE:
+                gate_tracker['low_volume'] = gate_tracker.get('low_volume', 0) + 1
+                return self.HOLD, 0.85, {**details, 'reason': f'low_volume ({state.volume_spike:.2f} < {MIN_VOLUME_SPIKE})'}
+
             # Trade with strong HMM trend + neural confirmation
             if state.hmm_trend > HMM_STRONG_BULLISH:
                 # Strong bullish HMM - check neural agrees
