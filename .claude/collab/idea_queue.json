@@ -1,6 +1,30 @@
 {
   "ideas": [
     {
+      "id": "IDEA-143",
+      "source": "phase45_analysis",
+      "timestamp": "2026-01-03T17:21:32.707253",
+      "category": "entry",
+      "title": "Phase 45: Low conf + High volume (data-driven)",
+      "description": "Analysis of 19K signals shows: conf<0.22 AND vol_spike>1.2 gives 7.9% signal win rate (+52% vs baseline). Combined with combo_dow base config (50% SL, 10% TP, skip Mon/Fri).",
+      "hypothesis": "Low confidence + high volume = model uncertain but market active = best entries",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TT_STOP_LOSS_PCT": "50",
+        "TT_TAKE_PROFIT_PCT": "10",
+        "TRAIN_MAX_CONF": "0.22",
+        "MIN_VOLUME_SPIKE": "1.2",
+        "DAY_OF_WEEK_FILTER": "1",
+        "SKIP_MONDAY": "1",
+        "SKIP_FRIDAY": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-03T17:22:12.185667"
+      }
+    },
+    {
       "id": "IDEA-142",
       "source": "data_analysis",
       "timestamp": "2026-01-02T11:42:00.127138",
@@ -484,6 +508,6 @@
       }
     }
   ],
-  "next_id": 143,
-  "last_updated": "2026-01-02T22:38:39.445479"
+  "next_id": 144,
+  "last_updated": "2026-01-03T17:22:12.185667"
 }
