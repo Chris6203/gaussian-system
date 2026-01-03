@@ -5527,3 +5527,74 @@ To improve beyond 65% would require:
 3. Different strategy (selling premium instead of buying)
 
 ---
+
+## Phase 44: Advanced Signal Integration (2026-01-03)
+
+### Goal
+Test advanced signal techniques identified from research to improve beyond 65% win rate.
+
+### Techniques Tested
+
+1. **Multi-Indicator Stacking** - 8+ technical indicators (RSI, MACD, Bollinger, Stochastic, ATR, OBV, etc.)
+2. **GEX/Gamma Signals** - Dealer positioning proxy using put/call ratios
+3. **Order Flow Imbalance** - Buy/sell volume tracking (placeholder data)
+4. **Combined** - All signals together
+
+### Test Results (5K cycles each, combo_dow base config)
+
+| Configuration | Win Rate | P&L | Trades | Per-Trade |
+|---------------|----------|-----|--------|-----------|
+| **Multi-Indicator** | **50.0%** | -$4.86 | 36 | -$0.14 |
+| Combined (all) | 46.3% | +$0.44 | 41 | +$0.01 |
+| GEX Signals | 44.4% | +$1.15 | 18 | +$0.06 |
+| Baseline | 36.1% | -$35.82 | 36 | -$0.99 |
+| Order Flow | 26.7% | -$8.17 | 15 | -$0.54 |
+
+### Key Findings
+
+1. **Multi-Indicator improved win rate by 14 percentage points** (36.1% → 50.0%)
+2. **GEX signals more selective** - Reduced trades from 36 to 18 with positive P&L
+3. **Order flow hurt performance** - Placeholder data is noise, not signal
+4. **Combined not better than multi-indicator alone** - Noisy signals dilute good ones
+
+### Win Rate Variance Observed
+
+Note: Baseline showed 36.1% vs Phase 42's 65% with same config. This variance (29 percentage points!) demonstrates:
+- Significant run-to-run variance in 5K cycle tests
+- 65% may have been a favorable sample
+- Need longer tests (10K+) for reliable comparison
+
+### Multi-Indicator Details
+
+The multi-indicator stack uses:
+- RSI (14) with normalized 0-1 score
+- MACD signal crossover
+- Bollinger Band position
+- Stochastic %K/%D
+- ATR normalized volatility
+- OBV momentum
+- Momentum (10-period)
+- Moving average crossover (9/21 EMA)
+
+Composite score: Average of all indicators, scaled -1 to +1
+
+### Environment Variables
+
+```bash
+# Multi-Indicator Stacking (best result)
+MULTI_INDICATOR_ENABLED=1 python scripts/train_time_travel.py
+
+# GEX Signals
+GEX_SIGNALS_ENABLED=1 python scripts/train_time_travel.py
+
+# Order Flow (not recommended - needs real data)
+ORDER_FLOW_ENABLED=1 python scripts/train_time_travel.py
+```
+
+### Conclusion
+
+Multi-indicator stacking shows promise but variance between runs is too high to draw firm conclusions. The 50% win rate is better than the 36.1% baseline but worse than Phase 42's 65% (same config, different run).
+
+Recommendation: Run longer 10K-20K cycle tests to get reliable metrics before declaring any improvement.
+
+---

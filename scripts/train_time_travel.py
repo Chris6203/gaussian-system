@@ -42,6 +42,20 @@ try:
 except ImportError:
     add_indicators_to_signal = None
 
+# Phase 44: Ensemble predictor and advanced signal generators
+try:
+    from bot_modules.ensemble_predictor import (
+        EnsemblePredictor, GammaExposureSignals, OrderFlowSignals,
+        MultiIndicatorStack, create_ensemble_predictor, create_signal_generators
+    )
+    ENSEMBLE_AVAILABLE = True
+except ImportError:
+    ENSEMBLE_AVAILABLE = False
+    EnsemblePredictor = None
+    GammaExposureSignals = None
+    OrderFlowSignals = None
+    MultiIndicatorStack = None
+
 # Set up comprehensive logging for both console and file (for dashboard)
 log_file = os.environ.get('TRAINING_LOG_FILE')
 if log_file:
@@ -1110,6 +1124,40 @@ run_name = os.path.basename(run_dir)
 if hasattr(bot, "paper_trader") and bot.paper_trader is not None:
     bot.paper_trader.set_run_id(run_name)
     logger.info(f"[TRAIN] Paper trader run_id set to: {run_name}")
+
+# Phase 44: Initialize ensemble predictor and signal generators
+phase44_ensemble = None
+phase44_gex_signals = None
+phase44_order_flow = None
+phase44_multi_indicator = None
+
+if ENSEMBLE_AVAILABLE and os.environ.get('ENSEMBLE_ENABLED', '0') == '1':
+    try:
+        phase44_ensemble = create_ensemble_predictor(feature_dim=50)
+        logger.info("[PHASE44] Ensemble predictor initialized")
+    except Exception as e:
+        logger.warning(f"[PHASE44] Failed to create ensemble predictor: {e}")
+
+if ENSEMBLE_AVAILABLE and os.environ.get('GEX_SIGNALS_ENABLED', '0') == '1':
+    try:
+        phase44_gex_signals = GammaExposureSignals()
+        logger.info("[PHASE44] GEX signal generator initialized")
+    except Exception as e:
+        logger.warning(f"[PHASE44] Failed to create GEX signals: {e}")
+
+if ENSEMBLE_AVAILABLE and os.environ.get('ORDER_FLOW_ENABLED', '0') == '1':
+    try:
+        phase44_order_flow = OrderFlowSignals()
+        logger.info("[PHASE44] Order flow signal generator initialized")
+    except Exception as e:
+        logger.warning(f"[PHASE44] Failed to create order flow signals: {e}")
+
+if ENSEMBLE_AVAILABLE and os.environ.get('MULTI_INDICATOR_ENABLED', '0') == '1':
+    try:
+        phase44_multi_indicator = MultiIndicatorStack()
+        logger.info("[PHASE44] Multi-indicator stack initialized")
+    except Exception as e:
+        logger.warning(f"[PHASE44] Failed to create multi-indicator stack: {e}")
 
 # Training capacity: allow more concurrent paper positions so learning isn't blocked by max_positions.
 try:
@@ -3231,14 +3279,92 @@ for idx, sim_time in enumerate(common_times):
                                     weekday = sim_time.weekday()  # 0=Mon, 4=Fri
                                     skip_monday = os.environ.get('SKIP_MONDAY', '1') == '1'
                                     skip_friday = os.environ.get('SKIP_FRIDAY', '1') == '1'
+                                    skip_thursday = os.environ.get('SKIP_THURSDAY', '0') == '1'
                                     if skip_monday and weekday == 0:
                                         filter_ok = False
                                         filter_reason = "skip_monday"
                                     elif skip_friday and weekday == 4:
                                         filter_ok = False
                                         filter_reason = "skip_friday"
+                                    elif skip_thursday and weekday == 3:
+                                        filter_ok = False
+                                        filter_reason = "skip_thursday"
                                 except Exception:
                                     pass
+
+                            # PHASE 44: Advanced signal integration
+                            phase44_boost = 0.0
+                            phase44_veto = False
+
+                            # Multi-Indicator Stack: Boost confidence if composite agrees
+                            if filter_ok and phase44_multi_indicator is not None:
+                                try:
+                                    # Get recent prices for indicators
+                                    price_history = getattr(bot, '_price_history', [])
+                                    if len(price_history) < 30:
+                                        price_history = [spy_price] * 30  # Fallback
+                                    indicators = phase44_multi_indicator.calculate_indicators(
+                                        np.array(price_history[-30:])
+                                    )
+                                    composite = indicators.get('composite', 0)
+                                    is_call = action == 'BUY_CALLS'
+
+                                    # Boost if indicators agree with direction
+                                    if (is_call and composite > 0.3) or (not is_call and composite < -0.3):
+                                        phase44_boost += 0.05  # 5% boost
+                                    # Veto if strong disagreement
+                                    elif (is_call and composite < -0.5) or (not is_call and composite > 0.5):
+                                        phase44_veto = True
+                                        filter_ok = False
+                                        filter_reason = f"multi_ind_veto (composite={composite:.2f})"
+                                except Exception:
+                                    pass
+
+                            # GEX Signals: Adjust based on dealer positioning
+                            if filter_ok and phase44_gex_signals is not None:
+                                try:
+                                    # Use available options data (simplified)
+                                    gex_data = phase44_gex_signals.calculate_gex_proxy(
+                                        call_volume=1000, put_volume=1000,  # Placeholders
+                                        call_oi=5000, put_oi=5000,
+                                        spot_price=spy_price,
+                                        vix=vix_for_rl if 'vix_for_rl' in dir() else 18.0
+                                    )
+                                    dealer_gamma = gex_data.get('dealer_gamma', 0.5)
+                                    is_call = action == 'BUY_CALLS'
+
+                                    # Long gamma = expect mean reversion (fade extremes)
+                                    # Short gamma = expect trend (follow direction)
+                                    if dealer_gamma > 0.6:  # Dealers long gamma
+                                        # Mean reversion likely - boost contrarian trades
+                                        if (is_call and momentum_5min < 0) or (not is_call and momentum_5min > 0):
+                                            phase44_boost += 0.03
+                                    elif dealer_gamma < 0.4:  # Dealers short gamma
+                                        # Trend likely - boost momentum trades
+                                        if (is_call and momentum_5min > 0) or (not is_call and momentum_5min < 0):
+                                            phase44_boost += 0.03
+                                except Exception:
+                                    pass
+
+                            # Order Flow: Boost if flow agrees with direction
+                            if filter_ok and phase44_order_flow is not None:
+                                try:
+                                    flow_data = phase44_order_flow.calculate_imbalance(
+                                        price=spy_price,
+                                        volume=1000000  # Placeholder
+                                    )
+                                    flow_imb = flow_data.get('flow_imbalance', 0)
+                                    is_call = action == 'BUY_CALLS'
+
+                                    # Boost if flow agrees
+                                    if (is_call and flow_imb > 0.3) or (not is_call and flow_imb < -0.3):
+                                        phase44_boost += 0.04
+                                except Exception:
+                                    pass
+
+                            # Apply Phase 44 boost to confidence (for logging)
+                            if phase44_boost > 0:
+                                print(f"   [PHASE44] Signal boost: +{phase44_boost:.1%}")
 
                             if conf_ok and edge_ok and time_ok and filter_ok:
                                 should_trade = True
