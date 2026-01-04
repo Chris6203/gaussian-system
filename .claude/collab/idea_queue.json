@@ -1197,7 +1197,7 @@
       "description": "Restrict trading to 10:00 AM - 2:00 PM. Avoid open/close volatility.",
       "hypothesis": "Mid-day is more predictable, trends develop better",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
@@ -1205,9 +1205,10 @@
         "TRADING_END_HOUR": "14",
         "USE_ENTROPY_CONFIDENCE": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T12:58:10.532431"
+      "last_result": {
+        "exp_id": "EXP-0123",
+        "per_trade_pnl": null,
+        "win_rate": 34.8
       }
     },
     {
@@ -1219,16 +1220,17 @@
       "description": "Size positions based on entropy: Low entropy (confident) = full size, High entropy = half size",
       "hypothesis": "Bet more when model is confident, less when uncertain",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
         "USE_ENTROPY_CONFIDENCE": "1",
         "ENTROPY_POSITION_SIZING": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T12:58:10.532431"
+      "last_result": {
+        "exp_id": "EXP-0124",
+        "per_trade_pnl": null,
+        "win_rate": 36.2
       }
     },
     {
@@ -1240,16 +1242,17 @@
       "description": "Combine tight stop (-5%) with wide TP (+25%). Cut losers fast, let winners run.",
       "hypothesis": "Asymmetric risk/reward in our favor",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "5",
         "TT_TAKE_PROFIT_PCT": "25",
         "USE_ENTROPY_CONFIDENCE": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T12:58:10.532431"
+      "last_result": {
+        "exp_id": "EXP-0125",
+        "per_trade_pnl": -0.6244444444444445,
+        "win_rate": 33.3
       }
     },
     {
@@ -1261,16 +1264,17 @@
       "description": "Only enter when volume is >1.5x average. High volume = real moves.",
       "hypothesis": "High volume confirms direction, low volume = fake moves",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
         "MIN_VOLUME_MULTIPLE": "1.5",
         "USE_ENTROPY_CONFIDENCE": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T12:58:10.532431"
+      "last_result": {
+        "exp_id": "EXP-0126",
+        "per_trade_pnl": -0.6244444444444445,
+        "win_rate": 33.3
       }
     },
     {
@@ -1313,5 +1317,5 @@
     }
   ],
   "next_id": 182,
-  "last_updated": "2026-01-04T12:58:10.532431"
+  "last_updated": "2026-01-04T13:17:42.199945"
 }

@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0123: Only trade 10AM-2PM (optimal hours) (2026-01-04 13:17)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.8% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0123_IDEA-176` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: entry
+**Hypothesis**: Mid-day is more predictable, trends develop better
+**Result**: ERROR
+
+---
+
+### EXP-0124: Entropy-based position sizing (2026-01-04 13:17)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0124_IDEA-177` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: risk
+**Hypothesis**: Bet more when model is confident, less when uncertain
+**Result**: ERROR
+
+---
+
+### EXP-0125: Tighter stop -5% with wide TP +25% (2026-01-04 13:17)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 33.3% |
+| P&L | -0.56% |
+| Per-Trade P&L | $-0.62 |
+| Trades | 45 |
+| Run Dir | `models/EXP-0125_IDEA-178` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: exit
+**Hypothesis**: Asymmetric risk/reward in our favor
+**Result**: FAIL
+
+---
+
+### EXP-0126: Volume spike filter (only high volume) (2026-01-04 13:17)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 33.3% |
+| P&L | -0.56% |
+| Per-Trade P&L | $-0.62 |
+| Trades | 45 |
+| Run Dir | `models/EXP-0126_IDEA-179` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: entry
+**Hypothesis**: High volume confirms direction, low volume = fake moves
+**Result**: FAIL
+
+---
+
+
 ### EXP-0120: Trailing stop instead of fixed TP (2026-01-04 12:57)
 
 | Metric | Quick Test (5K) |
