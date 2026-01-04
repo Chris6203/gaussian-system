@@ -1055,8 +1055,43 @@
         "per_trade_pnl": null,
         "win_rate": 40.3
       }
+    },
+    {
+      "id": "IDEA-170",
+      "source": "combo_test",
+      "timestamp": "2026-01-04T11:40:00.000000",
+      "category": "combined",
+      "title": "COMBO: TP +25% + Entropy Confidence (best P&L + best WR)",
+      "description": "Combine TP +25% (+91.44% P&L, 40.3% OOS WR) with entropy confidence (+9.2pp WR boost). Target: 49%+ WR with high P&L.",
+      "hypothesis": "Wide TP for big winners + entropy confidence for better entry selection = best of both",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "validation_plan": "Train and test - expect ~49% WR with high P&L"
+    },
+    {
+      "id": "IDEA-171",
+      "source": "combo_test",
+      "timestamp": "2026-01-04T11:40:00.000000",
+      "category": "combined",
+      "title": "COMBO: TP +25% + Entropy + V3 Transformer",
+      "description": "Triple combo: V3 architecture + Transformer + TP +25% + Entropy confidence",
+      "hypothesis": "Best architecture + best encoder + best exits + best entry filter",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "validation_plan": "Train and test - combine all winning elements"
     }
   ],
-  "next_id": 170,
-  "last_updated": "2026-01-04T04:47:04.290413"
+  "next_id": 172,
+  "last_updated": "2026-01-04T11:40:00.000000"
 }
