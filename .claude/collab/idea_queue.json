@@ -1823,11 +1823,15 @@
       "description": "Use VIX as sentiment indicator. VIX > 25 = extreme fear (favor calls), VIX < 12 = complacency (favor puts or no trade). Already have VIX data.",
       "hypothesis": "VIX extremes are reliable contrarian signals - high VIX = oversold, low VIX = overbought",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "USE_VIX_SENTIMENT": "1",
         "VIX_EXTREME_FEAR": "25",
         "VIX_COMPLACENCY": "12"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T15:29:52.379666"
       }
     },
     {
@@ -1839,16 +1843,20 @@
       "description": "Triple combo: (1) PCR > 1.2 for calls, PCR < 0.7 for puts, (2) VIX alignment, (3) Trailing stop exit. Only trade on sentiment confluence.",
       "hypothesis": "Multiple sentiment signals aligning = higher conviction trades",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
         "TRAILING_STOP_PCT": "5",
         "USE_PCR_FILTER": "1",
         "USE_VIX_SENTIMENT": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T15:29:52.379666"
       }
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T15:28:50.646878"
+  "last_updated": "2026-01-04T15:29:52.379666"
 }
