@@ -7047,7 +7047,18 @@ class UnifiedOptionsBot:
                             elif float(signal.get("confidence", 0.0)) < float(self.min_confidence_threshold):
                                 rejection_reasons.append("confidence_below_threshold")
                             else:
-                                trade_placed = bool(self.execute_trade(signal, symbol, signal.get("current_price", 0.0)))
+                                # Signal type filter - block strategies that historically lose money
+                                blocked_strategies = os.environ.get("BLOCK_SIGNAL_STRATEGIES", "").strip()
+                                if blocked_strategies:
+                                    blocked_list = [s.strip().upper() for s in blocked_strategies.split(",") if s.strip()]
+                                    signal_strategy = str(signal.get("strategy", "")).upper()
+                                    if any(blocked in signal_strategy for blocked in blocked_list):
+                                        rejection_reasons.append(f"blocked_strategy:{signal_strategy}")
+                                        trade_placed = False
+                                    else:
+                                        trade_placed = bool(self.execute_trade(signal, symbol, signal.get("current_price", 0.0)))
+                                else:
+                                    trade_placed = bool(self.execute_trade(signal, symbol, signal.get("current_price", 0.0)))
                                 if trade_placed:
                                     executed_action = proposed_action
                                 else:
