@@ -754,12 +754,16 @@
       "title": "Aggressive: -5%/+8%/20min with Transformer",
       "hypothesis": "Quick trades with tight risk control",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "5",
         "TT_TAKE_PROFIT_PCT": "8",
         "TT_MAX_HOLD_MINUTES": "20"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:46:46.537871"
       }
     },
     {
@@ -770,12 +774,16 @@
       "title": "Patient: -12%/+20%/60min with Transformer",
       "hypothesis": "Let trades develop fully",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "12",
         "TT_TAKE_PROFIT_PCT": "20",
         "TT_MAX_HOLD_MINUTES": "60"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:46:46.537871"
       }
     },
     {
@@ -786,11 +794,15 @@
       "title": "Relaxed HMM 0.60/0.40 with Transformer",
       "hypothesis": "More trades might improve total P&L",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "HMM_STRONG_BULLISH": "0.60",
         "HMM_STRONG_BEARISH": "0.40"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:46:46.537871"
       }
     },
     {
@@ -801,11 +813,15 @@
       "title": "Very strict HMM 0.80/0.20 with Transformer",
       "hypothesis": "Only strongest trends = highest quality",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "HMM_STRONG_BULLISH": "0.80",
         "HMM_STRONG_BEARISH": "0.20"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:46:46.537871"
       }
     },
     {
@@ -967,5 +983,5 @@
     }
   ],
   "next_id": 169,
-  "last_updated": "2026-01-04T02:45:45.034714"
+  "last_updated": "2026-01-04T02:46:46.537871"
 }
