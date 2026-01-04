@@ -1431,7 +1431,7 @@
       "description": "Combine trailing stop with tighter -5% stop loss",
       "hypothesis": "Cut losers fast + let winners run = asymmetric edge",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "5",
@@ -1439,6 +1439,10 @@
         "TRAILING_STOP_ACTIVATION": "10",
         "TRAILING_STOP_DISTANCE": "5",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:00:14.292831"
       }
     },
     {
@@ -1450,7 +1454,7 @@
       "description": "Combine trailing stop with V3 multi-horizon predictor",
       "hypothesis": "Better predictions + trailing stop = more winners that run",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
@@ -1458,6 +1462,10 @@
         "TRAILING_STOP_ACTIVATION": "10",
         "TRAILING_STOP_DISTANCE": "5",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:00:14.292831"
       }
     },
     {
@@ -1469,7 +1477,7 @@
       "description": "Combine trailing stop with optimal trading hours",
       "hypothesis": "Best exit strategy + best time = compounded edge",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1478,6 +1486,10 @@
         "USE_ENTROPY_CONFIDENCE": "1",
         "TRADING_START_HOUR": "10",
         "TRADING_END_HOUR": "14"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:00:14.292831"
       }
     },
     {
@@ -1489,7 +1501,7 @@
       "description": "Combine trailing stop with stricter HMM filtering",
       "hypothesis": "Higher quality entries + trailing stop = fewer but bigger winners",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1498,6 +1510,10 @@
         "USE_ENTROPY_CONFIDENCE": "1",
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:00:14.292831"
       }
     },
     {
@@ -1770,5 +1786,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T13:59:12.954078"
+  "last_updated": "2026-01-04T14:00:14.292831"
 }
