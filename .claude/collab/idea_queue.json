@@ -896,8 +896,72 @@
         "TT_TAKE_PROFIT_PCT": "10",
         "TT_MAX_HOLD_MINUTES": "20"
       }
+    },
+    {
+      "id": "IDEA-166",
+      "source": "oos_validation",
+      "timestamp": "2026-01-04T02:35:00.000000",
+      "category": "validation",
+      "title": "OOS: V3+Transformer on December (IDEA-144 winner)",
+      "description": "Load pretrained model from IDEA-144 (48.1% WR, +12% P&L) and validate on December OOS period",
+      "hypothesis": "V3+Transformer showed best WR in training, validate on unseen data",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer",
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_MODEL_PATH": "models/EXP-0095_IDEA-144/state",
+        "TRAINING_START_DATE": "2025-12-01",
+        "TRAINING_END_DATE": "2025-12-20",
+        "TT_MAX_CYCLES": "3500"
+      },
+      "validation_plan": "Test on December 2025 (unseen data)"
+    },
+    {
+      "id": "IDEA-167",
+      "source": "oos_validation",
+      "timestamp": "2026-01-04T02:35:00.000000",
+      "category": "validation",
+      "title": "OOS: Wider TP (+20%) on December (IDEA-146 winner)",
+      "description": "Load pretrained model from IDEA-146 (+66.6% P&L, +$74/trade) and validate on December OOS period",
+      "hypothesis": "Wider TP showed best P&L in training, validate on unseen data",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "20",
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_MODEL_PATH": "models/EXP-0097_IDEA-146/state",
+        "TRAINING_START_DATE": "2025-12-01",
+        "TRAINING_END_DATE": "2025-12-20",
+        "TT_MAX_CYCLES": "3500"
+      },
+      "validation_plan": "Test on December 2025 (unseen data)"
+    },
+    {
+      "id": "IDEA-168",
+      "source": "oos_validation",
+      "timestamp": "2026-01-04T02:35:00.000000",
+      "category": "validation",
+      "title": "OOS: Symmetric exits on December (IDEA-145)",
+      "description": "Load pretrained model from IDEA-145 (+17.6% P&L) and validate on December OOS period",
+      "hypothesis": "Symmetric exits showed solid P&L, validate on unseen data",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "10",
+        "TT_TAKE_PROFIT_PCT": "10",
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_MODEL_PATH": "models/EXP-0096_IDEA-145/state",
+        "TRAINING_START_DATE": "2025-12-01",
+        "TRAINING_END_DATE": "2025-12-20",
+        "TT_MAX_CYCLES": "3500"
+      },
+      "validation_plan": "Test on December 2025 (unseen data)"
     }
   ],
-  "next_id": 166,
-  "last_updated": "2026-01-04T02:24:28.536158"
+  "next_id": 169,
+  "last_updated": "2026-01-04T02:35:00.000000"
 }
