@@ -1529,7 +1529,7 @@
       "description": "Trailing + V3 + Entropy + Time filter + Strict HMM",
       "hypothesis": "Stack all winning elements with trailing stop",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
@@ -1542,6 +1542,10 @@
         "TRADING_END_HOUR": "14",
         "HMM_STRONG_BULLISH": "0.70",
         "HMM_STRONG_BEARISH": "0.30"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:22:37.221778"
       }
     },
     {
@@ -1553,7 +1557,7 @@
       "description": "Analysis shows 11AM-1PM has 8-9% WR vs 0.3-0.7% in afternoon. Massive edge.",
       "hypothesis": "Midday has cleaner trends, afternoon is choppy reversals",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1562,6 +1566,10 @@
         "USE_ENTROPY_CONFIDENCE": "1",
         "TRADING_START_HOUR": "11",
         "TRADING_END_HOUR": "13"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:22:37.221778"
       }
     },
     {
@@ -1573,7 +1581,7 @@
       "description": "Winners have 1.24 vol spike vs 0.94 losers. Filter >1.3 gives +2.8pp WR.",
       "hypothesis": "High volume confirms real moves, low volume = fake breakouts",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1581,6 +1589,10 @@
         "TRAILING_STOP_DISTANCE": "5",
         "USE_ENTROPY_CONFIDENCE": "1",
         "MIN_VOLUME_SPIKE": "1.3"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:22:37.221778"
       }
     },
     {
@@ -1592,7 +1604,7 @@
       "description": "Afternoon hours have near-zero win rate. Block all trades 1PM-3PM.",
       "hypothesis": "Afternoon reversals kill trades - just avoid them",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1602,6 +1614,10 @@
         "BLOCK_AFTERNOON": "1",
         "AFTERNOON_START": "13",
         "AFTERNOON_END": "15"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:22:37.221778"
       }
     },
     {
@@ -1790,5 +1806,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T14:21:35.611327"
+  "last_updated": "2026-01-04T14:22:37.221778"
 }
