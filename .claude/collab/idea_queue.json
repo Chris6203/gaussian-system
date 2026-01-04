@@ -836,11 +836,15 @@
       "title": "V3 + Transformer + 15min horizon",
       "hypothesis": "Match prediction to hold time",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
         "V3_DEFAULT_HORIZON": "15"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T03:07:45.005980"
       }
     },
     {
@@ -851,11 +855,15 @@
       "title": "V3 + Transformer + 30min horizon",
       "hypothesis": "Longer horizon for bigger moves",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
         "V3_DEFAULT_HORIZON": "30"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T03:07:45.005980"
       }
     },
     {
@@ -866,10 +874,14 @@
       "title": "Transformer 15K cycles",
       "hypothesis": "Optimal training length between 10K and 20K",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_MAX_CYCLES": "15000"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T03:07:45.005980"
       }
     },
     {
@@ -880,10 +892,14 @@
       "title": "Transformer with dropout 0.2",
       "hypothesis": "More dropout = less overfitting",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "DROPOUT_RATE": "0.2"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T03:07:45.005980"
       }
     },
     {
@@ -1008,5 +1024,5 @@
     }
   ],
   "next_id": 170,
-  "last_updated": "2026-01-04T03:06:43.571122"
+  "last_updated": "2026-01-04T03:07:45.005980"
 }
