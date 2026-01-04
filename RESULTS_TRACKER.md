@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0148: COMBO: Trailing Stop + PCR Sentiment Filter (2026-01-04 15:28)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0148_IDEA-201` |
+
+**Source**: USER_SUGGESTION
+**Category**: combo
+**Hypothesis**: PCR filter will cut bad trades while trailing stop lets winners run
+**Result**: FAIL
+
+---
+
+### EXP-0146: SENTIMENT: Fear & Greed Index (CNN) (2026-01-04 15:28)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0146_IDEA-199` |
+
+**Source**: USER_SUGGESTION
+**Category**: features
+**Hypothesis**: Extreme sentiment = reversal opportunities. Fear = buy, Greed = sell
+**Result**: FAIL
+
+---
+
+### EXP-0145: SENTIMENT: Alpha Vantage News Sentiment API (2026-01-04 15:28)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 49.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 52 |
+| Run Dir | `models/EXP-0145_IDEA-198` |
+
+**Source**: USER_SUGGESTION
+**Category**: features
+**Hypothesis**: News sentiment provides leading indicator - positive news + bullish HMM = higher win rate
+**Result**: ERROR
+
+---
+
+### EXP-0147: SENTIMENT: Enhanced Put/Call Ratio (already have data) (2026-01-04 15:28)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0147_IDEA-200` |
+
+**Source**: USER_SUGGESTION
+**Category**: features
+**Hypothesis**: Extreme PCR is a reliable contrarian indicator - already have this data, just need to use it better
+**Result**: FAIL
+
+---
+
+
 ### EXP-0142: DATA-DRIVEN: Low confidence filter (< 0.25) (2026-01-04 15:06)
 
 | Metric | Quick Test (5K) |
