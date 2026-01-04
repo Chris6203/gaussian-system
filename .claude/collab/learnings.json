@@ -55,6 +55,38 @@
       "evidence": "User-reported: Walk-forward validation with 3-month training window",
       "implications": ["Use LOAD_PRETRAINED=1", "Periodically retrain on recent data"],
       "experiments": ["jerry_baseline_pretrained"]
+    },
+    {
+      "id": "LEARN-008",
+      "date": "2026-01-02",
+      "insight": "TRANSFORMER temporal encoder generalizes best to out-of-sample data",
+      "evidence": "Phase 35: Transformer +32.65% Dec P&L vs V3 -3.34% vs TCN 20K pretrain -3.95%",
+      "implications": ["Use TEMPORAL_ENCODER=transformer for production", "TCN overfits to training data"],
+      "experiments": ["exp35_transformer", "exp35_v3_multi", "pretrain_20k_sept_nov"]
+    },
+    {
+      "id": "LEARN-009",
+      "date": "2026-01-02",
+      "insight": "Training P&L does NOT predict out-of-sample performance",
+      "evidence": "V3: +3119% training, -3.34% Dec OOS. 20K TCN: +3753% training, -3.95% Dec OOS",
+      "implications": ["ALWAYS validate on out-of-sample period before deployment", "Training P&L is meaningless"],
+      "experiments": ["exp35_v3_multi", "pretrain_20k_sept_nov", "exp35_v3_dec_test", "pretrain_20k_dec_test"]
+    },
+    {
+      "id": "LEARN-010",
+      "date": "2026-01-02",
+      "insight": "The 59.8% win rate from dec_validation_v2 is NOT REPRODUCIBLE",
+      "evidence": "20K pretrain on Sept-Nov achieved only 18.4% WR on December (worse than random)",
+      "implications": ["Stop trying to reproduce dec_validation_v2", "Focus on Transformer which actually generalizes"],
+      "experiments": ["pretrain_20k_sept_nov", "pretrain_20k_dec_test"]
+    },
+    {
+      "id": "LEARN-011",
+      "date": "2026-01-02",
+      "insight": "Longer training makes model MORE selective but with WRONG predictions",
+      "evidence": "20K pretrain: 38 trades from 3412 signals (1.1% rate) but 18.4% WR",
+      "implications": ["Long training != better predictions", "Conservative != correct"],
+      "experiments": ["pretrain_20k_dec_test"]
     }
   ],
   "failed_approaches": [
@@ -83,29 +115,44 @@
       "experiments": ["HMM+Neural 5K", "HMM+Neural 20K"],
       "do_not_retry": false,
       "note": "Might work with better neural model"
+    },
+    {
+      "approach": "V3 Multi-Horizon with TCN (long training)",
+      "reason": "High training P&L (+3119%) but loses money on December OOS (-3.34%)",
+      "experiments": ["exp35_v3_multi", "exp35_v3_dec_test"],
+      "do_not_retry": false,
+      "note": "V3 architecture is good, just needs Transformer encoder"
+    },
+    {
+      "approach": "20K+ pretrain to reproduce dec_validation_v2",
+      "reason": "Long training makes model selective (1% trade rate) but predictions are WRONG (18.4% WR)",
+      "experiments": ["pretrain_20k_sept_nov", "pretrain_20k_dec_test"],
+      "do_not_retry": true
     }
   ],
   "best_configuration": {
-    "name": "Dec 2025 Pretrained (CURRENT BEST)",
-    "run_dir": "models/dec_validation_v2",
-    "notes": "Pretrained model on 3 months data, tested on Dec 2025",
-    "test_period": "2025-12-01 to 2025-12-11",
-    "result": {"win_rate": 59.8, "per_trade_pnl": 338.86, "total_pnl_pct": 413.41, "trades": 61},
-    "validated_cycles": 2995,
-    "needs_investigation": "Find exact config that produced this result"
+    "name": "Transformer 10K (CURRENT BEST - VALIDATED OOS)",
+    "run_dir": "models/exp35_transformer",
+    "notes": "Transformer temporal encoder, 10K training on Sept-Nov, validated on December OOS",
+    "training_period": "2025-09-01 to 2025-11-30",
+    "test_period": "2025-12-01 to 2025-12-15",
+    "training_result": {"win_rate": 35.8, "pnl_pct": 2777, "trades": 1706},
+    "oos_result": {"win_rate": 27.4, "pnl_pct": 32.65, "trades": 61},
+    "validated_cycles": 3417,
+    "env_vars": {"TEMPORAL_ENCODER": "transformer"},
+    "why_best": "Only model that shows positive P&L on out-of-sample December data"
   },
   "previous_best": {
-    "name": "Bandit Baseline",
-    "entry_controller": "bandit",
-    "hmm_thresholds": {"bullish": 0.70, "bearish": 0.30, "confidence": 0.70},
-    "exits": {"stop_loss": -8, "take_profit": 12, "max_hold_minutes": 45},
-    "result": {"win_rate": 40.9, "per_trade_pnl": 1.40, "total_pnl_pct": 85},
-    "validated_cycles": 23751
+    "name": "Dec 2025 Pretrained (NOT REPRODUCIBLE)",
+    "run_dir": "models/dec_validation_v2",
+    "notes": "Original model with 59.8% WR - specific weights are irreplaceable",
+    "result": {"win_rate": 59.8, "per_trade_pnl": 338.86, "total_pnl_pct": 413.41, "trades": 61},
+    "status": "DEPRECATED - Cannot be reproduced through retraining"
   },
   "hardware": {
     "gpus": "2x Tesla P40 (48GB VRAM total)",
     "parallel_experiments": 4,
     "note": "Can run 4 experiments in parallel for faster iteration"
   },
-  "last_updated": "2025-12-28T00:00:00Z"
+  "last_updated": "2026-01-02T11:00:00Z"
 }

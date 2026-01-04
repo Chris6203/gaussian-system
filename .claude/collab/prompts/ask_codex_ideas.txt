@@ -1,20 +1,31 @@
 You are an AI trading system architect reviewing the Gaussian Options Trading Bot.
 
-CURRENT BEST CONFIGURATION:
-- Method: 3-month pretrained predictor, tested on current month (walk-forward)
-- Entry: Bandit mode (HMM + Neural confirmation)
-- HMM thresholds: trend > 0.70 (bullish) or < 0.30 (bearish), confidence > 0.70
+CURRENT BEST CONFIGURATION (VALIDATED OOS):
+- Temporal Encoder: TRANSFORMER (not TCN!)
+- Training: 10K cycles on Sept-Nov 2025
+- Entry: Bandit mode (HMM-based)
 - Exit: -8% stop loss, +12% take profit, 45-minute max hold
-- **BEST Result: 59.8% win rate, +$338.86 per-trade P&L, +413% total P&L**
+- **Training Result: +2777% P&L, 35.8% WR, 1706 trades**
+- **December OOS Result: +32.65% P&L, 27.4% WR, 61 trades**
+- Env var: TEMPORAL_ENCODER=transformer
 
-BASELINE (without pretraining):
-- 40.9% win rate, +$1.40 per-trade P&L, +85% total P&L
+CRITICAL LEARNINGS (DO NOT VIOLATE):
+1. Training P&L does NOT predict OOS performance
+2. ALWAYS validate on out-of-sample period before deployment
+3. Transformer encoder generalizes better than TCN/LSTM
+4. The 59.8% WR from dec_validation_v2 is NOT reproducible - stop trying
+5. Longer training (20K+) makes model selective but with WRONG predictions
 
-KNOWN ISSUES:
-1. Exit ratio asymmetry (-8%/+12%) requires 40% win rate just to break even
-2. Prediction horizon mismatch (predicting 15min but holding 45min)
-3. Neural predictions are unreliable (~50% accuracy) - hence HMM-only works better
-4. Transformer architecture implemented but untested
+FAILED APPROACHES (DO NOT RETRY):
+- 20K+ pretrain to get conservative predictions (18.4% WR - worse than random)
+- Dynamic exit evaluator (cuts positions too early)
+- Contrarian mode (catches fake reversals)
+- V3 Multi-Horizon with TCN (overfits, loses OOS)
+
+KNOWN ISSUES TO SOLVE:
+1. Exit ratio asymmetry (-8%/+12%) requires 40% WR to break even
+2. Prediction horizon (15min) mismatches hold time (45min)
+3. Win rate drops ~8% from training to OOS (35% → 27%)
 
 KEY LEARNINGS (DO NOT SUGGEST THESE AGAIN):
 {INSERT_LEARNINGS}
@@ -26,28 +37,30 @@ HARDWARE AVAILABLE:
 - 2x Tesla P40 GPUs (48GB total VRAM)
 - Can run 4 experiments in parallel
 
-Please suggest 3-5 NEW improvement ideas across these categories:
-1. Exit strategy (stop loss %, take profit %, max hold time, trailing stops)
-2. Entry strategy (HMM thresholds, confidence requirements)
-3. Architecture changes (temporal encoder type, normalization, activations)
-4. Feature engineering (new signals, indicators, data sources)
-5. Risk management (position sizing, daily limits)
-6. Training methodology (walk-forward, ensemble, different loss functions)
+VALIDATION REQUIREMENT:
+- All ideas MUST be tested on out-of-sample period (December 2025)
+- Training P&L is meaningless - only OOS P&L matters
+
+Please suggest 3-5 NEW improvement ideas focusing on:
+1. Improving OOS generalization (the main problem)
+2. Exit strategy improvements (asymmetry is a known issue)
+3. Combining Transformer with V3 Multi-Horizon
+4. Feature engineering for better OOS
+5. Reducing gap between training and OOS performance
 
 For each idea, provide:
 - title: Short descriptive title
 - description: What to change
-- hypothesis: Why this might improve results
-- category: Which category above
-- priority: high/medium/low
-- env_vars: Environment variables to set for testing (if applicable)
-- files_to_modify: Which files need changes (if any code changes needed)
-- estimated_complexity: low/medium/high
+- hypothesis: Why this might improve OOS performance
+- category: entry/exit/architecture/features/risk/training
+- priority: critical/high/medium/low
+- env_vars: Environment variables to set for testing
+- validation_plan: How to validate OOS
 
 IMPORTANT:
-- Focus on ideas NOT already in the failed_approaches list
+- Focus on OOS performance, NOT training performance
+- All ideas must include TEMPORAL_ENCODER=transformer (proven best)
 - Prioritize quick-to-test ideas (config changes via env vars)
-- Consider the exit ratio problem as top priority
 - Output valid JSON that can be appended to idea_queue.json
 
 Output format:
@@ -63,9 +76,11 @@ Output format:
       "hypothesis": "...",
       "priority": "...",
       "status": "pending",
-      "files_to_modify": [...],
-      "env_vars": {...},
-      "estimated_complexity": "..."
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        ...
+      },
+      "validation_plan": "Train on Sept-Nov, test on December"
     }
   ],
   "reasoning": "Brief explanation of why these ideas were chosen"
