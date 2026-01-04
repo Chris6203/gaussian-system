@@ -1734,12 +1734,16 @@
       "description": "Integrate Alpha Vantage NEWS_SENTIMENT endpoint for SPY. Get real-time sentiment scores from financial news. Use sentiment_score > 0.3 for bullish, < -0.3 for bearish confirmation.",
       "hypothesis": "News sentiment provides leading indicator - positive news + bullish HMM = higher win rate",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "USE_NEWS_SENTIMENT": "1",
         "SENTIMENT_SOURCE": "alphavantage",
         "SENTIMENT_BULLISH_THRESHOLD": "0.3",
         "SENTIMENT_BEARISH_THRESHOLD": "-0.3"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T15:07:27.500756"
       }
     },
     {
@@ -1751,11 +1755,15 @@
       "description": "Scrape/API CNN Fear & Greed Index. Extreme fear (<25) = contrarian bullish, Extreme greed (>75) = contrarian bearish. Use as filter or position sizing.",
       "hypothesis": "Extreme sentiment = reversal opportunities. Fear = buy, Greed = sell",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "USE_FEAR_GREED": "1",
         "FEAR_GREED_EXTREME_FEAR": "25",
         "FEAR_GREED_EXTREME_GREED": "75"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T15:07:27.500756"
       }
     },
     {
@@ -1767,12 +1775,16 @@
       "description": "Use existing vol_put_call_ratio more aggressively. PCR > 1.2 = fear (contrarian bullish), PCR < 0.7 = greed (contrarian bearish). Filter trades to align with PCR signal.",
       "hypothesis": "Extreme PCR is a reliable contrarian indicator - already have this data, just need to use it better",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "USE_PCR_FILTER": "1",
         "PCR_FEAR_THRESHOLD": "1.2",
         "PCR_GREED_THRESHOLD": "0.7",
         "PCR_CONTRARIAN": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T15:07:27.500756"
       }
     },
     {
@@ -1784,7 +1796,7 @@
       "description": "Combine best strategy (trailing stop +250%) with Put/Call ratio filter. Only trade when PCR confirms direction.",
       "hypothesis": "PCR filter will cut bad trades while trailing stop lets winners run",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
@@ -1792,6 +1804,10 @@
         "USE_PCR_FILTER": "1",
         "PCR_FEAR_THRESHOLD": "1.2",
         "PCR_GREED_THRESHOLD": "0.7"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T15:07:27.500756"
       }
     },
     {
@@ -1830,5 +1846,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T15:06:26.011672"
+  "last_updated": "2026-01-04T15:07:27.500756"
 }
