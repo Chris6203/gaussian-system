@@ -1012,7 +1012,7 @@
       "description": "Load pretrained model from IDEA-145 (+17.6% P&L) and validate on December OOS period",
       "hypothesis": "Symmetric exits showed solid P&L, validate on unseen data",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "10",
@@ -1023,7 +1023,11 @@
         "TRAINING_END_DATE": "2025-12-20",
         "TT_MAX_CYCLES": "3500"
       },
-      "validation_plan": "Test on December 2025 (unseen data)"
+      "validation_plan": "Test on December 2025 (unseen data)",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T04:33:08.230343"
+      }
     },
     {
       "id": "IDEA-169",
@@ -1034,7 +1038,7 @@
       "description": "Load pretrained model from IDEA-153 (+91.44% P&L, +$101/trade) - CURRENT BEST - validate on December OOS",
       "hypothesis": "Widest TP showed best P&L in training, validate on unseen data",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
@@ -1044,9 +1048,13 @@
         "TRAINING_END_DATE": "2025-12-20",
         "TT_MAX_CYCLES": "3500"
       },
-      "validation_plan": "Test on December 2025 (unseen data)"
+      "validation_plan": "Test on December 2025 (unseen data)",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T04:33:08.230343"
+      }
     }
   ],
   "next_id": 170,
-  "last_updated": "2026-01-04T04:32:06.493039"
+  "last_updated": "2026-01-04T04:33:08.230343"
 }
