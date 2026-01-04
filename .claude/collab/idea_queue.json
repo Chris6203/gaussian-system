@@ -1100,8 +1100,7 @@
         "per_trade_pnl": null,
         "win_rate": 39.3
       }
-    }
-,
+    },
     {
       "id": "IDEA-172",
       "source": "claude_brainstorm",
@@ -1111,11 +1110,15 @@
       "description": "TP +25% showed +91% P&L. Test if +30% is even better.",
       "hypothesis": "If wider TP helps, even wider might help more",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "30",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T12:36:55.179276"
       }
     },
     {
@@ -1127,13 +1130,17 @@
       "description": "Use trailing stop (activate at +10%, trail 5%) instead of fixed TP. Let winners run indefinitely.",
       "hypothesis": "Trailing stops capture more upside than fixed TP",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
         "TRAILING_STOP_ACTIVATION": "10",
         "TRAILING_STOP_DISTANCE": "5",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T12:36:55.179276"
       }
     },
     {
@@ -1145,11 +1152,15 @@
       "description": "Dynamic TP based on VIX: Low VIX (<15) = TP +30%, High VIX (>25) = TP +15%",
       "hypothesis": "Low VIX = trending markets = let winners run longer",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "VIX_ADAPTIVE_EXITS": "1",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T12:36:55.179276"
       }
     },
     {
@@ -1161,12 +1172,16 @@
       "description": "Skip trading in first 30 min after open (9:30-10:00 AM). Market is choppy.",
       "hypothesis": "Opening volatility causes whipsaws - skip it",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
         "SKIP_FIRST_30_MIN": "1",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T12:36:55.179276"
       }
     },
     {
@@ -1278,5 +1293,5 @@
     }
   ],
   "next_id": 182,
-  "last_updated": "2026-01-04T12:00:00.000000"
+  "last_updated": "2026-01-04T12:36:55.179276"
 }
