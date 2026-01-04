@@ -1633,7 +1633,7 @@
       "description": "Combine best time window with volume filter and trailing stop",
       "hypothesis": "Stack all data-driven filters for maximum edge",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1643,6 +1643,10 @@
         "TRADING_START_HOUR": "11",
         "TRADING_END_HOUR": "13",
         "MIN_VOLUME_SPIKE": "1.3"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:45:52.617970"
       }
     },
     {
@@ -1654,13 +1658,17 @@
       "description": "Winners have LOWER confidence (0.22) than losers (0.25). Filter for low conf.",
       "hypothesis": "High confidence = overfit prediction = worse outcome",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
         "TRAILING_STOP_ACTIVATION": "10",
         "TRAILING_STOP_DISTANCE": "5",
         "MAX_CONFIDENCE": "0.25"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:45:52.617970"
       }
     },
     {
@@ -1672,7 +1680,7 @@
       "description": "11AM-1PM + Volume>1.3 + Low conf + Trailing + Entropy",
       "hypothesis": "Maximum filtering based on actual data patterns",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1683,6 +1691,10 @@
         "TRADING_END_HOUR": "13",
         "MIN_VOLUME_SPIKE": "1.3",
         "MAX_CONFIDENCE": "0.25"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:45:52.617970"
       }
     },
     {
@@ -1694,7 +1706,7 @@
       "description": "PUTS have slightly higher WR. Weight puts more heavily.",
       "hypothesis": "Market has slight downward bias or puts are better priced",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1703,6 +1715,10 @@
         "USE_ENTROPY_CONFIDENCE": "1",
         "FAVOR_PUTS": "1",
         "PUT_BIAS": "1.2"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T14:45:52.617970"
       }
     },
     {
@@ -1810,5 +1826,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T14:44:51.113244"
+  "last_updated": "2026-01-04T14:45:52.617970"
 }
