@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0129: OOS: Trailing stop on December (BEST +250%) (2026-01-04 13:59)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 183 |
+| Run Dir | `models/EXP-0129_IDEA-182` |
+
+**Source**: OOS_VALIDATION
+**Category**: validation
+**Hypothesis**: Trailing stop strategy generalizes to unseen data
+**Result**: ERROR
+
+---
+
+### EXP-0132: Trailing: Later activation at +15% (2026-01-04 13:59)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.8% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0132_IDEA-185` |
+
+**Source**: TRAILING_OPTIMIZATION
+**Category**: exit
+**Hypothesis**: Later activation lets trends develop more
+**Result**: ERROR
+
+---
+
+### EXP-0130: Trailing: Tighter trail 3% (lock more profit) (2026-01-04 13:59)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 33.3% |
+| P&L | -0.56% |
+| Per-Trade P&L | $-0.62 |
+| Trades | 45 |
+| Run Dir | `models/EXP-0130_IDEA-183` |
+
+**Source**: TRAILING_OPTIMIZATION
+**Category**: exit
+**Hypothesis**: Tighter trail locks in more profit on reversals
+**Result**: FAIL
+
+---
+
+### EXP-0131: Trailing: Earlier activation at +5% (2026-01-04 13:59)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.8% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0131_IDEA-184` |
+
+**Source**: TRAILING_OPTIMIZATION
+**Category**: exit
+**Hypothesis**: Earlier activation protects gains sooner
+**Result**: ERROR
+
+---
+
+
 ### EXP-0127: Momentum confirmation filter (2026-01-04 13:38)
 
 | Metric | Quick Test (5K) |
