@@ -1334,7 +1334,7 @@
       "description": "Validate IDEA-173 (trailing stop) on December OOS. Current best at +250% P&L.",
       "hypothesis": "Trailing stop strategy generalizes to unseen data",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
@@ -1346,6 +1346,10 @@
         "TRAINING_START_DATE": "2025-12-01",
         "TRAINING_END_DATE": "2025-12-20",
         "TT_MAX_CYCLES": "3500"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T13:39:31.161951"
       }
     },
     {
@@ -1357,13 +1361,17 @@
       "description": "Same as IDEA-173 but with 3% trail distance instead of 5%",
       "hypothesis": "Tighter trail locks in more profit on reversals",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
         "TRAILING_STOP_ACTIVATION": "10",
         "TRAILING_STOP_DISTANCE": "3",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T13:39:31.161951"
       }
     },
     {
@@ -1375,13 +1383,17 @@
       "description": "Activate trailing stop earlier at +5% instead of +10%",
       "hypothesis": "Earlier activation protects gains sooner",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
         "TRAILING_STOP_ACTIVATION": "5",
         "TRAILING_STOP_DISTANCE": "3",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T13:39:31.161951"
       }
     },
     {
@@ -1393,13 +1405,17 @@
       "description": "Activate trailing stop later at +15% - give winners more room",
       "hypothesis": "Later activation lets trends develop more",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "100",
         "TRAILING_STOP_ACTIVATION": "15",
         "TRAILING_STOP_DISTANCE": "5",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T13:39:31.161951"
       }
     },
     {
@@ -1647,5 +1663,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T13:38:29.746101"
+  "last_updated": "2026-01-04T13:39:31.161951"
 }
