@@ -2125,8 +2125,130 @@
         "per_trade_pnl": -0.2976923076923077,
         "win_rate": 46.2
       }
+    },
+    {
+      "id": "IDEA-216",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T18:14:40.448096",
+      "category": "entry",
+      "title": "TDA-BEST+: Add Volume Filter (>1.2)",
+      "description": "Build on IDEA-213 (+74%, 49% WR) by adding volume spike filter. Data shows winners have 1.23 avg volume vs 0.95 for losers. Filter for volume_spike > 1.2.",
+      "hypothesis": "Volume spike predicts trade quality - filtering for high volume improves win rate",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "MIN_VOLUME_SPIKE": "1.2"
+      }
+    },
+    {
+      "id": "IDEA-217",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T18:14:40.448105",
+      "category": "entry",
+      "title": "TDA-BEST+: Low Confidence Cap (max 0.25)",
+      "description": "Build on IDEA-213 (+74%, 49% WR) by capping confidence. Data shows winners have 0.21 avg confidence vs 0.24 for losers. Lower confidence = better.",
+      "hypothesis": "Model overconfidence predicts losers - trade only when uncertain",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-218",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T18:14:40.448109",
+      "category": "entry",
+      "title": "TDA-BEST+: Volume + Low Conf Combined",
+      "description": "Combine both winning signals: volume > 1.2 AND confidence < 0.25. Should be highest quality trades.",
+      "hypothesis": "Both filters together will produce fewer but higher quality trades",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "MIN_VOLUME_SPIKE": "1.2",
+        "TRAIN_MAX_CONF": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-219",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T18:14:40.448112",
+      "category": "entry",
+      "title": "TDA-BEST+: Stronger Volume Filter (>1.3)",
+      "description": "More aggressive volume filter. Winners cluster around 1.3+ volume spike.",
+      "hypothesis": "Higher volume threshold = even better trade quality",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "MIN_VOLUME_SPIKE": "1.3"
+      }
+    },
+    {
+      "id": "IDEA-220",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T18:14:40.448119",
+      "category": "validation",
+      "title": "TDA-BEST+: 10K Validation Run",
+      "description": "Run IDEA-213 config for 10K cycles to validate performance over longer period.",
+      "hypothesis": "Longer test will confirm if +74% P&L is consistent",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TT_MAX_CYCLES": "10000"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T18:19:10.694406"
+      }
+    },
+    {
+      "id": "IDEA-221",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T18:14:40.448123",
+      "category": "entry",
+      "title": "TDA-BEST+: Tighter Trailing (8% activate, 4% trail)",
+      "description": "More aggressive trailing stop to lock in profits earlier.",
+      "hypothesis": "Tighter trailing reduces drawdown from peak while keeping winners",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "8",
+        "TRAILING_STOP_PCT": "4",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T18:19:10.694406"
+      }
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T18:08:06.980852"
+  "last_updated": "2026-01-04T18:19:10.694406"
 }
