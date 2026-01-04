@@ -507,8 +507,106 @@
         "per_trade_pnl": null,
         "win_rate": 0.0
       }
+    },
+    {
+      "id": "IDEA-144",
+      "source": "phase35_claude",
+      "timestamp": "2026-01-04T01:38:48.939200",
+      "category": "architecture",
+      "title": "V3 Multi-Horizon + Transformer encoder",
+      "description": "Combine best architecture (V3) with best encoder (Transformer). V3 gives multi-horizon predictions, Transformer generalizes to OOS.",
+      "hypothesis": "V3 architecture + Transformer encoder = best of both worlds for OOS",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer"
+      },
+      "validation_plan": "Train Sept-Nov, test December"
+    },
+    {
+      "id": "IDEA-145",
+      "source": "phase35_claude",
+      "timestamp": "2026-01-04T01:38:48.939210",
+      "category": "exit",
+      "title": "Symmetric exits (-10%/+10%) with Transformer",
+      "description": "Fix exit asymmetry issue. -8%/+12% requires 40% WR to break even. Symmetric -10%/+10% only requires 50% WR.",
+      "hypothesis": "Symmetric exits reduce breakeven threshold, improving edge capture",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "10",
+        "TT_TAKE_PROFIT_PCT": "10"
+      },
+      "validation_plan": "Train Sept-Nov, test December"
+    },
+    {
+      "id": "IDEA-146",
+      "source": "phase35_claude",
+      "timestamp": "2026-01-04T01:38:48.939214",
+      "category": "exit",
+      "title": "Wider TP (-8%/+20%) with Transformer",
+      "description": "Let winners run longer. Current +12% TP may cut profits too early.",
+      "hypothesis": "Wider TP lets trending moves develop fully",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "20"
+      },
+      "validation_plan": "Train Sept-Nov, test December"
+    },
+    {
+      "id": "IDEA-147",
+      "source": "phase35_claude",
+      "timestamp": "2026-01-04T01:38:48.939217",
+      "category": "exit",
+      "title": "Shorter max hold (20 min) with Transformer",
+      "description": "Match prediction horizon (15min) with max hold time. 45 min hold exceeds 15 min prediction.",
+      "hypothesis": "Holding beyond prediction horizon causes reversals",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_MAX_HOLD_MINUTES": "20"
+      },
+      "validation_plan": "Train Sept-Nov, test December"
+    },
+    {
+      "id": "IDEA-148",
+      "source": "phase35_claude",
+      "timestamp": "2026-01-04T01:38:48.939221",
+      "category": "training",
+      "title": "Transformer + 5K training (less overfitting)",
+      "description": "Test if shorter training (5K vs 10K) reduces overfitting further.",
+      "hypothesis": "Less training = less overfitting = better OOS",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_MAX_CYCLES": "5000"
+      },
+      "validation_plan": "Train Sept-Nov, test December"
+    },
+    {
+      "id": "IDEA-149",
+      "source": "phase35_claude",
+      "timestamp": "2026-01-04T01:38:48.939224",
+      "category": "entry",
+      "title": "Stricter HMM (0.75/0.25) with Transformer",
+      "description": "Require stronger HMM trend signals. Current 0.65/0.35 may be too loose.",
+      "hypothesis": "Stricter HMM filtering = fewer but higher quality entries",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "HMM_STRONG_BULLISH": "0.75",
+        "HMM_STRONG_BEARISH": "0.25"
+      },
+      "validation_plan": "Train Sept-Nov, test December"
     }
   ],
-  "next_id": 144,
-  "last_updated": "2026-01-03T17:42:23.932209"
+  "next_id": 150,
+  "last_updated": "2026-01-04T01:38:48.939228"
 }
