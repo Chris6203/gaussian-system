@@ -1501,8 +1501,149 @@
         "HMM_STRONG_BULLISH": "0.70",
         "HMM_STRONG_BEARISH": "0.30"
       }
+    },
+    {
+      "id": "IDEA-191",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T13:45:00.000000",
+      "category": "entry",
+      "title": "DATA-DRIVEN: Only trade 11AM-1PM (9.3% WR window)",
+      "description": "Analysis shows 11AM-1PM has 8-9% WR vs 0.3-0.7% in afternoon. Massive edge.",
+      "hypothesis": "Midday has cleaner trends, afternoon is choppy reversals",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "TRADING_START_HOUR": "11",
+        "TRADING_END_HOUR": "13"
+      }
+    },
+    {
+      "id": "IDEA-192",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T13:45:00.000000",
+      "category": "entry",
+      "title": "DATA-DRIVEN: Volume spike > 1.3 filter",
+      "description": "Winners have 1.24 vol spike vs 0.94 losers. Filter >1.3 gives +2.8pp WR.",
+      "hypothesis": "High volume confirms real moves, low volume = fake breakouts",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "MIN_VOLUME_SPIKE": "1.3"
+      }
+    },
+    {
+      "id": "IDEA-193",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T13:45:00.000000",
+      "category": "entry",
+      "title": "DATA-DRIVEN: Skip 1PM-3PM entirely (0.3-0.7% WR)",
+      "description": "Afternoon hours have near-zero win rate. Block all trades 1PM-3PM.",
+      "hypothesis": "Afternoon reversals kill trades - just avoid them",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "BLOCK_AFTERNOON": "1",
+        "AFTERNOON_START": "13",
+        "AFTERNOON_END": "15"
+      }
+    },
+    {
+      "id": "IDEA-194",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T13:45:00.000000",
+      "category": "combined",
+      "title": "COMBO: 11AM-1PM + Volume > 1.3 + Trailing",
+      "description": "Combine best time window with volume filter and trailing stop",
+      "hypothesis": "Stack all data-driven filters for maximum edge",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "TRADING_START_HOUR": "11",
+        "TRADING_END_HOUR": "13",
+        "MIN_VOLUME_SPIKE": "1.3"
+      }
+    },
+    {
+      "id": "IDEA-195",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T13:45:00.000000",
+      "category": "entry",
+      "title": "DATA-DRIVEN: Low confidence filter (< 0.25)",
+      "description": "Winners have LOWER confidence (0.22) than losers (0.25). Filter for low conf.",
+      "hypothesis": "High confidence = overfit prediction = worse outcome",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "MAX_CONFIDENCE": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-196",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T13:45:00.000000",
+      "category": "combined",
+      "title": "ULTIMATE DATA-DRIVEN: All filters combined",
+      "description": "11AM-1PM + Volume>1.3 + Low conf + Trailing + Entropy",
+      "hypothesis": "Maximum filtering based on actual data patterns",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "TRADING_START_HOUR": "11",
+        "TRADING_END_HOUR": "13",
+        "MIN_VOLUME_SPIKE": "1.3",
+        "MAX_CONFIDENCE": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-197",
+      "source": "data_analysis",
+      "timestamp": "2026-01-04T13:45:00.000000",
+      "category": "entry",
+      "title": "Favor PUTS over CALLS (4.8% vs 4.0% WR)",
+      "description": "PUTS have slightly higher WR. Weight puts more heavily.",
+      "hypothesis": "Market has slight downward bias or puts are better priced",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "FAVOR_PUTS": "1",
+        "PUT_BIAS": "1.2"
+      }
     }
   ],
-  "next_id": 191,
-  "last_updated": "2026-01-04T13:25:00.000000"
+  "next_id": 198,
+  "last_updated": "2026-01-04T13:45:00.000000"
 }
