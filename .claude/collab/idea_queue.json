@@ -1065,16 +1065,17 @@
       "description": "Combine TP +25% (+91.44% P&L, 40.3% OOS WR) with entropy confidence (+9.2pp WR boost). Target: 49%+ WR with high P&L.",
       "hypothesis": "Wide TP for big winners + entropy confidence for better entry selection = best of both",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
         "USE_ENTROPY_CONFIDENCE": "1"
       },
       "validation_plan": "Train and test - expect ~49% WR with high P&L",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T11:39:26.978038"
+      "last_result": {
+        "exp_id": "EXP-0117",
+        "per_trade_pnl": null,
+        "win_rate": 38.0
       }
     },
     {
@@ -1086,7 +1087,7 @@
       "description": "Triple combo: V3 architecture + Transformer + TP +25% + Entropy confidence",
       "hypothesis": "Best architecture + best encoder + best exits + best entry filter",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
@@ -1094,12 +1095,13 @@
         "USE_ENTROPY_CONFIDENCE": "1"
       },
       "validation_plan": "Train and test - combine all winning elements",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T11:39:26.978038"
+      "last_result": {
+        "exp_id": "EXP-0118",
+        "per_trade_pnl": null,
+        "win_rate": 39.3
       }
     }
   ],
   "next_id": 172,
-  "last_updated": "2026-01-04T11:39:26.978038"
+  "last_updated": "2026-01-04T12:00:47.133489"
 }

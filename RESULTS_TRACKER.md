@@ -2663,6 +2663,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0117: COMBO: TP +25% + Entropy Confidence (best P&L + best WR) (2026-01-04 12:00)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 276 |
+| Run Dir | `models/EXP-0117_IDEA-170` |
+
+**Source**: COMBO_TEST
+**Category**: combined
+**Hypothesis**: Wide TP for big winners + entropy confidence for better entry selection = best of both
+**Result**: ERROR
+
+---
+
+### EXP-0118: COMBO: TP +25% + Entropy + V3 Transformer (2026-01-04 12:00)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 328 |
+| Run Dir | `models/EXP-0118_IDEA-171` |
+
+**Source**: COMBO_TEST
+**Category**: combined
+**Hypothesis**: Best architecture + best encoder + best exits + best entry filter
+**Result**: ERROR
+
+---
+
+
 ### EXP-0116: OOS: TP +25% on December (IDEA-153 BEST +91.44%) (2026-01-04 04:47)
 
 | Metric | Quick Test (5K) |
