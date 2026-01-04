@@ -621,8 +621,247 @@
         "HMM_STRONG_BEARISH": "0.25"
       },
       "validation_plan": "Train Sept-Nov, test December"
+    },
+    {
+      "id": "IDEA-150",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412765",
+      "category": "exit",
+      "title": "Tight stop -5% with Transformer",
+      "hypothesis": "Tighter stops reduce large losses",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "5"
+      }
+    },
+    {
+      "id": "IDEA-151",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412779",
+      "category": "exit",
+      "title": "Wide stop -15% with Transformer",
+      "hypothesis": "Wider stops avoid premature exits",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "15"
+      }
+    },
+    {
+      "id": "IDEA-152",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412784",
+      "category": "exit",
+      "title": "TP +15% with Transformer",
+      "hypothesis": "Medium-wide TP balances profit capture",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "15"
+      }
+    },
+    {
+      "id": "IDEA-153",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412794",
+      "category": "exit",
+      "title": "TP +25% with Transformer",
+      "hypothesis": "Very wide TP lets big winners run",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25"
+      }
+    },
+    {
+      "id": "IDEA-154",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412802",
+      "category": "exit",
+      "title": "Max hold 30min with Transformer",
+      "hypothesis": "30 min closer to 15 min prediction horizon",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_MAX_HOLD_MINUTES": "30"
+      }
+    },
+    {
+      "id": "IDEA-155",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412807",
+      "category": "exit",
+      "title": "Max hold 60min with Transformer",
+      "hypothesis": "Longer hold for bigger moves",
+      "priority": "low",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_MAX_HOLD_MINUTES": "60"
+      }
+    },
+    {
+      "id": "IDEA-156",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412812",
+      "category": "exit",
+      "title": "Aggressive: -5%/+8%/20min with Transformer",
+      "hypothesis": "Quick trades with tight risk control",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "5",
+        "TT_TAKE_PROFIT_PCT": "8",
+        "TT_MAX_HOLD_MINUTES": "20"
+      }
+    },
+    {
+      "id": "IDEA-157",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412817",
+      "category": "exit",
+      "title": "Patient: -12%/+20%/60min with Transformer",
+      "hypothesis": "Let trades develop fully",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "12",
+        "TT_TAKE_PROFIT_PCT": "20",
+        "TT_MAX_HOLD_MINUTES": "60"
+      }
+    },
+    {
+      "id": "IDEA-158",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412822",
+      "category": "entry",
+      "title": "Relaxed HMM 0.60/0.40 with Transformer",
+      "hypothesis": "More trades might improve total P&L",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "HMM_STRONG_BULLISH": "0.60",
+        "HMM_STRONG_BEARISH": "0.40"
+      }
+    },
+    {
+      "id": "IDEA-159",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412829",
+      "category": "entry",
+      "title": "Very strict HMM 0.80/0.20 with Transformer",
+      "hypothesis": "Only strongest trends = highest quality",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "HMM_STRONG_BULLISH": "0.80",
+        "HMM_STRONG_BEARISH": "0.20"
+      }
+    },
+    {
+      "id": "IDEA-160",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412834",
+      "category": "architecture",
+      "title": "V3 + Transformer + 15min horizon",
+      "hypothesis": "Match prediction to hold time",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer",
+        "V3_DEFAULT_HORIZON": "15"
+      }
+    },
+    {
+      "id": "IDEA-161",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412839",
+      "category": "architecture",
+      "title": "V3 + Transformer + 30min horizon",
+      "hypothesis": "Longer horizon for bigger moves",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer",
+        "V3_DEFAULT_HORIZON": "30"
+      }
+    },
+    {
+      "id": "IDEA-162",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412843",
+      "category": "training",
+      "title": "Transformer 15K cycles",
+      "hypothesis": "Optimal training length between 10K and 20K",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_MAX_CYCLES": "15000"
+      }
+    },
+    {
+      "id": "IDEA-163",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412848",
+      "category": "training",
+      "title": "Transformer with dropout 0.2",
+      "hypothesis": "More dropout = less overfitting",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "DROPOUT_RATE": "0.2"
+      }
+    },
+    {
+      "id": "IDEA-164",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412852",
+      "category": "combined",
+      "title": "BEST BET: V3+Trans+Sym exits+20min hold",
+      "hypothesis": "Combine all OOS-friendly settings",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "10",
+        "TT_TAKE_PROFIT_PCT": "10",
+        "TT_MAX_HOLD_MINUTES": "20"
+      }
+    },
+    {
+      "id": "IDEA-165",
+      "source": "grid_search",
+      "timestamp": "2026-01-04T01:43:09.412857",
+      "category": "combined",
+      "title": "BEST BET: Trans+StrictHMM+TightExits",
+      "hypothesis": "Quality over quantity with fast exits",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "HMM_STRONG_BULLISH": "0.75",
+        "HMM_STRONG_BEARISH": "0.25",
+        "TT_STOP_LOSS_PCT": "5",
+        "TT_TAKE_PROFIT_PCT": "10",
+        "TT_MAX_HOLD_MINUTES": "20"
+      }
     }
   ],
-  "next_id": 150,
-  "last_updated": "2026-01-04T01:39:55.071852"
+  "next_id": 166,
+  "last_updated": "2026-01-04T01:43:09.412866"
 }
