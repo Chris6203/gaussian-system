@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Gaussian Options Trading Bot** - an algorithmic SPY options trading system combining:
 - Bayesian neural networks with Gaussian kernel processors for price/volatility prediction
-- **65% win rate achieved** with combo_dow configuration (Phase 42)
+- **Phase 48: Entropy-based confidence** improves win rate by +9.2pp (33% → 42%)
 - Multi-dimensional HMM (3×3×3 = 27 states) for market regime detection
 - Multiple entry controllers: bandit (default), RL (PPO), Q-Scorer, consensus
 - Paper trading and live execution via Tradier API
