@@ -980,8 +980,29 @@
         "TT_MAX_CYCLES": "3500"
       },
       "validation_plan": "Test on December 2025 (unseen data)"
+    },
+    {
+      "id": "IDEA-169",
+      "source": "oos_validation",
+      "timestamp": "2026-01-04T02:50:00.000000",
+      "category": "validation",
+      "title": "OOS: TP +25% on December (IDEA-153 BEST +91.44%)",
+      "description": "Load pretrained model from IDEA-153 (+91.44% P&L, +$101/trade) - CURRENT BEST - validate on December OOS",
+      "hypothesis": "Widest TP showed best P&L in training, validate on unseen data",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_MODEL_PATH": "models/EXP-0100_IDEA-153/state",
+        "TRAINING_START_DATE": "2025-12-01",
+        "TRAINING_END_DATE": "2025-12-20",
+        "TT_MAX_CYCLES": "3500"
+      },
+      "validation_plan": "Test on December 2025 (unseen data)"
     }
   ],
-  "next_id": 169,
-  "last_updated": "2026-01-04T02:46:46.537871"
+  "next_id": 170,
+  "last_updated": "2026-01-04T02:50:00.000000"
 }
