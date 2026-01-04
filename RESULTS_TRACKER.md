@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0158: BEST+: Trailing + Transformer encoder (2026-01-04 17:43)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.2% |
+| P&L | -4.52% |
+| Per-Trade P&L | $-2.86 |
+| Trades | 79 |
+| Run Dir | `models/EXP-0158_IDEA-211` |
+
+**Source**: LEADERBOARD_OPTIMIZATION
+**Category**: architecture
+**Hypothesis**: Transformer attention = better regime detection = better entry timing
+**Result**: FAIL
+
+---
+
+### EXP-0155: ULTIMATE BEST: Trailing + Volume + Low Conf + Sentiment (2026-01-04 17:43)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 51.9% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 22 |
+| Run Dir | `models/EXP-0155_IDEA-208` |
+
+**Source**: LEADERBOARD_OPTIMIZATION
+**Category**: combo
+**Hypothesis**: Multiple quality filters = fewer but much higher quality trades
+**Result**: ERROR
+
+---
+
+### EXP-0157: BEST+: Trailing + V3 Multi-Horizon (2026-01-04 17:43)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 43 |
+| Run Dir | `models/EXP-0157_IDEA-210` |
+
+**Source**: LEADERBOARD_OPTIMIZATION
+**Category**: architecture
+**Hypothesis**: Better prediction horizon selection = better entry points for trailing
+**Result**: ERROR
+
+---
+
+### EXP-0156: BEST+: Trailing + 11AM-1PM (best hours) (2026-01-04 17:43)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 47.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 52 |
+| Run Dir | `models/EXP-0156_IDEA-209` |
+
+**Source**: LEADERBOARD_OPTIMIZATION
+**Category**: combo
+**Hypothesis**: Morning momentum + trailing = catch the best moves
+**Result**: ERROR
+
+---
+
+
 ### EXP-0152: BEST+: Trailing + Sentiment (Fear & Greed < 40) (2026-01-04 17:20)
 
 | Metric | Quick Test (5K) |
