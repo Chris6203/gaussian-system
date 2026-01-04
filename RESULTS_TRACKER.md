@@ -2663,6 +2663,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0150: ULTIMATE SENTIMENT: PCR + VIX + Trailing Stop (2026-01-04 15:50)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0150_IDEA-203` |
+
+**Source**: USER_SUGGESTION
+**Category**: combo
+**Hypothesis**: Multiple sentiment signals aligning = higher conviction trades
+**Result**: FAIL
+
+---
+
+### EXP-0149: SENTIMENT: VIX as Sentiment (extreme levels only) (2026-01-04 15:50)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 47.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 52 |
+| Run Dir | `models/EXP-0149_IDEA-202` |
+
+**Source**: USER_SUGGESTION
+**Category**: features
+**Hypothesis**: VIX extremes are reliable contrarian signals - high VIX = oversold, low VIX = overbought
+**Result**: ERROR
+
+---
+
+
 ### EXP-0148: COMBO: Trailing Stop + PCR Sentiment Filter (2026-01-04 15:28)
 
 | Metric | Quick Test (5K) |
