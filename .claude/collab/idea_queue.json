@@ -1286,12 +1286,16 @@
       "description": "Only enter when 5-min momentum aligns with signal direction",
       "hypothesis": "Trading with momentum improves win rate",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
         "REQUIRE_MOMENTUM_CONFIRM": "1",
         "USE_ENTROPY_CONFIDENCE": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T13:18:43.909409"
       }
     },
     {
@@ -1303,7 +1307,7 @@
       "description": "Combine: TP +25%, Entropy confidence, Trailing stop, Time filter (10-2), Momentum confirm",
       "hypothesis": "Stack all improvements for maximum edge",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
@@ -1313,9 +1317,13 @@
         "TRADING_START_HOUR": "10",
         "TRADING_END_HOUR": "14",
         "REQUIRE_MOMENTUM_CONFIRM": "1"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T13:18:43.909409"
       }
     }
   ],
   "next_id": 182,
-  "last_updated": "2026-01-04T13:17:42.199945"
+  "last_updated": "2026-01-04T13:18:43.909409"
 }
