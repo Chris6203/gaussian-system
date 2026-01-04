@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0160: BEST+: Trailing + TDA regime filter (2026-01-04 18:08)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 49.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 52 |
+| Run Dir | `models/EXP-0160_IDEA-213` |
+
+**Source**: TDA_RESEARCH
+**Category**: combo
+**Hypothesis**: TDA can distinguish trending vs choppy regimes - only trade in trending
+**Result**: ERROR
+
+---
+
+### EXP-0159: TDA: Topological features for regime detection (2026-01-04 18:08)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 48.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 52 |
+| Run Dir | `models/EXP-0159_IDEA-212` |
+
+**Source**: TDA_RESEARCH
+**Category**: architecture
+**Hypothesis**: TDA captures structural patterns (regime transitions, crash geometry) invisible to traditional indicators
+**Result**: ERROR
+
+---
+
+### EXP-0162: ULTIMATE+: Trailing + TDA + Volume + Sentiment (2026-01-04 18:08)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0162_IDEA-215` |
+
+**Source**: TDA_RESEARCH
+**Category**: combo
+**Hypothesis**: Multiple advanced signals = highest quality entries
+**Result**: FAIL
+
+---
+
+### EXP-0161: TDA: Multi-scale windows (30m, 60m, 120m) (2026-01-04 18:08)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0161_IDEA-214` |
+
+**Source**: TDA_RESEARCH
+**Category**: architecture
+**Hypothesis**: Multi-scale TDA captures patterns at different frequencies
+**Result**: FAIL
+
+---
+
+
 ### EXP-0158: BEST+: Trailing + Transformer encoder (2026-01-04 17:43)
 
 | Metric | Quick Test (5K) |

@@ -2047,14 +2047,15 @@
       "description": "Add TDA (Topological Data Analysis) features using giotto-tda. Computes persistent homology on price windows to detect regime changes, loops, and structural patterns that traditional indicators miss.",
       "hypothesis": "TDA captures structural patterns (regime transitions, crash geometry) invisible to traditional indicators",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "ENABLE_TDA": "1",
         "TDA_WINDOW_SIZE": "60"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T17:44:38.907068"
+      "last_result": {
+        "exp_id": "EXP-0159",
+        "per_trade_pnl": null,
+        "win_rate": 48.3
       }
     },
     {
@@ -2066,7 +2067,7 @@
       "description": "Combine trailing stop (+250%) with TDA features. Use TDA complexity and loop_trend_ratio to filter entries - only trade when topology indicates trending regime.",
       "hypothesis": "TDA can distinguish trending vs choppy regimes - only trade in trending",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
@@ -2074,9 +2075,10 @@
         "ENABLE_TDA": "1",
         "TDA_REGIME_FILTER": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T17:44:38.907068"
+      "last_result": {
+        "exp_id": "EXP-0160",
+        "per_trade_pnl": null,
+        "win_rate": 49.2
       }
     },
     {
@@ -2088,15 +2090,16 @@
       "description": "Compute TDA features at multiple time scales to capture both intraday and longer patterns. 30m=short-term, 60m=medium, 120m=session-level topology.",
       "hypothesis": "Multi-scale TDA captures patterns at different frequencies",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "ENABLE_TDA": "1",
         "TDA_MULTI_SCALE": "1",
         "TDA_WINDOWS": "30,60,120"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T17:44:38.907068"
+      "last_result": {
+        "exp_id": "EXP-0161",
+        "per_trade_pnl": -0.2976923076923077,
+        "win_rate": 46.2
       }
     },
     {
@@ -2108,7 +2111,7 @@
       "description": "Combine ALL advanced features: (1) Trailing stop, (2) TDA regime detection, (3) Volume > 1.3, (4) Fear & Greed sentiment. Maximum quality filtering.",
       "hypothesis": "Multiple advanced signals = highest quality entries",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
@@ -2117,12 +2120,13 @@
         "MIN_VOLUME_SPIKE": "1.3",
         "SENTIMENT_FEAR_GREED_MAX": "50"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T17:44:38.907068"
+      "last_result": {
+        "exp_id": "EXP-0162",
+        "per_trade_pnl": -0.2976923076923077,
+        "win_rate": 46.2
       }
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T17:44:38.907068"
+  "last_updated": "2026-01-04T18:08:06.980852"
 }
