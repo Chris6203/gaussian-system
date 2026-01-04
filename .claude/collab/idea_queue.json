@@ -1101,7 +1101,182 @@
         "win_rate": 39.3
       }
     }
+,
+    {
+      "id": "IDEA-172",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "exit",
+      "title": "Even wider TP +30% (push the limit)",
+      "description": "TP +25% showed +91% P&L. Test if +30% is even better.",
+      "hypothesis": "If wider TP helps, even wider might help more",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "30",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-173",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "exit",
+      "title": "Trailing stop instead of fixed TP",
+      "description": "Use trailing stop (activate at +10%, trail 5%) instead of fixed TP. Let winners run indefinitely.",
+      "hypothesis": "Trailing stops capture more upside than fixed TP",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-174",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "exit",
+      "title": "VIX-adaptive exits (wider in low VIX)",
+      "description": "Dynamic TP based on VIX: Low VIX (<15) = TP +30%, High VIX (>25) = TP +15%",
+      "hypothesis": "Low VIX = trending markets = let winners run longer",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "VIX_ADAPTIVE_EXITS": "1",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-175",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "entry",
+      "title": "Time-of-day filter (avoid first 30 min)",
+      "description": "Skip trading in first 30 min after open (9:30-10:00 AM). Market is choppy.",
+      "hypothesis": "Opening volatility causes whipsaws - skip it",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "SKIP_FIRST_30_MIN": "1",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-176",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "entry",
+      "title": "Only trade 10AM-2PM (optimal hours)",
+      "description": "Restrict trading to 10:00 AM - 2:00 PM. Avoid open/close volatility.",
+      "hypothesis": "Mid-day is more predictable, trends develop better",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "TRADING_START_HOUR": "10",
+        "TRADING_END_HOUR": "14",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-177",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "risk",
+      "title": "Entropy-based position sizing",
+      "description": "Size positions based on entropy: Low entropy (confident) = full size, High entropy = half size",
+      "hypothesis": "Bet more when model is confident, less when uncertain",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "ENTROPY_POSITION_SIZING": "1"
+      }
+    },
+    {
+      "id": "IDEA-178",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "exit",
+      "title": "Tighter stop -5% with wide TP +25%",
+      "description": "Combine tight stop (-5%) with wide TP (+25%). Cut losers fast, let winners run.",
+      "hypothesis": "Asymmetric risk/reward in our favor",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "5",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-179",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "entry",
+      "title": "Volume spike filter (only high volume)",
+      "description": "Only enter when volume is >1.5x average. High volume = real moves.",
+      "hypothesis": "High volume confirms direction, low volume = fake moves",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "MIN_VOLUME_MULTIPLE": "1.5",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-180",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "entry",
+      "title": "Momentum confirmation filter",
+      "description": "Only enter when 5-min momentum aligns with signal direction",
+      "hypothesis": "Trading with momentum improves win rate",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "REQUIRE_MOMENTUM_CONFIRM": "1",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-181",
+      "source": "claude_brainstorm",
+      "timestamp": "2026-01-04T12:00:00.000000",
+      "category": "combined",
+      "title": "ULTIMATE: All winning features combined",
+      "description": "Combine: TP +25%, Entropy confidence, Trailing stop, Time filter (10-2), Momentum confirm",
+      "hypothesis": "Stack all improvements for maximum edge",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "25",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "TRAILING_STOP_ACTIVATION": "15",
+        "TRAILING_STOP_DISTANCE": "5",
+        "TRADING_START_HOUR": "10",
+        "TRADING_END_HOUR": "14",
+        "REQUIRE_MOMENTUM_CONFIRM": "1"
+      }
+    }
   ],
-  "next_id": 172,
-  "last_updated": "2026-01-04T12:00:47.133489"
+  "next_id": 182,
+  "last_updated": "2026-01-04T12:00:00.000000"
 }

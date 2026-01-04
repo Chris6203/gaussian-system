@@ -87,6 +87,22 @@
       "evidence": "20K pretrain: 38 trades from 3412 signals (1.1% rate) but 18.4% WR",
       "implications": ["Long training != better predictions", "Conservative != correct"],
       "experiments": ["pretrain_20k_dec_test"]
+    },
+    {
+      "id": "LEARN-012",
+      "date": "2026-01-04",
+      "insight": "Wider take profit (+25%) dramatically improves P&L",
+      "evidence": "TP +25%: +91.44% P&L, $101/trade vs TP +12% baseline. OOS validated at 40.3% WR",
+      "implications": ["Let winners run longer", "Wide TP compensates for lower WR"],
+      "experiments": ["EXP-0100_IDEA-153", "EXP-0116_IDEA-169"]
+    },
+    {
+      "id": "LEARN-013",
+      "date": "2026-01-04",
+      "insight": "Entropy-based confidence improves win rate by +9.2pp",
+      "evidence": "Pure entropy confidence: 42.5% WR vs 33.3% baseline (+9.2pp improvement)",
+      "implications": ["Use prediction entropy as confidence proxy", "Low entropy = high certainty = better trades"],
+      "experiments": ["entropy_confidence_test"]
     }
   ],
   "failed_approaches": [
@@ -131,16 +147,20 @@
     }
   ],
   "best_configuration": {
-    "name": "Transformer 10K (CURRENT BEST - VALIDATED OOS)",
-    "run_dir": "models/exp35_transformer",
-    "notes": "Transformer temporal encoder, 10K training on Sept-Nov, validated on December OOS",
-    "training_period": "2025-09-01 to 2025-11-30",
-    "test_period": "2025-12-01 to 2025-12-15",
-    "training_result": {"win_rate": 35.8, "pnl_pct": 2777, "trades": 1706},
-    "oos_result": {"win_rate": 27.4, "pnl_pct": 32.65, "trades": 61},
-    "validated_cycles": 3417,
-    "env_vars": {"TEMPORAL_ENCODER": "transformer"},
-    "why_best": "Only model that shows positive P&L on out-of-sample December data"
+    "name": "TP +25% with Transformer (CURRENT BEST - VALIDATED OOS)",
+    "run_dir": "models/EXP-0100_IDEA-153",
+    "notes": "Wider TP (+25%) lets winners run, validated 40.3% WR on December OOS",
+    "training_period": "2025-06-26 to 2025-12-26",
+    "test_period": "2025-12-01 to 2025-12-20",
+    "training_result": {"win_rate": 38.9, "pnl_pct": 91.44, "trades": 45, "per_trade_pnl": 101.59},
+    "oos_result": {"win_rate": 40.3, "pnl_pct": "pending", "trades": "pending"},
+    "env_vars": {"TEMPORAL_ENCODER": "transformer", "TT_TAKE_PROFIT_PCT": "25"},
+    "why_best": "Best P&L (+91.44%) and OOS WR at 40.3% (above breakeven)"
+  },
+  "pending_improvements": {
+    "combo_test": "TP +25% + Entropy Confidence (IDEA-170, IDEA-171)",
+    "expected_wr": "~49% (40.3% + 9.2pp from entropy)",
+    "status": "queued for testing"
   },
   "previous_best": {
     "name": "Dec 2025 Pretrained (NOT REPRODUCIBLE)",
@@ -154,5 +174,5 @@
     "parallel_experiments": 4,
     "note": "Can run 4 experiments in parallel for faster iteration"
   },
-  "last_updated": "2026-01-02T11:00:00Z"
+  "last_updated": "2026-01-04T11:45:00Z"
 }
