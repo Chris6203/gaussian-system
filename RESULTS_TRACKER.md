@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0097: Wider TP (-8%/+20%) with Transformer (2026-01-04 02:01)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0097_IDEA-146` |
+
+**Source**: PHASE35_CLAUDE
+**Category**: exit
+**Hypothesis**: Wider TP lets trending moves develop fully
+**Result**: ERROR
+
+---
+
+### EXP-0096: Symmetric exits (-10%/+10%) with Transformer (2026-01-04 02:01)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0096_IDEA-145` |
+
+**Source**: PHASE35_CLAUDE
+**Category**: exit
+**Hypothesis**: Symmetric exits reduce breakeven threshold, improving edge capture
+**Result**: ERROR
+
+---
+
+### EXP-0095: V3 Multi-Horizon + Transformer encoder (2026-01-04 02:01)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 48.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 76 |
+| Run Dir | `models/EXP-0095_IDEA-144` |
+
+**Source**: PHASE35_CLAUDE
+**Category**: architecture
+**Hypothesis**: V3 architecture + Transformer encoder = best of both worlds for OOS
+**Result**: ERROR
+
+---
+
+### EXP-0098: Shorter max hold (20 min) with Transformer (2026-01-04 02:01)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.8% |
+| P&L | -0.52% |
+| Per-Trade P&L | $-0.54 |
+| Trades | 49 |
+| Run Dir | `models/EXP-0098_IDEA-147` |
+
+**Source**: PHASE35_CLAUDE
+**Category**: exit
+**Hypothesis**: Holding beyond prediction horizon causes reversals
+**Result**: FAIL
+
+---
+
+
 ### EXP-0094: Phase 45: Low conf + High volume (data-driven) (2026-01-03 17:42)
 
 | Metric | Quick Test (5K) |

@@ -517,15 +517,16 @@
       "description": "Combine best architecture (V3) with best encoder (Transformer). V3 gives multi-horizon predictions, Transformer generalizes to OOS.",
       "hypothesis": "V3 architecture + Transformer encoder = best of both worlds for OOS",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer"
       },
       "validation_plan": "Train Sept-Nov, test December",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T01:39:55.071852"
+      "last_result": {
+        "exp_id": "EXP-0095",
+        "per_trade_pnl": null,
+        "win_rate": 48.1
       }
     },
     {
@@ -537,16 +538,17 @@
       "description": "Fix exit asymmetry issue. -8%/+12% requires 40% WR to break even. Symmetric -10%/+10% only requires 50% WR.",
       "hypothesis": "Symmetric exits reduce breakeven threshold, improving edge capture",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "10",
         "TT_TAKE_PROFIT_PCT": "10"
       },
       "validation_plan": "Train Sept-Nov, test December",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T01:39:55.071852"
+      "last_result": {
+        "exp_id": "EXP-0096",
+        "per_trade_pnl": null,
+        "win_rate": 36.2
       }
     },
     {
@@ -558,15 +560,16 @@
       "description": "Let winners run longer. Current +12% TP may cut profits too early.",
       "hypothesis": "Wider TP lets trending moves develop fully",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "20"
       },
       "validation_plan": "Train Sept-Nov, test December",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T01:39:55.071852"
+      "last_result": {
+        "exp_id": "EXP-0097",
+        "per_trade_pnl": null,
+        "win_rate": 36.5
       }
     },
     {
@@ -578,15 +581,16 @@
       "description": "Match prediction horizon (15min) with max hold time. 45 min hold exceeds 15 min prediction.",
       "hypothesis": "Holding beyond prediction horizon causes reversals",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_MAX_HOLD_MINUTES": "20"
       },
       "validation_plan": "Train Sept-Nov, test December",
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T01:39:55.071852"
+      "last_result": {
+        "exp_id": "EXP-0098",
+        "per_trade_pnl": -0.5353061224489796,
+        "win_rate": 38.8
       }
     },
     {
@@ -863,5 +867,5 @@
     }
   ],
   "next_id": 166,
-  "last_updated": "2026-01-04T01:43:09.412866"
+  "last_updated": "2026-01-04T02:01:06.561371"
 }
