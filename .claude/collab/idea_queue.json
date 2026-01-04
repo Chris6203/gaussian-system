@@ -1322,8 +1322,187 @@
         "machine_id": "lrn-ai-serv1",
         "locked_at": "2026-01-04T13:18:43.909409"
       }
+    },
+    {
+      "id": "IDEA-182",
+      "source": "oos_validation",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "validation",
+      "title": "OOS: Trailing stop on December (BEST +250%)",
+      "description": "Validate IDEA-173 (trailing stop) on December OOS. Current best at +250% P&L.",
+      "hypothesis": "Trailing stop strategy generalizes to unseen data",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "LOAD_PRETRAINED": "1",
+        "PRETRAINED_MODEL_PATH": "models/EXP-0120_IDEA-173/state",
+        "TRAINING_START_DATE": "2025-12-01",
+        "TRAINING_END_DATE": "2025-12-20",
+        "TT_MAX_CYCLES": "3500"
+      }
+    },
+    {
+      "id": "IDEA-183",
+      "source": "trailing_optimization",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "exit",
+      "title": "Trailing: Tighter trail 3% (lock more profit)",
+      "description": "Same as IDEA-173 but with 3% trail distance instead of 5%",
+      "hypothesis": "Tighter trail locks in more profit on reversals",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "3",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-184",
+      "source": "trailing_optimization",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "exit",
+      "title": "Trailing: Earlier activation at +5%",
+      "description": "Activate trailing stop earlier at +5% instead of +10%",
+      "hypothesis": "Earlier activation protects gains sooner",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "5",
+        "TRAILING_STOP_DISTANCE": "3",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-185",
+      "source": "trailing_optimization",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "exit",
+      "title": "Trailing: Later activation at +15%",
+      "description": "Activate trailing stop later at +15% - give winners more room",
+      "hypothesis": "Later activation lets trends develop more",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "15",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-186",
+      "source": "trailing_optimization",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "exit",
+      "title": "Trailing + Tighter stop -5% (cut losers faster)",
+      "description": "Combine trailing stop with tighter -5% stop loss",
+      "hypothesis": "Cut losers fast + let winners run = asymmetric edge",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "5",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-187",
+      "source": "trailing_optimization",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "combined",
+      "title": "Trailing + V3 + Transformer (architecture combo)",
+      "description": "Combine trailing stop with V3 multi-horizon predictor",
+      "hypothesis": "Better predictions + trailing stop = more winners that run",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1"
+      }
+    },
+    {
+      "id": "IDEA-188",
+      "source": "trailing_optimization",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "combined",
+      "title": "Trailing + Time filter 10AM-2PM",
+      "description": "Combine trailing stop with optimal trading hours",
+      "hypothesis": "Best exit strategy + best time = compounded edge",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "TRADING_START_HOUR": "10",
+        "TRADING_END_HOUR": "14"
+      }
+    },
+    {
+      "id": "IDEA-189",
+      "source": "trailing_optimization",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "combined",
+      "title": "Trailing + Stricter HMM 0.75/0.25",
+      "description": "Combine trailing stop with stricter HMM filtering",
+      "hypothesis": "Higher quality entries + trailing stop = fewer but bigger winners",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "5",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "HMM_STRONG_BULLISH": "0.75",
+        "HMM_STRONG_BEARISH": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-190",
+      "source": "trailing_optimization",
+      "timestamp": "2026-01-04T13:25:00.000000",
+      "category": "combined",
+      "title": "ULTIMATE TRAILING: All optimizations combined",
+      "description": "Trailing + V3 + Entropy + Time filter + Strict HMM",
+      "hypothesis": "Stack all winning elements with trailing stop",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "PREDICTOR_ARCH": "v3_multi_horizon",
+        "TEMPORAL_ENCODER": "transformer",
+        "TT_STOP_LOSS_PCT": "5",
+        "TT_TAKE_PROFIT_PCT": "100",
+        "TRAILING_STOP_ACTIVATION": "10",
+        "TRAILING_STOP_DISTANCE": "4",
+        "USE_ENTROPY_CONFIDENCE": "1",
+        "TRADING_START_HOUR": "10",
+        "TRADING_END_HOUR": "14",
+        "HMM_STRONG_BULLISH": "0.70",
+        "HMM_STRONG_BEARISH": "0.30"
+      }
     }
   ],
-  "next_id": 182,
-  "last_updated": "2026-01-04T13:18:43.909409"
+  "next_id": 191,
+  "last_updated": "2026-01-04T13:25:00.000000"
 }
