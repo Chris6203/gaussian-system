@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0114: OOS: Wider TP (+20%) on December (IDEA-146 winner) (2026-01-04 04:32)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.6% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 183 |
+| Run Dir | `models/EXP-0114_IDEA-167` |
+
+**Source**: OOS_VALIDATION
+**Category**: validation
+**Hypothesis**: Wider TP showed best P&L in training, validate on unseen data
+**Result**: ERROR
+
+---
+
+### EXP-0113: OOS: V3+Transformer on December (IDEA-144 winner) (2026-01-04 04:32)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 42.6% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 348 |
+| Run Dir | `models/EXP-0113_IDEA-166` |
+
+**Source**: OOS_VALIDATION
+**Category**: validation
+**Hypothesis**: V3+Transformer showed best WR in training, validate on unseen data
+**Result**: ERROR
+
+---
+
+### EXP-0112: BEST BET: Trans+StrictHMM+TightExits (2026-01-04 04:32)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 49 |
+| Run Dir | `models/EXP-0112_IDEA-165` |
+
+**Source**: GRID_SEARCH
+**Category**: combined
+**Hypothesis**: Quality over quantity with fast exits
+**Result**: ERROR
+
+---
+
+### EXP-0111: BEST BET: V3+Trans+Sym exits+20min hold (2026-01-04 04:32)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 35.8% |
+| P&L | -3.65% |
+| Per-Trade P&L | $-0.60 |
+| Trades | 302 |
+| Run Dir | `models/EXP-0111_IDEA-164` |
+
+**Source**: GRID_SEARCH
+**Category**: combined
+**Hypothesis**: Combine all OOS-friendly settings
+**Result**: FAIL
+
+---
+
+
 ### EXP-0110: Transformer with dropout 0.2 (2026-01-04 04:07)
 
 | Metric | Quick Test (5K) |
