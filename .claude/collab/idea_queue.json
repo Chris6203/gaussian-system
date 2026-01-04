@@ -836,15 +836,16 @@
       "title": "V3 + Transformer + 15min horizon",
       "hypothesis": "Match prediction to hold time",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
         "V3_DEFAULT_HORIZON": "15"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T03:07:45.005980"
+      "last_result": {
+        "exp_id": "EXP-0107",
+        "per_trade_pnl": null,
+        "win_rate": 48.1
       }
     },
     {
@@ -855,15 +856,16 @@
       "title": "V3 + Transformer + 30min horizon",
       "hypothesis": "Longer horizon for bigger moves",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
         "V3_DEFAULT_HORIZON": "30"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T03:07:45.005980"
+      "last_result": {
+        "exp_id": "EXP-0108",
+        "per_trade_pnl": -1.262361111111111,
+        "win_rate": 40.3
       }
     },
     {
@@ -874,14 +876,15 @@
       "title": "Transformer 15K cycles",
       "hypothesis": "Optimal training length between 10K and 20K",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_MAX_CYCLES": "15000"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T03:07:45.005980"
+      "last_result": {
+        "exp_id": "EXP-0109",
+        "per_trade_pnl": null,
+        "win_rate": 34.7
       }
     },
     {
@@ -892,14 +895,15 @@
       "title": "Transformer with dropout 0.2",
       "hypothesis": "More dropout = less overfitting",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "DROPOUT_RATE": "0.2"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T03:07:45.005980"
+      "last_result": {
+        "exp_id": "EXP-0110",
+        "per_trade_pnl": null,
+        "win_rate": 37.7
       }
     },
     {
@@ -1024,5 +1028,5 @@
     }
   ],
   "next_id": 170,
-  "last_updated": "2026-01-04T03:07:45.005980"
+  "last_updated": "2026-01-04T04:07:51.600432"
 }

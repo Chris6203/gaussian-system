@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0110: Transformer with dropout 0.2 (2026-01-04 04:07)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.7% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0110_IDEA-163` |
+
+**Source**: GRID_SEARCH
+**Category**: training
+**Hypothesis**: More dropout = less overfitting
+**Result**: ERROR
+
+---
+
+### EXP-0108: V3 + Transformer + 30min horizon (2026-01-04 04:07)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.3% |
+| P&L | -1.82% |
+| Per-Trade P&L | $-1.26 |
+| Trades | 72 |
+| Run Dir | `models/EXP-0108_IDEA-161` |
+
+**Source**: GRID_SEARCH
+**Category**: architecture
+**Hypothesis**: Longer horizon for bigger moves
+**Result**: FAIL
+
+---
+
+### EXP-0107: V3 + Transformer + 15min horizon (2026-01-04 04:07)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 48.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 76 |
+| Run Dir | `models/EXP-0107_IDEA-160` |
+
+**Source**: GRID_SEARCH
+**Category**: architecture
+**Hypothesis**: Match prediction to hold time
+**Result**: ERROR
+
+---
+
+### EXP-0109: Transformer 15K cycles (2026-01-04 04:07)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 34.7% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 114 |
+| Run Dir | `models/EXP-0109_IDEA-162` |
+
+**Source**: GRID_SEARCH
+**Category**: training
+**Hypothesis**: Optimal training length between 10K and 20K
+**Result**: ERROR
+
+---
+
+
 ### EXP-0103: Aggressive: -5%/+8%/20min with Transformer (2026-01-04 03:06)
 
 | Metric | Quick Test (5K) |
