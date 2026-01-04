@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0140: DATA-DRIVEN: Skip 1PM-3PM entirely (0.3-0.7% WR) (2026-01-04 14:44)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 79 |
+| Run Dir | `models/EXP-0140_IDEA-193` |
+
+**Source**: DATA_ANALYSIS
+**Category**: entry
+**Hypothesis**: Afternoon reversals kill trades - just avoid them
+**Result**: ERROR
+
+---
+
+### EXP-0138: DATA-DRIVEN: Only trade 11AM-1PM (9.3% WR window) (2026-01-04 14:44)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 79 |
+| Run Dir | `models/EXP-0138_IDEA-191` |
+
+**Source**: DATA_ANALYSIS
+**Category**: entry
+**Hypothesis**: Midday has cleaner trends, afternoon is choppy reversals
+**Result**: ERROR
+
+---
+
+### EXP-0137: ULTIMATE TRAILING: All optimizations combined (2026-01-04 14:44)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 20.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 56 |
+| Run Dir | `models/EXP-0137_IDEA-190` |
+
+**Source**: TRAILING_OPTIMIZATION
+**Category**: combined
+**Hypothesis**: Stack all winning elements with trailing stop
+**Result**: ERROR
+
+---
+
+### EXP-0139: DATA-DRIVEN: Volume spike > 1.3 filter (2026-01-04 14:44)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.2% |
+| P&L | -4.52% |
+| Per-Trade P&L | $-2.86 |
+| Trades | 79 |
+| Run Dir | `models/EXP-0139_IDEA-192` |
+
+**Source**: DATA_ANALYSIS
+**Category**: entry
+**Hypothesis**: High volume confirms real moves, low volume = fake breakouts
+**Result**: FAIL
+
+---
+
+
 ### EXP-0133: Trailing + Tighter stop -5% (cut losers faster) (2026-01-04 14:21)
 
 | Metric | Quick Test (5K) |
