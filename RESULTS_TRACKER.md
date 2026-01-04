@@ -2663,6 +2663,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0127: Momentum confirmation filter (2026-01-04 13:38)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0127_IDEA-180` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: entry
+**Hypothesis**: Trading with momentum improves win rate
+**Result**: ERROR
+
+---
+
+### EXP-0128: ULTIMATE: All winning features combined (2026-01-04 13:38)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 33.3% |
+| P&L | -0.56% |
+| Per-Trade P&L | $-0.62 |
+| Trades | 45 |
+| Run Dir | `models/EXP-0128_IDEA-181` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: combined
+**Hypothesis**: Stack all improvements for maximum edge
+**Result**: FAIL
+
+---
+
+
 ### EXP-0123: Only trade 10AM-2PM (optimal hours) (2026-01-04 13:17)
 
 | Metric | Quick Test (5K) |

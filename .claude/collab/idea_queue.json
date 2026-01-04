@@ -1286,16 +1286,17 @@
       "description": "Only enter when 5-min momentum aligns with signal direction",
       "hypothesis": "Trading with momentum improves win rate",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
         "REQUIRE_MOMENTUM_CONFIRM": "1",
         "USE_ENTROPY_CONFIDENCE": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T13:18:43.909409"
+      "last_result": {
+        "exp_id": "EXP-0127",
+        "per_trade_pnl": null,
+        "win_rate": 36.2
       }
     },
     {
@@ -1307,7 +1308,7 @@
       "description": "Combine: TP +25%, Entropy confidence, Trailing stop, Time filter (10-2), Momentum confirm",
       "hypothesis": "Stack all improvements for maximum edge",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25",
@@ -1318,9 +1319,10 @@
         "TRADING_END_HOUR": "14",
         "REQUIRE_MOMENTUM_CONFIRM": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T13:18:43.909409"
+      "last_result": {
+        "exp_id": "EXP-0128",
+        "per_trade_pnl": -0.6244444444444445,
+        "win_rate": 33.3
       }
     },
     {
@@ -1645,5 +1647,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T13:45:00.000000"
+  "last_updated": "2026-01-04T13:38:29.746101"
 }
