@@ -87,6 +87,15 @@ class TradeState:
     mtf_consensus: float = 0.5       # Multi-timeframe: 0=bearish, 0.5=neutral, 1=bullish
     trending_signal_count: float = 0.0  # 0-1 normalized count of trending signals
 
+    # Sentiment features (Fear & Greed, PCR, VIX-based)
+    sentiment_fear_greed: float = 0.5  # 0=extreme fear, 1=extreme greed
+    sentiment_pcr: float = 0.0         # Put/Call ratio normalized (-1 to +1)
+    sentiment_contrarian: float = 0.0  # Composite contrarian signal (-1 to +1)
+    sentiment_news: float = 0.0        # News sentiment (-1 to +1)
+
+
+# Environment variable to enable sentiment features (adds 4 features to state)
+SENTIMENT_FEATURES_ENABLED = os.environ.get('SENTIMENT_FEATURES_ENABLED', '1') == '1'
 
 # Environment variable to enable condor regime features (adds 3 features to state)
 CONDOR_FEATURES_ENABLED = os.environ.get('CONDOR_FEATURES_ENABLED', '0') == '1'
@@ -99,7 +108,7 @@ class UnifiedPolicyNetwork(nn.Module):
     Key insight: Simpler networks often outperform complex ones
     when data is noisy (which trading data always is).
 
-    State features (18 base, or 21 with condor features):
+    State features (18 base, +4 sentiment, +3 condor = up to 25):
     - Position state (4): in_trade, is_call, pnl%, drawdown
     - Time (2): minutes_held, minutes_to_expiry
     - Prediction (3): direction, confidence, momentum
@@ -110,9 +119,14 @@ class UnifiedPolicyNetwork(nn.Module):
     """
 
     def __init__(self, state_dim: int = None, hidden_dim: int = 64):
-        # Auto-detect state dim based on condor features setting
+        # Auto-detect state dim based on feature flags
         if state_dim is None:
-            state_dim = 21 if CONDOR_FEATURES_ENABLED else 18
+            # Base: 18 features + optional sentiment (4) + optional condor (3)
+            state_dim = 18
+            if SENTIMENT_FEATURES_ENABLED:
+                state_dim += 4
+            if CONDOR_FEATURES_ENABLED:
+                state_dim += 3
         super().__init__()
         
         # Shared feature extractor (simple!)
@@ -232,15 +246,21 @@ class UnifiedRLPolicy:
         # Track win/loss history for adaptive position sizing
         self.recent_results = []  # Last 20 trades
         
-        # Network (18 base features, or 21 with condor regime features)
-        state_dim = 21 if CONDOR_FEATURES_ENABLED else 18
+        # Network (18 base + 4 sentiment + 3 condor = up to 25 features)
+        state_dim = 18
+        if SENTIMENT_FEATURES_ENABLED:
+            state_dim += 4
+        if CONDOR_FEATURES_ENABLED:
+            state_dim += 3
         self.network = UnifiedPolicyNetwork(state_dim=state_dim, hidden_dim=64).to(device)
 
-        # Log condor features status
+        # Log feature status
+        features_desc = [f"Base(18)"]
+        if SENTIMENT_FEATURES_ENABLED:
+            features_desc.append("Sentiment(4)")
         if CONDOR_FEATURES_ENABLED:
-            logger.info(f"🦅 CONDOR FEATURES ENABLED: Using 21-dim state (Iron Condor logic as NN weights)")
-        else:
-            logger.info(f"📊 Standard mode: Using 18-dim state")
+            features_desc.append("Condor(3)")
+        logger.info(f"📊 RL State: {state_dim}-dim [{' + '.join(features_desc)}]")
         self.optimizer = torch.optim.AdamW(
             self.network.parameters(), 
             lr=learning_rate,
@@ -320,6 +340,15 @@ class UnifiedRLPolicy:
                 np.clip(state.condor_suitability, 0, 1),     # 0=trending, 1=neutral (condor territory)
                 np.clip(state.mtf_consensus, 0, 1),          # Multi-timeframe consensus
                 np.clip(state.trending_signal_count, 0, 1),  # Normalized trending signal count
+            ])
+
+        # Sentiment features (4 features) - ENABLED by default
+        if SENTIMENT_FEATURES_ENABLED:
+            features.extend([
+                np.clip(state.sentiment_fear_greed, 0, 1),    # 0=extreme fear, 1=extreme greed
+                np.clip(state.sentiment_pcr, -1, 1),          # Put/Call ratio normalized
+                np.clip(state.sentiment_contrarian, -1, 1),   # Composite contrarian signal
+                np.clip(state.sentiment_news, -1, 1),         # News sentiment
             ])
 
         return torch.tensor(features, dtype=torch.float32, device=self.device)

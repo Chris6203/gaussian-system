@@ -27,6 +27,7 @@ from .macro import (
 from .crypto import compute_crypto_features, compute_crypto_equity_correlation, CRYPTO_SYMBOLS
 from .meta import compute_meta_features
 from .jerry_features import compute_jerry_features
+from .sentiment import compute_all_sentiment_features, SENTIMENT_FEATURE_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ class FeatureConfig:
     enable_crypto: bool = True
     enable_meta: bool = True
     enable_jerry: bool = False  # Jerry's fuzzy logic features (Quantor-MTFuzz)
+    enable_sentiment: bool = True  # Sentiment features (Fear & Greed, PCR, VIX, News)
     
     # Equity/ETF parameters
     equity_symbols: List[str] = field(default_factory=lambda: list(EQUITY_ETF_SYMBOLS.keys()))
@@ -98,6 +100,7 @@ class FeatureConfig:
             enable_crypto=feature_config.get('enable_crypto', True),
             enable_meta=feature_config.get('enable_meta', True),
             enable_jerry=enable_jerry,
+            enable_sentiment=feature_config.get('enable_sentiment', True),
             equity_symbols=feature_config.get('equity_symbols', list(EQUITY_ETF_SYMBOLS.keys())),
             macro_symbols=feature_config.get('macro_symbols', list(ALL_MACRO_SYMBOLS.keys())),
             primary_symbol=config.get('trading', {}).get('symbol', 'SPY'),
@@ -121,6 +124,7 @@ class FeatureConfig:
             'enable_crypto': self.enable_crypto,
             'enable_meta': self.enable_meta,
             'enable_jerry': self.enable_jerry,
+            'enable_sentiment': self.enable_sentiment,
             'equity_symbols': self.equity_symbols,
             'breadth_symbols': self.breadth_symbols,
             'macro_symbols': self.macro_symbols,
@@ -401,6 +405,25 @@ class FeaturePipeline:
 
                 jerry_dict = jerry_feats.to_dict()
                 features.update(jerry_dict)
+
+            # =================================================================
+            # 8. SENTIMENT FEATURES (Fear & Greed, PCR, VIX, News)
+            # =================================================================
+            if self.config.enable_sentiment:
+                # Get PCR from options surface features if available
+                oi_put_call_ratio = features.get('opt_oi_put_call_ratio', 1.0)
+                vol_put_call_ratio = features.get('opt_vol_put_call_ratio', None)
+
+                sentiment_features = compute_all_sentiment_features(
+                    vix_level=vix_level or 18.0,
+                    oi_put_call_ratio=oi_put_call_ratio,
+                    vol_put_call_ratio=vol_put_call_ratio,
+                    fetch_external=True,  # Fetch Fear & Greed and Polygon news
+                    polygon_api_key=None  # Will use config/env
+                )
+                if self.config.use_prefix:
+                    sentiment_features = {f'sent_{k}': v for k, v in sentiment_features.items()}
+                features.update(sentiment_features)
 
         except Exception as e:
             self.logger.error(f"Error computing features: {e}")

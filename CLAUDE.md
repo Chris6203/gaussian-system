@@ -114,7 +114,8 @@ Market Data → Features (50-500 dims) → HMM Regime → Predictor → Entry Po
 | Main Orchestrator | `unified_options_trading_bot.py` | Combines all components |
 | Neural Predictor | `bot_modules/neural_networks.py` | TCN/LSTM + Bayesian heads + RBF kernels |
 | HMM Regime | `backend/multi_dimensional_hmm.py` | 3×3×3 trend/vol/liquidity detection |
-| Entry Policy | `backend/unified_rl_policy.py` | 18 state features → 4 actions (HOLD/CALL/PUT/EXIT) |
+| Entry Policy | `backend/unified_rl_policy.py` | 18-22 state features → 4 actions (HOLD/CALL/PUT/EXIT) |
+| Sentiment | `features/sentiment.py` | Fear & Greed, PCR, VIX, News sentiment |
 | Exit Manager | `backend/unified_exit_manager.py` | Hard rules first, then model-based |
 | Paper Trading | `backend/paper_trading_system.py` | Simulated execution |
 | Live Execution | `execution/tradier_adapter.py` | Tradier API integration |
@@ -207,7 +208,7 @@ See `docs/ARCHITECTURE_IMPROVEMENTS_V4.md` for full documentation.
 - `confidence`: 0-1
 - `risk_adjusted_return`: **Always use this, not raw return_mean**
 
-### UnifiedRLPolicy State (18 features)
+### UnifiedRLPolicy State (18-22 features)
 
 | Category | Features |
 |----------|----------|
@@ -217,6 +218,9 @@ See `docs/ARCHITECTURE_IMPROVEMENTS_V4.md` for full documentation.
 | Market | `vix_level`, `volume_spike` |
 | HMM Regime | `hmm_trend`, `hmm_vol`, `hmm_liq`, `hmm_conf` |
 | Greeks | `theta_decay`, `delta` |
+| Sentiment* | `fear_greed`, `pcr`, `contrarian`, `news` |
+
+*Sentiment features enabled by default (SENTIMENT_FEATURES_ENABLED=1)
 
 **Actions:** 0=HOLD, 1=BUY_CALL, 2=BUY_PUT, 3=EXIT
 
@@ -235,6 +239,23 @@ All normalized 0-1: `hmm_trend` (0=Bearish, 1=Bullish), `hmm_volatility`, `hmm_l
 | Polygon | 2 | Historical 1-min bars | Starter plan: 5 years |
 | FMP | 3 | Alternative historical | 300 req/min limit |
 | Yahoo | 4 | Backup | Free |
+
+### Sentiment Data Sources
+
+| Source | Data | API | Notes |
+|--------|------|-----|-------|
+| **Fear & Greed Index** | Market sentiment (0-100) | `api.alternative.me/fng/` | Free, cached 5 min |
+| **Polygon News** | News sentiment | Polygon API | Uses existing API key |
+| **Put/Call Ratio** | Options flow | Computed | From options chain data |
+| **VIX** | Volatility sentiment | Market data | Already in features |
+
+**Sentiment features** (`features/sentiment.py`):
+- `fear_greed`: 0=extreme fear, 1=extreme greed
+- `pcr_contrarian`: High PCR = bullish (contrarian), Low = bearish
+- `composite_contrarian`: Combined contrarian signal
+- `news_sentiment`: Polygon news sentiment (-1 to +1)
+
+**Enable/disable:** `SENTIMENT_FEATURES_ENABLED=0` to disable (default: enabled)
 
 ### Data Manager Integration
 
