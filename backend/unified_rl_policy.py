@@ -40,6 +40,9 @@ from backend.kill_switches import check_kill_switches
 # Fuzzy logic scoring for trade quality (Jerry's improvement)
 from backend.fuzzy_scoring import should_allow_trade as fuzzy_allow_trade
 
+# Condor regime filter for weighting directional vs neutral markets
+from backend.condor_regime_filter import get_condor_regime_filter
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,24 +82,37 @@ class TradeState:
     estimated_theta_decay: float = 0.0  # Daily theta as %
     estimated_delta: float = 0.5
 
+    # Condor regime features (use condor logic as weights for directional decisions)
+    condor_suitability: float = 0.5  # 0=trending (good for directional), 1=neutral (condor territory)
+    mtf_consensus: float = 0.5       # Multi-timeframe: 0=bearish, 0.5=neutral, 1=bullish
+    trending_signal_count: float = 0.0  # 0-1 normalized count of trending signals
+
+
+# Environment variable to enable condor regime features (adds 3 features to state)
+CONDOR_FEATURES_ENABLED = os.environ.get('CONDOR_FEATURES_ENABLED', '0') == '1'
+
 
 class UnifiedPolicyNetwork(nn.Module):
     """
     Simple but effective policy network.
-    
+
     Key insight: Simpler networks often outperform complex ones
     when data is noisy (which trading data always is).
-    
-    State features (18 total):
+
+    State features (18 base, or 21 with condor features):
     - Position state (4): in_trade, is_call, pnl%, drawdown
-    - Time (2): minutes_held, minutes_to_expiry  
+    - Time (2): minutes_held, minutes_to_expiry
     - Prediction (3): direction, confidence, momentum
     - Market (2): vix, volume_spike
     - HMM Regime (4): trend, volatility, liquidity, hmm_confidence
     - Greeks (2): theta, delta
+    - [Optional] Condor Regime (3): condor_suitability, mtf_consensus, trending_count
     """
-    
-    def __init__(self, state_dim: int = 18, hidden_dim: int = 64):  # 18 features now
+
+    def __init__(self, state_dim: int = None, hidden_dim: int = 64):
+        # Auto-detect state dim based on condor features setting
+        if state_dim is None:
+            state_dim = 21 if CONDOR_FEATURES_ENABLED else 18
         super().__init__()
         
         # Shared feature extractor (simple!)
@@ -216,8 +232,15 @@ class UnifiedRLPolicy:
         # Track win/loss history for adaptive position sizing
         self.recent_results = []  # Last 20 trades
         
-        # Network (18 features: position + time + prediction + market + HMM + greeks)
-        self.network = UnifiedPolicyNetwork(state_dim=18, hidden_dim=64).to(device)
+        # Network (18 base features, or 21 with condor regime features)
+        state_dim = 21 if CONDOR_FEATURES_ENABLED else 18
+        self.network = UnifiedPolicyNetwork(state_dim=state_dim, hidden_dim=64).to(device)
+
+        # Log condor features status
+        if CONDOR_FEATURES_ENABLED:
+            logger.info(f"🦅 CONDOR FEATURES ENABLED: Using 21-dim state (Iron Condor logic as NN weights)")
+        else:
+            logger.info(f"📊 Standard mode: Using 18-dim state")
         self.optimizer = torch.optim.AdamW(
             self.network.parameters(), 
             lr=learning_rate,
@@ -287,11 +310,18 @@ class UnifiedRLPolicy:
             np.clip(state.estimated_theta_decay * 100, -0.1, 0),  # Theta is always negative
             np.clip(state.estimated_delta, 0, 1),
 
-            # Padding / misc (1 feature)
-            # NOTE: The network expects 18 inputs. We append a stable extra feature rather than
-            # shifting the meaning/order of the existing 17 features.
+            # Position size (1 feature)
             np.clip(float(state.position_size) / 10.0, 0.0, 1.0),
         ]
+
+        # Condor regime features (3 features) - ONLY if enabled
+        if CONDOR_FEATURES_ENABLED:
+            features.extend([
+                np.clip(state.condor_suitability, 0, 1),     # 0=trending, 1=neutral (condor territory)
+                np.clip(state.mtf_consensus, 0, 1),          # Multi-timeframe consensus
+                np.clip(state.trending_signal_count, 0, 1),  # Normalized trending signal count
+            ])
+
         return torch.tensor(features, dtype=torch.float32, device=self.device)
     
     def select_action(
@@ -1242,3 +1272,68 @@ class AdaptiveRulesPolicy:
             'win_rate': self.win_rate,
         }
 
+
+# ============================================================================
+# CONDOR REGIME FEATURES - Use Iron Condor logic as weights in neural network
+# ============================================================================
+
+def compute_condor_regime_features(features: Dict) -> Dict[str, float]:
+    """
+    Compute condor regime features from raw market features.
+
+    These features encode Iron Condor logic as weights for the neural network:
+    - condor_suitability: 0 = trending market (good for directional), 1 = neutral (condor territory)
+    - mtf_consensus: Multi-timeframe consensus (0 = bearish, 0.5 = neutral, 1 = bullish)
+    - trending_signal_count: Normalized count of trending signals (0-1)
+
+    The neural network learns to weight these optimally.
+    """
+    try:
+        condor_filter = get_condor_regime_filter()
+        signal = condor_filter.check_regime(features)
+
+        # condor_suitability: 0 = allow directional (trending), 1 = block directional (neutral/condor)
+        # INVERTED: When condor would enter, we DON'T want directional
+        condor_suitability = 0.0 if signal.allow_directional else 1.0
+
+        # Add confidence weighting
+        if signal.regime_type == "trending":
+            condor_suitability = 0.0 + (1.0 - signal.confidence) * 0.2  # 0.0-0.2 for trending
+        elif signal.regime_type == "neutral":
+            condor_suitability = 0.8 + signal.confidence * 0.2  # 0.8-1.0 for neutral
+        else:  # mixed
+            condor_suitability = 0.4 + signal.confidence * 0.2  # 0.4-0.6 for mixed
+
+        # mtf_consensus: Calculate from HMM + momentum
+        hmm_trend = features.get('hmm_trend', 0.5)
+        momentum_5m = features.get('momentum_5m', 0.0)
+
+        # Weight HMM more heavily, add momentum contribution
+        mom_contribution = 0.5 + min(0.3, max(-0.3, momentum_5m * 10))
+        mtf_consensus = 0.7 * hmm_trend + 0.3 * mom_contribution
+        mtf_consensus = max(0.0, min(1.0, mtf_consensus))  # Clip to [0, 1]
+
+        # trending_signal_count: Count of trending indicators
+        vix = features.get('vix_level', 18.0)
+        is_trending = hmm_trend > 0.70 or hmm_trend < 0.30
+        has_momentum = abs(momentum_5m) > 0.003
+        high_vol = vix > 25.0
+        low_vol = vix < 14.0
+        mtf_trending = mtf_consensus < 0.40 or mtf_consensus > 0.60
+
+        # Normalize: 4 possible trending signals
+        trending_count = sum([is_trending, has_momentum, high_vol or low_vol, mtf_trending])
+        trending_signal_count = trending_count / 4.0
+
+        return {
+            'condor_suitability': condor_suitability,
+            'mtf_consensus': mtf_consensus,
+            'trending_signal_count': trending_signal_count,
+        }
+    except Exception as e:
+        logger.warning(f"Error computing condor regime features: {e}")
+        return {
+            'condor_suitability': 0.5,  # Neutral default
+            'mtf_consensus': 0.5,
+            'trending_signal_count': 0.5,
+        }

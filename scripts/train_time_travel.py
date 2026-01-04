@@ -836,7 +836,7 @@ rules_policy = None
 q_entry_controller = None
 
 try:
-    from backend.unified_rl_policy import UnifiedRLPolicy, TradeState, AdaptiveRulesPolicy
+    from backend.unified_rl_policy import UnifiedRLPolicy, TradeState, AdaptiveRulesPolicy, compute_condor_regime_features, CONDOR_FEATURES_ENABLED
     
     # Use unified RL policy (single system for entry + exit)
     # TRAINING MODE: Lower thresholds to generate more trades for learning
@@ -3007,7 +3007,28 @@ for idx, sim_time in enumerate(common_times):
                     
                     # HMM confidence
                     hmm_conf_float = bot.current_hmm_regime.get('confidence', 0.5)
-                
+
+                # ============================================================
+                # CONDOR REGIME FEATURES: Use Iron Condor logic as NN weights
+                # Only computed when CONDOR_FEATURES_ENABLED=1
+                # ============================================================
+                condor_suitability = 0.5
+                mtf_consensus = 0.5
+                trending_signal_count = 0.0
+
+                if CONDOR_FEATURES_ENABLED:
+                    condor_features_dict = {
+                        'vix_level': vix_for_rl,
+                        'hmm_trend': hmm_trend_float,
+                        'hmm_confidence': hmm_conf_float,
+                        'momentum_5m': momentum_5min,
+                        'confidence': confidence,
+                    }
+                    condor_regime = compute_condor_regime_features(condor_features_dict)
+                    condor_suitability = condor_regime['condor_suitability']
+                    mtf_consensus = condor_regime['mtf_consensus']
+                    trending_signal_count = condor_regime['trending_signal_count']
+
                 trade_state = TradeState(
                     is_in_trade=False,  # Entry decision
                     is_call=action == 'BUY_CALLS',
@@ -3024,6 +3045,11 @@ for idx, sim_time in enumerate(common_times):
                     # Greeks
                     estimated_theta_decay=-0.03,  # Assume 0DTE
                     estimated_delta=0.5,
+                    # CONDOR REGIME FEATURES (Iron Condor logic as NN weights)
+                    # Only used when CONDOR_FEATURES_ENABLED=1
+                    condor_suitability=condor_suitability,
+                    mtf_consensus=mtf_consensus,
+                    trending_signal_count=trending_signal_count,
                 )
 
                 # ============================================================
