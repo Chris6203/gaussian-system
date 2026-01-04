@@ -1660,6 +1660,109 @@
         "FAVOR_PUTS": "1",
         "PUT_BIAS": "1.2"
       }
+    },
+    {
+      "id": "IDEA-198",
+      "source": "user_suggestion",
+      "timestamp": "2026-01-04T13:50:26.522652",
+      "category": "features",
+      "title": "SENTIMENT: Alpha Vantage News Sentiment API",
+      "description": "Integrate Alpha Vantage NEWS_SENTIMENT endpoint for SPY. Get real-time sentiment scores from financial news. Use sentiment_score > 0.3 for bullish, < -0.3 for bearish confirmation.",
+      "hypothesis": "News sentiment provides leading indicator - positive news + bullish HMM = higher win rate",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "USE_NEWS_SENTIMENT": "1",
+        "SENTIMENT_SOURCE": "alphavantage",
+        "SENTIMENT_BULLISH_THRESHOLD": "0.3",
+        "SENTIMENT_BEARISH_THRESHOLD": "-0.3"
+      }
+    },
+    {
+      "id": "IDEA-199",
+      "source": "user_suggestion",
+      "timestamp": "2026-01-04T13:50:26.522668",
+      "category": "features",
+      "title": "SENTIMENT: Fear & Greed Index (CNN)",
+      "description": "Scrape/API CNN Fear & Greed Index. Extreme fear (<25) = contrarian bullish, Extreme greed (>75) = contrarian bearish. Use as filter or position sizing.",
+      "hypothesis": "Extreme sentiment = reversal opportunities. Fear = buy, Greed = sell",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "USE_FEAR_GREED": "1",
+        "FEAR_GREED_EXTREME_FEAR": "25",
+        "FEAR_GREED_EXTREME_GREED": "75"
+      }
+    },
+    {
+      "id": "IDEA-200",
+      "source": "user_suggestion",
+      "timestamp": "2026-01-04T13:50:26.522672",
+      "category": "features",
+      "title": "SENTIMENT: Enhanced Put/Call Ratio (already have data)",
+      "description": "Use existing vol_put_call_ratio more aggressively. PCR > 1.2 = fear (contrarian bullish), PCR < 0.7 = greed (contrarian bearish). Filter trades to align with PCR signal.",
+      "hypothesis": "Extreme PCR is a reliable contrarian indicator - already have this data, just need to use it better",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "USE_PCR_FILTER": "1",
+        "PCR_FEAR_THRESHOLD": "1.2",
+        "PCR_GREED_THRESHOLD": "0.7",
+        "PCR_CONTRARIAN": "1"
+      }
+    },
+    {
+      "id": "IDEA-201",
+      "source": "user_suggestion",
+      "timestamp": "2026-01-04T13:50:26.522675",
+      "category": "combo",
+      "title": "COMBO: Trailing Stop + PCR Sentiment Filter",
+      "description": "Combine best strategy (trailing stop +250%) with Put/Call ratio filter. Only trade when PCR confirms direction.",
+      "hypothesis": "PCR filter will cut bad trades while trailing stop lets winners run",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "USE_PCR_FILTER": "1",
+        "PCR_FEAR_THRESHOLD": "1.2",
+        "PCR_GREED_THRESHOLD": "0.7"
+      }
+    },
+    {
+      "id": "IDEA-202",
+      "source": "user_suggestion",
+      "timestamp": "2026-01-04T13:50:26.522677",
+      "category": "features",
+      "title": "SENTIMENT: VIX as Sentiment (extreme levels only)",
+      "description": "Use VIX as sentiment indicator. VIX > 25 = extreme fear (favor calls), VIX < 12 = complacency (favor puts or no trade). Already have VIX data.",
+      "hypothesis": "VIX extremes are reliable contrarian signals - high VIX = oversold, low VIX = overbought",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "USE_VIX_SENTIMENT": "1",
+        "VIX_EXTREME_FEAR": "25",
+        "VIX_COMPLACENCY": "12"
+      }
+    },
+    {
+      "id": "IDEA-203",
+      "source": "user_suggestion",
+      "timestamp": "2026-01-04T13:50:26.522680",
+      "category": "combo",
+      "title": "ULTIMATE SENTIMENT: PCR + VIX + Trailing Stop",
+      "description": "Triple combo: (1) PCR > 1.2 for calls, PCR < 0.7 for puts, (2) VIX alignment, (3) Trailing stop exit. Only trade on sentiment confluence.",
+      "hypothesis": "Multiple sentiment signals aligning = higher conviction trades",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "USE_PCR_FILTER": "1",
+        "USE_VIX_SENTIMENT": "1"
+      }
     }
   ],
   "next_id": 198,
