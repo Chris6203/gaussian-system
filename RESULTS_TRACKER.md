@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0152: BEST+: Trailing + Sentiment (Fear & Greed < 40) (2026-01-04 17:20)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0152_IDEA-205` |
+
+**Source**: LEADERBOARD_OPTIMIZATION
+**Category**: combo
+**Hypothesis**: Fear = best time to buy. Trailing lets winners run during recovery.
+**Result**: FAIL
+
+---
+
+### EXP-0154: BEST+: Trailing + PCR > 1.1 (fear signal) (2026-01-04 17:20)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0154_IDEA-207` |
+
+**Source**: LEADERBOARD_OPTIMIZATION
+**Category**: combo
+**Hypothesis**: High put buying = retail panic = time to buy with trailing stop
+**Result**: FAIL
+
+---
+
+### EXP-0153: BEST+: Trailing + Low Confidence (< 0.25) (2026-01-04 17:20)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 50.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 22 |
+| Run Dir | `models/EXP-0153_IDEA-206` |
+
+**Source**: LEADERBOARD_OPTIMIZATION
+**Category**: combo
+**Hypothesis**: Low model confidence = market uncertainty = opportunity for trend followers
+**Result**: ERROR
+
+---
+
+### EXP-0151: BEST+: Trailing + Volume > 1.3 (data-proven filter) (2026-01-04 17:20)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0151_IDEA-204` |
+
+**Source**: LEADERBOARD_OPTIMIZATION
+**Category**: combo
+**Hypothesis**: Volume confirms institutional activity - high volume + trailing = best of both
+**Result**: FAIL
+
+---
+
+
 ### EXP-0150: ULTIMATE SENTIMENT: PCR + VIX + Trailing Stop (2026-01-04 15:50)
 
 | Metric | Quick Test (5K) |

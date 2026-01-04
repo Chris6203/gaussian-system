@@ -1867,16 +1867,17 @@
       "description": "Combine trailing stop (+250%) with volume spike > 1.3 filter. Data shows +61% WR improvement (7.1% vs 4.4% signal WR). Should cut bad trades while keeping winners.",
       "hypothesis": "Volume confirms institutional activity - high volume + trailing = best of both",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
         "TRAILING_STOP_PCT": "5",
         "MIN_VOLUME_SPIKE": "1.3"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T16:56:55.979905"
+      "last_result": {
+        "exp_id": "EXP-0151",
+        "per_trade_pnl": -0.2976923076923077,
+        "win_rate": 46.2
       }
     },
     {
@@ -1888,16 +1889,17 @@
       "description": "Combine trailing stop with Fear & Greed sentiment filter. Only trade when market is in fear (FG < 40) - contrarian bullish. Current FG = 25 (Extreme Fear).",
       "hypothesis": "Fear = best time to buy. Trailing lets winners run during recovery.",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
         "TRAILING_STOP_PCT": "5",
         "SENTIMENT_FEAR_GREED_MAX": "40"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T16:56:55.979905"
+      "last_result": {
+        "exp_id": "EXP-0152",
+        "per_trade_pnl": -0.2976923076923077,
+        "win_rate": 46.2
       }
     },
     {
@@ -1909,16 +1911,17 @@
       "description": "Combine trailing stop with INVERSE confidence filter. Data shows winners have LOWER confidence (0.22 vs 0.25). Filter for confidence < 0.25.",
       "hypothesis": "Low model confidence = market uncertainty = opportunity for trend followers",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
         "TRAILING_STOP_PCT": "5",
         "TRAIN_MAX_CONF": "0.25"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T16:56:55.979905"
+      "last_result": {
+        "exp_id": "EXP-0153",
+        "per_trade_pnl": null,
+        "win_rate": 50.0
       }
     },
     {
@@ -1930,7 +1933,7 @@
       "description": "Combine trailing stop with Put/Call Ratio filter. High PCR (> 1.1) indicates fear - contrarian bullish signal. Use new sentiment features.",
       "hypothesis": "High put buying = retail panic = time to buy with trailing stop",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
@@ -1938,9 +1941,10 @@
         "USE_PCR_FILTER": "1",
         "PCR_MIN_THRESHOLD": "1.1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T16:56:55.979905"
+      "last_result": {
+        "exp_id": "EXP-0154",
+        "per_trade_pnl": -0.2976923076923077,
+        "win_rate": 46.2
       }
     },
     {
@@ -2016,5 +2020,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T16:56:55.979905"
+  "last_updated": "2026-01-04T17:20:19.562070"
 }
