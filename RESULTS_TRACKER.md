@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0120: Trailing stop instead of fixed TP (2026-01-04 12:57)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 189 |
+| Run Dir | `models/EXP-0120_IDEA-173` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: exit
+**Hypothesis**: Trailing stops capture more upside than fixed TP
+**Result**: ERROR
+
+---
+
+### EXP-0122: Time-of-day filter (avoid first 30 min) (2026-01-04 12:57)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 216 |
+| Run Dir | `models/EXP-0122_IDEA-175` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: entry
+**Hypothesis**: Opening volatility causes whipsaws - skip it
+**Result**: ERROR
+
+---
+
+### EXP-0119: Even wider TP +30% (push the limit) (2026-01-04 12:57)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 182 |
+| Run Dir | `models/EXP-0119_IDEA-172` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: exit
+**Hypothesis**: If wider TP helps, even wider might help more
+**Result**: ERROR
+
+---
+
+### EXP-0121: VIX-adaptive exits (wider in low VIX) (2026-01-04 12:57)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 37.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 187 |
+| Run Dir | `models/EXP-0121_IDEA-174` |
+
+**Source**: CLAUDE_BRAINSTORM
+**Category**: exit
+**Hypothesis**: Low VIX = trending markets = let winners run longer
+**Result**: ERROR
+
+---
+
+
 ### EXP-0117: COMBO: TP +25% + Entropy Confidence (best P&L + best WR) (2026-01-04 12:00)
 
 | Metric | Quick Test (5K) |
