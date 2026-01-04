@@ -678,10 +678,14 @@
       "title": "TP +15% with Transformer",
       "hypothesis": "Medium-wide TP balances profit capture",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "15"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:24:28.536158"
       }
     },
     {
@@ -692,10 +696,14 @@
       "title": "TP +25% with Transformer",
       "hypothesis": "Very wide TP lets big winners run",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:24:28.536158"
       }
     },
     {
@@ -706,10 +714,14 @@
       "title": "Max hold 30min with Transformer",
       "hypothesis": "30 min closer to 15 min prediction horizon",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_MAX_HOLD_MINUTES": "30"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:24:28.536158"
       }
     },
     {
@@ -720,10 +732,14 @@
       "title": "Max hold 60min with Transformer",
       "hypothesis": "Longer hold for bigger moves",
       "priority": "low",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_MAX_HOLD_MINUTES": "60"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:24:28.536158"
       }
     },
     {
@@ -883,5 +899,5 @@
     }
   ],
   "next_id": 166,
-  "last_updated": "2026-01-04T02:02:07.958474"
+  "last_updated": "2026-01-04T02:24:28.536158"
 }
