@@ -602,12 +602,16 @@
       "description": "Test if shorter training (5K vs 10K) reduces overfitting further.",
       "hypothesis": "Less training = less overfitting = better OOS",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_MAX_CYCLES": "5000"
       },
-      "validation_plan": "Train Sept-Nov, test December"
+      "validation_plan": "Train Sept-Nov, test December",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:02:07.958474"
+      }
     },
     {
       "id": "IDEA-149",
@@ -618,13 +622,17 @@
       "description": "Require stronger HMM trend signals. Current 0.65/0.35 may be too loose.",
       "hypothesis": "Stricter HMM filtering = fewer but higher quality entries",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "HMM_STRONG_BULLISH": "0.75",
         "HMM_STRONG_BEARISH": "0.25"
       },
-      "validation_plan": "Train Sept-Nov, test December"
+      "validation_plan": "Train Sept-Nov, test December",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:02:07.958474"
+      }
     },
     {
       "id": "IDEA-150",
@@ -634,10 +642,14 @@
       "title": "Tight stop -5% with Transformer",
       "hypothesis": "Tighter stops reduce large losses",
       "priority": "high",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "5"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:02:07.958474"
       }
     },
     {
@@ -648,10 +660,14 @@
       "title": "Wide stop -15% with Transformer",
       "hypothesis": "Wider stops avoid premature exits",
       "priority": "medium",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "15"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T02:02:07.958474"
       }
     },
     {
@@ -867,5 +883,5 @@
     }
   ],
   "next_id": 166,
-  "last_updated": "2026-01-04T02:01:06.561371"
+  "last_updated": "2026-01-04T02:02:07.958474"
 }
