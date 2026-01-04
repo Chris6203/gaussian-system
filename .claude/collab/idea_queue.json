@@ -678,14 +678,15 @@
       "title": "TP +15% with Transformer",
       "hypothesis": "Medium-wide TP balances profit capture",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "15"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T02:24:28.536158"
+      "last_result": {
+        "exp_id": "EXP-0099",
+        "per_trade_pnl": null,
+        "win_rate": 40.4
       }
     },
     {
@@ -696,14 +697,15 @@
       "title": "TP +25% with Transformer",
       "hypothesis": "Very wide TP lets big winners run",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "25"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T02:24:28.536158"
+      "last_result": {
+        "exp_id": "EXP-0100",
+        "per_trade_pnl": null,
+        "win_rate": 38.9
       }
     },
     {
@@ -714,14 +716,15 @@
       "title": "Max hold 30min with Transformer",
       "hypothesis": "30 min closer to 15 min prediction horizon",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_MAX_HOLD_MINUTES": "30"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T02:24:28.536158"
+      "last_result": {
+        "exp_id": "EXP-0101",
+        "per_trade_pnl": null,
+        "win_rate": 36.5
       }
     },
     {
@@ -732,14 +735,15 @@
       "title": "Max hold 60min with Transformer",
       "hypothesis": "Longer hold for bigger moves",
       "priority": "low",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_MAX_HOLD_MINUTES": "60"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T02:24:28.536158"
+      "last_result": {
+        "exp_id": "EXP-0102",
+        "per_trade_pnl": -1.462391304347826,
+        "win_rate": 43.5
       }
     },
     {
@@ -963,5 +967,5 @@
     }
   ],
   "next_id": 169,
-  "last_updated": "2026-01-04T02:35:00.000000"
+  "last_updated": "2026-01-04T02:45:45.034714"
 }

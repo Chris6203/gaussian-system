@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0099: TP +15% with Transformer (2026-01-04 02:45)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.4% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0099_IDEA-152` |
+
+**Source**: GRID_SEARCH
+**Category**: exit
+**Hypothesis**: Medium-wide TP balances profit capture
+**Result**: ERROR
+
+---
+
+### EXP-0101: Max hold 30min with Transformer (2026-01-04 02:45)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 36.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0101_IDEA-154` |
+
+**Source**: GRID_SEARCH
+**Category**: exit
+**Hypothesis**: 30 min closer to 15 min prediction horizon
+**Result**: ERROR
+
+---
+
+### EXP-0100: TP +25% with Transformer (2026-01-04 02:45)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.9% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0100_IDEA-153` |
+
+**Source**: GRID_SEARCH
+**Category**: exit
+**Hypothesis**: Very wide TP lets big winners run
+**Result**: ERROR
+
+---
+
+### EXP-0102: Max hold 60min with Transformer (2026-01-04 02:45)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 43.5% |
+| P&L | -1.35% |
+| Per-Trade P&L | $-1.46 |
+| Trades | 46 |
+| Run Dir | `models/EXP-0102_IDEA-155` |
+
+**Source**: GRID_SEARCH
+**Category**: exit
+**Hypothesis**: Longer hold for bigger moves
+**Result**: FAIL
+
+---
+
+
 ### EXP-0097: Wider TP (-8%/+20%) with Transformer (2026-01-04 02:01)
 
 | Metric | Quick Test (5K) |
