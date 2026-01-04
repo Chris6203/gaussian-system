@@ -914,13 +914,17 @@
       "title": "BEST BET: V3+Trans+Sym exits+20min hold",
       "hypothesis": "Combine all OOS-friendly settings",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
         "TT_STOP_LOSS_PCT": "10",
         "TT_TAKE_PROFIT_PCT": "10",
         "TT_MAX_HOLD_MINUTES": "20"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T04:08:52.969798"
       }
     },
     {
@@ -931,7 +935,7 @@
       "title": "BEST BET: Trans+StrictHMM+TightExits",
       "hypothesis": "Quality over quantity with fast exits",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "HMM_STRONG_BULLISH": "0.75",
@@ -939,6 +943,10 @@
         "TT_STOP_LOSS_PCT": "5",
         "TT_TAKE_PROFIT_PCT": "10",
         "TT_MAX_HOLD_MINUTES": "20"
+      },
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T04:08:52.969798"
       }
     },
     {
@@ -950,7 +958,7 @@
       "description": "Load pretrained model from IDEA-144 (48.1% WR, +12% P&L) and validate on December OOS period",
       "hypothesis": "V3+Transformer showed best WR in training, validate on unseen data",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "PREDICTOR_ARCH": "v3_multi_horizon",
         "TEMPORAL_ENCODER": "transformer",
@@ -960,7 +968,11 @@
         "TRAINING_END_DATE": "2025-12-20",
         "TT_MAX_CYCLES": "3500"
       },
-      "validation_plan": "Test on December 2025 (unseen data)"
+      "validation_plan": "Test on December 2025 (unseen data)",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T04:08:52.969798"
+      }
     },
     {
       "id": "IDEA-167",
@@ -971,7 +983,7 @@
       "description": "Load pretrained model from IDEA-146 (+66.6% P&L, +$74/trade) and validate on December OOS period",
       "hypothesis": "Wider TP showed best P&L in training, validate on unseen data",
       "priority": "critical",
-      "status": "pending",
+      "status": "in_progress",
       "env_vars": {
         "TEMPORAL_ENCODER": "transformer",
         "TT_TAKE_PROFIT_PCT": "20",
@@ -981,7 +993,11 @@
         "TRAINING_END_DATE": "2025-12-20",
         "TT_MAX_CYCLES": "3500"
       },
-      "validation_plan": "Test on December 2025 (unseen data)"
+      "validation_plan": "Test on December 2025 (unseen data)",
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-04T04:08:52.969798"
+      }
     },
     {
       "id": "IDEA-168",
@@ -1028,5 +1044,5 @@
     }
   ],
   "next_id": 170,
-  "last_updated": "2026-01-04T04:07:51.600432"
+  "last_updated": "2026-01-04T04:08:52.969798"
 }
