@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0103: Aggressive: -5%/+8%/20min with Transformer (2026-01-04 03:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.8% |
+| P&L | -0.52% |
+| Per-Trade P&L | $-0.54 |
+| Trades | 49 |
+| Run Dir | `models/EXP-0103_IDEA-156` |
+
+**Source**: GRID_SEARCH
+**Category**: exit
+**Hypothesis**: Quick trades with tight risk control
+**Result**: FAIL
+
+---
+
+### EXP-0104: Patient: -12%/+20%/60min with Transformer (2026-01-04 03:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 43.5% |
+| P&L | -1.35% |
+| Per-Trade P&L | $-1.46 |
+| Trades | 46 |
+| Run Dir | `models/EXP-0104_IDEA-157` |
+
+**Source**: GRID_SEARCH
+**Category**: exit
+**Hypothesis**: Let trades develop fully
+**Result**: FAIL
+
+---
+
+### EXP-0105: Relaxed HMM 0.60/0.40 with Transformer (2026-01-04 03:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 44.4% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0105_IDEA-158` |
+
+**Source**: GRID_SEARCH
+**Category**: entry
+**Hypothesis**: More trades might improve total P&L
+**Result**: ERROR
+
+---
+
+### EXP-0106: Very strict HMM 0.80/0.20 with Transformer (2026-01-04 03:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 45 |
+| Run Dir | `models/EXP-0106_IDEA-159` |
+
+**Source**: GRID_SEARCH
+**Category**: entry
+**Hypothesis**: Only strongest trends = highest quality
+**Result**: ERROR
+
+---
+
+
 ### EXP-0099: TP +15% with Transformer (2026-01-04 02:45)
 
 | Metric | Quick Test (5K) |
