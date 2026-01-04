@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0133: Trailing + Tighter stop -5% (cut losers faster) (2026-01-04 14:21)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 41.7% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 225 |
+| Run Dir | `models/EXP-0133_IDEA-186` |
+
+**Source**: TRAILING_OPTIMIZATION
+**Category**: exit
+**Hypothesis**: Cut losers fast + let winners run = asymmetric edge
+**Result**: ERROR
+
+---
+
+### EXP-0136: Trailing + Stricter HMM 0.75/0.25 (2026-01-04 14:21)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 41.3% |
+| P&L | -29.79% |
+| Per-Trade P&L | $-6.62 |
+| Trades | 225 |
+| Run Dir | `models/EXP-0136_IDEA-189` |
+
+**Source**: TRAILING_OPTIMIZATION
+**Category**: combined
+**Hypothesis**: Higher quality entries + trailing stop = fewer but bigger winners
+**Result**: FAIL
+
+---
+
+### EXP-0135: Trailing + Time filter 10AM-2PM (2026-01-04 14:21)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 234 |
+| Run Dir | `models/EXP-0135_IDEA-188` |
+
+**Source**: TRAILING_OPTIMIZATION
+**Category**: combined
+**Hypothesis**: Best exit strategy + best time = compounded edge
+**Result**: ERROR
+
+---
+
+### EXP-0134: Trailing + V3 + Transformer (architecture combo) (2026-01-04 14:21)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 29.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 97 |
+| Run Dir | `models/EXP-0134_IDEA-187` |
+
+**Source**: TRAILING_OPTIMIZATION
+**Category**: combined
+**Hypothesis**: Better predictions + trailing stop = more winners that run
+**Result**: ERROR
+
+---
+
+
 ### EXP-0129: OOS: Trailing stop on December (BEST +250%) (2026-01-04 13:59)
 
 | Metric | Quick Test (5K) |
