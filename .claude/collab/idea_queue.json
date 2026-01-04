@@ -2042,7 +2042,7 @@
       "title": "TDA: Topological features for regime detection",
       "description": "Add TDA (Topological Data Analysis) features using giotto-tda. Computes persistent homology on price windows to detect regime changes, loops, and structural patterns that traditional indicators miss.",
       "hypothesis": "TDA captures structural patterns (regime transitions, crash geometry) invisible to traditional indicators",
-      "priority": "high",
+      "priority": "critical",
       "status": "pending",
       "env_vars": {
         "ENABLE_TDA": "1",
@@ -2075,7 +2075,7 @@
       "title": "TDA: Multi-scale windows (30m, 60m, 120m)",
       "description": "Compute TDA features at multiple time scales to capture both intraday and longer patterns. 30m=short-term, 60m=medium, 120m=session-level topology.",
       "hypothesis": "Multi-scale TDA captures patterns at different frequencies",
-      "priority": "high",
+      "priority": "critical",
       "status": "pending",
       "env_vars": {
         "ENABLE_TDA": "1",
