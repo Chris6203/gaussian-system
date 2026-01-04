@@ -28,6 +28,7 @@ from .crypto import compute_crypto_features, compute_crypto_equity_correlation, 
 from .meta import compute_meta_features
 from .jerry_features import compute_jerry_features
 from .sentiment import compute_all_sentiment_features, SENTIMENT_FEATURE_NAMES
+from .tda_topological import compute_tda_features, GTDA_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class FeatureConfig:
     enable_meta: bool = True
     enable_jerry: bool = False  # Jerry's fuzzy logic features (Quantor-MTFuzz)
     enable_sentiment: bool = True  # Sentiment features (Fear & Greed, PCR, VIX, News)
+    enable_tda: bool = True  # Topological Data Analysis features (requires giotto-tda)
     
     # Equity/ETF parameters
     equity_symbols: List[str] = field(default_factory=lambda: list(EQUITY_ETF_SYMBOLS.keys()))
@@ -101,6 +103,7 @@ class FeatureConfig:
             enable_meta=feature_config.get('enable_meta', True),
             enable_jerry=enable_jerry,
             enable_sentiment=feature_config.get('enable_sentiment', True),
+            enable_tda=feature_config.get('enable_tda', GTDA_AVAILABLE),
             equity_symbols=feature_config.get('equity_symbols', list(EQUITY_ETF_SYMBOLS.keys())),
             macro_symbols=feature_config.get('macro_symbols', list(ALL_MACRO_SYMBOLS.keys())),
             primary_symbol=config.get('trading', {}).get('symbol', 'SPY'),
@@ -125,6 +128,7 @@ class FeatureConfig:
             'enable_meta': self.enable_meta,
             'enable_jerry': self.enable_jerry,
             'enable_sentiment': self.enable_sentiment,
+            'enable_tda': self.enable_tda,
             'equity_symbols': self.equity_symbols,
             'breadth_symbols': self.breadth_symbols,
             'macro_symbols': self.macro_symbols,
@@ -424,6 +428,19 @@ class FeaturePipeline:
                 if self.config.use_prefix:
                     sentiment_features = {f'sent_{k}': v for k, v in sentiment_features.items()}
                 features.update(sentiment_features)
+
+            # =================================================================
+            # 9. TDA FEATURES (Topological Data Analysis)
+            # =================================================================
+            if self.config.enable_tda and GTDA_AVAILABLE:
+                tda_features = compute_tda_features(
+                    price_data=equity_data,
+                    symbols=['SPY', 'QQQ', 'VIX'],
+                    window_size=60  # 60 minutes of data
+                )
+                if self.config.use_prefix:
+                    tda_features = {f'tda_{k}': v for k, v in tda_features.items()}
+                features.update(tda_features)
 
         except Exception as e:
             self.logger.error(f"Error computing features: {e}")

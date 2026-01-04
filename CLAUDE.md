@@ -257,6 +257,23 @@ All normalized 0-1: `hmm_trend` (0=Bearish, 1=Bullish), `hmm_volatility`, `hmm_l
 
 **Enable/disable:** `SENTIMENT_FEATURES_ENABLED=0` to disable (default: enabled)
 
+### TDA (Topological Data Analysis) Features
+
+Uses persistent homology to detect structural patterns in price data:
+- Regime transitions invisible to traditional indicators
+- Loop detection (cyclical behavior)
+- Crash-like geometry patterns
+
+| Feature | Description |
+|---------|-------------|
+| `tda_entropy_h0/h1` | Topological complexity (H0=trends, H1=loops) |
+| `tda_amplitude_h0/h1` | Persistence strength |
+| `tda_loop_trend_ratio` | Loops vs trends ratio (high=choppy) |
+| `tda_complexity` | Overall topological complexity |
+
+**Requires:** `pip install giotto-tda`
+**Enable/disable:** `ENABLE_TDA=0` to disable (default: enabled if giotto-tda installed)
+
 ### Data Manager Integration
 
 The bot uses a remote Data Manager server for centralized data collection. Configure in `config.json`:
