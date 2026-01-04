@@ -2663,6 +2663,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0116: OOS: TP +25% on December (IDEA-153 BEST +91.44%) (2026-01-04 04:47)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.3% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 181 |
+| Run Dir | `models/EXP-0116_IDEA-169` |
+
+**Source**: OOS_VALIDATION
+**Category**: validation
+**Hypothesis**: Widest TP showed best P&L in training, validate on unseen data
+**Result**: ERROR
+
+---
+
+### EXP-0115: OOS: Symmetric exits on December (IDEA-145) (2026-01-04 04:47)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.9% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 183 |
+| Run Dir | `models/EXP-0115_IDEA-168` |
+
+**Source**: OOS_VALIDATION
+**Category**: validation
+**Hypothesis**: Symmetric exits showed solid P&L, validate on unseen data
+**Result**: ERROR
+
+---
+
+
 ### EXP-0114: OOS: Wider TP (+20%) on December (IDEA-146 winner) (2026-01-04 04:32)
 
 | Metric | Quick Test (5K) |
