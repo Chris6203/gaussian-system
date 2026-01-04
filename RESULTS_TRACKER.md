@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0142: DATA-DRIVEN: Low confidence filter (< 0.25) (2026-01-04 15:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 40.2% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 79 |
+| Run Dir | `models/EXP-0142_IDEA-195` |
+
+**Source**: DATA_ANALYSIS
+**Category**: entry
+**Hypothesis**: High confidence = overfit prediction = worse outcome
+**Result**: ERROR
+
+---
+
+### EXP-0143: ULTIMATE DATA-DRIVEN: All filters combined (2026-01-04 15:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.8% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 79 |
+| Run Dir | `models/EXP-0143_IDEA-196` |
+
+**Source**: DATA_ANALYSIS
+**Category**: combined
+**Hypothesis**: Maximum filtering based on actual data patterns
+**Result**: ERROR
+
+---
+
+### EXP-0141: COMBO: 11AM-1PM + Volume > 1.3 + Trailing (2026-01-04 15:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.0% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 79 |
+| Run Dir | `models/EXP-0141_IDEA-194` |
+
+**Source**: DATA_ANALYSIS
+**Category**: combined
+**Hypothesis**: Stack all data-driven filters for maximum edge
+**Result**: ERROR
+
+---
+
+### EXP-0144: Favor PUTS over CALLS (4.8% vs 4.0% WR) (2026-01-04 15:06)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.2% |
+| P&L | -4.52% |
+| Per-Trade P&L | $-2.86 |
+| Trades | 79 |
+| Run Dir | `models/EXP-0144_IDEA-197` |
+
+**Source**: DATA_ANALYSIS
+**Category**: entry
+**Hypothesis**: Market has slight downward bias or puts are better priced
+**Result**: FAIL
+
+---
+
+
 ### EXP-0140: DATA-DRIVEN: Skip 1PM-3PM entirely (0.3-0.7% WR) (2026-01-04 14:44)
 
 | Metric | Quick Test (5K) |
