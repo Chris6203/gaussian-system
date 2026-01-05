@@ -624,14 +624,30 @@
 
                 if (liveChart) liveChart.destroy();
 
+                // Handle both array format [ts, price] and object format {timestamp, close}
+                const chartData = data.spy_prices.map(p => {
+                    if (Array.isArray(p)) {
+                        return { x: new Date(p[0]), y: p[1] };
+                    } else {
+                        return { x: new Date(p.timestamp), y: p.close };
+                    }
+                });
+
+                // Add trade annotations if available
+                const annotations = (data.annotations || []).map(a => ({
+                    x: new Date(a.timestamp),
+                    label: a.label,
+                    type: a.type
+                }));
+
                 liveChart = new Chart(ctx, {
                     type: 'line',
                     data: {
                         datasets: [{
                             label: 'SPY',
-                            data: data.spy_prices.map(p => ({ x: new Date(p[0]), y: p[1] })),
+                            data: chartData,
                             borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             fill: true,
                             tension: 0.1,
                             pointRadius: 0
@@ -701,9 +717,90 @@
                 document.getElementById('training-phase').textContent = data.phase || '--';
 
                 document.getElementById('run-status').textContent = `Last update: ${data.last_update || '--'}`;
+
+                // Render P&L chart from trades
+                renderTrainingChart(data);
             } catch (e) {
                 console.error('Error loading training data:', e);
             }
+        }
+
+        function renderTrainingChart(data) {
+            const trades = data.log_trades || [];
+            if (trades.length === 0) {
+                if (trainingChart) trainingChart.destroy();
+                return;
+            }
+
+            // Build cumulative P&L data
+            const initialBalance = data.initial_balance || 5000;
+            let cumPnl = 0;
+            const pnlData = trades.map((t, i) => {
+                cumPnl += (t.pnl || 0);
+                return {
+                    x: i + 1,
+                    y: cumPnl,
+                    pnl: t.pnl,
+                    type: t.type
+                };
+            });
+
+            // Add starting point
+            pnlData.unshift({ x: 0, y: 0 });
+
+            const ctx = document.getElementById('training-chart').getContext('2d');
+            if (trainingChart) trainingChart.destroy();
+
+            // Color the line based on final P&L
+            const finalPnl = pnlData[pnlData.length - 1].y;
+            const lineColor = finalPnl >= 0 ? 'rgb(0, 214, 143)' : 'rgb(255, 92, 124)';
+            const fillColor = finalPnl >= 0 ? 'rgba(0, 214, 143, 0.1)' : 'rgba(255, 92, 124, 0.1)';
+
+            trainingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Cumulative P&L',
+                        data: pnlData,
+                        borderColor: lineColor,
+                        backgroundColor: fillColor,
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    const point = pnlData[ctx.dataIndex];
+                                    if (point.pnl !== undefined) {
+                                        return `P&L: $${point.y.toFixed(2)} (Trade: ${point.pnl >= 0 ? '+' : ''}$${point.pnl.toFixed(2)})`;
+                                    }
+                                    return `P&L: $${point.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Trade #', color: '#888' },
+                            grid: { color: '#2a2a3a' },
+                            ticks: { color: '#888' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Cumulative P&L ($)', color: '#888' },
+                            grid: { color: '#2a2a3a' },
+                            ticks: { color: '#888' }
+                        }
+                    }
+                }
+            });
         }
 
         function refreshTraining() {
@@ -806,15 +903,105 @@
                         </div>
                     </div>
 
+                    <h3>P&L Curve</h3>
+                    <div class="chart-container" style="height: 250px; margin-bottom: 20px;">
+                        <canvas id="history-chart"></canvas>
+                    </div>
+
                     <h3>Trade History (${tradesData.trade_count || 0}${tradesData.has_more ? ` of ${tradesData.total_count.toLocaleString()}` : ''} trades)${tradesData.has_more ? ' <span style="color:var(--gold);font-size:0.8rem;">(showing most recent)</span>' : ''}</h3>
-                    <div style="max-height: 400px; overflow-y: auto;">
+                    <div style="max-height: 300px; overflow-y: auto;">
                         ${renderTradesTable(tradesData.trades || [], { emptyMessage: 'No trades' })}
                     </div>
                 `;
                 detailEl.classList.add('fade-in');
+
+                // Render P&L chart
+                renderHistoryChart(tradesData.trades || []);
             } catch (e) {
                 document.getElementById('model-detail').innerHTML = `<div class="error">Error loading model</div>`;
             }
+        }
+
+        let historyChart = null;
+
+        function renderHistoryChart(trades) {
+            if (!trades || trades.length === 0) return;
+
+            // Reverse trades to chronological order (API returns newest first)
+            const chronoTrades = [...trades].reverse();
+
+            // Build cumulative P&L data
+            let cumPnl = 0;
+            const pnlData = chronoTrades.map((t, i) => {
+                const pnl = parseFloat(t.pnl) || 0;
+                cumPnl += pnl;
+                return {
+                    x: i + 1,
+                    y: cumPnl,
+                    pnl: pnl,
+                    type: t.option_type || t.type
+                };
+            });
+
+            // Add starting point
+            pnlData.unshift({ x: 0, y: 0 });
+
+            const canvas = document.getElementById('history-chart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            if (historyChart) historyChart.destroy();
+
+            // Color based on final P&L
+            const finalPnl = pnlData[pnlData.length - 1].y;
+            const lineColor = finalPnl >= 0 ? 'rgb(0, 214, 143)' : 'rgb(255, 92, 124)';
+            const fillColor = finalPnl >= 0 ? 'rgba(0, 214, 143, 0.1)' : 'rgba(255, 92, 124, 0.1)';
+
+            historyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Cumulative P&L',
+                        data: pnlData,
+                        borderColor: lineColor,
+                        backgroundColor: fillColor,
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    const point = pnlData[ctx.dataIndex];
+                                    if (point.pnl !== undefined) {
+                                        return `P&L: $${point.y.toFixed(2)} (Trade: ${point.pnl >= 0 ? '+' : ''}$${point.pnl.toFixed(2)})`;
+                                    }
+                                    return `P&L: $${point.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Trade #', color: '#888' },
+                            grid: { color: '#2a2a3a' },
+                            ticks: { color: '#888' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Cumulative P&L ($)', color: '#888' },
+                            grid: { color: '#2a2a3a' },
+                            ticks: { color: '#888' }
+                        }
+                    }
+                }
+            });
         }
 
         // ==================== INIT ====================
