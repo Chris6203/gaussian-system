@@ -160,13 +160,20 @@ def main():
     config = load_config()
     dm_config = config.get('data_manager', {})
 
-    # Get connection params
+    # Get connection params (with server_config.json fallback)
     base_url = args.url or dm_config.get('base_url', '')
+    if not base_url:
+        try:
+            from config_loader import get_data_manager_url
+            base_url = get_data_manager_url()
+            print(f"[INFO] Using server_config.json fallback: {base_url}")
+        except ImportError:
+            pass
     api_key = args.key or dm_config.get('api_key', '')
 
     if not base_url:
         print("[ERROR] No Data Manager URL configured")
-        print("[HINT] Set data_manager.base_url in config.json or use --url")
+        print("[HINT] Set data_manager.base_url in config.json, use --url, or configure server_config.json")
         sys.exit(1)
 
     if not api_key:

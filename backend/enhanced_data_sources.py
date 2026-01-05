@@ -57,7 +57,14 @@ class EnhancedDataSource:
             try:
                 from backend.datamanager_data_source import DataManagerDataSource
 
+                # Get base_url from config, or use server_config.json with fallback
                 base_url = dm_config.get('base_url', '')
+                if not base_url:
+                    try:
+                        from config_loader import get_data_manager_url
+                        base_url = get_data_manager_url()
+                    except ImportError:
+                        pass
                 api_key = dm_config.get('api_key', '')
 
                 if base_url and api_key:

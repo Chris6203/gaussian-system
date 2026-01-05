@@ -1,19 +1,32 @@
 {
   "_comment": "Server configuration - edit this file to migrate the system to a new server",
-  "main_server": {
+  "_fallback_note": "If primary server unavailable, system falls back to localhost for standalone operation",
+
+  "primary": {
     "ip": "192.168.20.235",
     "description": "Primary server hosting dashboard and data manager"
   },
+
+  "fallback": {
+    "ip": "localhost",
+    "description": "Localhost fallback for standalone operation"
+  },
+
   "dashboard": {
     "host": "0.0.0.0",
-    "port": 5000,
-    "url": "http://192.168.20.235:5000"
+    "port": 5000
   },
+
+  "training_dashboard": {
+    "host": "0.0.0.0",
+    "port": 5001
+  },
+
   "data_manager": {
-    "host": "192.168.20.235",
     "port": 5050,
-    "url": "http://192.168.20.235:5050"
+    "timeout_seconds": 3
   },
+
   "experiment_sync": {
     "enabled": true,
     "git_remote": "origin"

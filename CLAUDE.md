@@ -187,26 +187,30 @@ Market Data → Features (50-500 dims) → HMM Regime → Predictor → Entry Po
 
 ### Server Configuration (server_config.json)
 
-For easy system migration, server IPs are centralized in `server_config.json`:
+Server IPs are centralized in `server_config.json` with **automatic localhost fallback**:
 
 ```json
 {
-  "main_server": {
+  "primary": {
     "ip": "192.168.20.235",
-    "description": "Primary server hosting dashboard and data"
+    "description": "Primary server hosting dashboard and data manager"
   },
-  "dashboard": {
-    "port": 5000,
-    "url": "http://192.168.20.235:5000"
+  "fallback": {
+    "ip": "localhost",
+    "description": "Localhost fallback for standalone operation"
   },
-  "data_manager": {
-    "port": 5050,
-    "url": "http://192.168.20.235:5050"
-  }
+  "dashboard": { "port": 5000 },
+  "training_dashboard": { "port": 5001 },
+  "data_manager": { "port": 5050, "timeout_seconds": 3 }
 }
 ```
 
-To migrate the system to a new server, update the IP address in this file.
+**Behavior:**
+- On startup, the system checks if primary server (192.168.20.235:5050) is reachable
+- If unreachable, automatically falls back to localhost for standalone operation
+- Use `config_loader.get_data_manager_url()` to get the correct URL
+
+To migrate the system to a new server, update the IP address in `primary.ip`.
 
 ### Main Configuration (config.json)
 
@@ -307,7 +311,7 @@ All normalized 0-1: `hmm_trend` (0=Bearish, 1=Bullish), `hmm_volatility`, `hmm_l
 
 | Source | Priority | Use | Notes |
 |--------|----------|-----|-------|
-| **Data Manager** | 0 (highest) | Centralized data | Remote server at 31.97.215.206:5050 |
+| **Data Manager** | 0 (highest) | Centralized data | Uses server_config.json (primary: 192.168.20.235, fallback: localhost) |
 | Tradier | 1 | Real-time + options | Live trading API |
 | Polygon | 2 | Historical 1-min bars | Starter plan: 5 years |
 | FMP | 3 | Alternative historical | 300 req/min limit |
@@ -349,25 +353,32 @@ Uses persistent homology to detect structural patterns in price data:
 
 ### Data Manager Integration
 
-The bot uses a remote Data Manager server for centralized data collection. Configure in `config.json`:
+The bot uses a remote Data Manager server for centralized data collection.
 
+**Option 1: Explicit URL in config.json**
 ```json
 "data_manager": {
     "enabled": true,
-    "base_url": "http://31.97.215.206:5050",
+    "base_url": "http://192.168.20.235:5050",
     "api_key": "dm_your_api_key_here"
 }
 ```
 
+**Option 2: Use server_config.json (recommended)**
+- Leave `base_url` empty in config.json
+- System uses `server_config.json` with automatic localhost fallback
+- If primary server unreachable, falls back to localhost:5050
+
 **Commands:**
 ```bash
-# Test connection
+# Test connection (uses server_config.json fallback)
 python scripts/test_datamanager.py
 
 # Sync data for training (fetches from Data Manager → local SQLite)
 python scripts/sync_from_datamanager.py --days 30
 
-# Live trading automatically uses Data Manager as primary source
+# Check which server is active
+python -c "from config_loader import get_data_manager_url; print(get_data_manager_url())"
 ```
 
 ## Databases

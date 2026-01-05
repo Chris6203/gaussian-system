@@ -33,6 +33,15 @@ def main():
     base_url = dm_config.get('base_url', '')
     api_key = dm_config.get('api_key', '')
 
+    # Use server_config.json fallback if base_url not in config.json
+    if not base_url:
+        try:
+            from config_loader import get_data_manager_url
+            base_url = get_data_manager_url()
+            print(f"[INFO] Using server_config.json fallback: {base_url}")
+        except ImportError:
+            pass
+
     print(f"\n[1] Configuration Check")
     print(f"    URL: {base_url or '(not set)'}")
     print(f"    API Key: {'*' * 8 + api_key[-4:] if api_key else '(not set)'}")
@@ -43,9 +52,10 @@ def main():
         print("[HINT] Add to config.json:")
         print('    "data_manager": {')
         print('        "enabled": true,')
-        print('        "base_url": "http://31.97.215.206:5050",')
+        print('        "base_url": "http://192.168.20.235:5050",')
         print('        "api_key": "dm_your_api_key_here"')
         print('    }')
+        print("\nOr set server_config.json for automatic fallback to localhost.")
         return 1
 
     # Test DataManagerDataSource directly
