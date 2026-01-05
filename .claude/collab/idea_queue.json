@@ -2212,7 +2212,7 @@
       "description": "Run IDEA-213 config for 10K cycles to validate performance over longer period.",
       "hypothesis": "Longer test will confirm if +74% P&L is consistent",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "10",
@@ -2221,9 +2221,10 @@
         "TDA_REGIME_FILTER": "1",
         "TT_MAX_CYCLES": "10000"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T18:19:10.694406"
+      "last_result": {
+        "exp_id": "EXP-0163",
+        "per_trade_pnl": null,
+        "win_rate": 39.5
       }
     },
     {
@@ -2235,7 +2236,7 @@
       "description": "More aggressive trailing stop to lock in profits earlier.",
       "hypothesis": "Tighter trailing reduces drawdown from peak while keeping winners",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_TRAILING_STOP": "1",
         "TRAILING_ACTIVATION_PCT": "8",
@@ -2243,12 +2244,13 @@
         "ENABLE_TDA": "1",
         "TDA_REGIME_FILTER": "1"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-04T18:19:10.694406"
+      "last_result": {
+        "exp_id": "EXP-0164",
+        "per_trade_pnl": -0.2976923076923077,
+        "win_rate": 46.2
       }
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T18:19:10.694406"
+  "last_updated": "2026-01-04T19:03:35.792896"
 }

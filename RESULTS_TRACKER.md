@@ -2663,6 +2663,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0164: TDA-BEST+: Tighter Trailing (8% activate, 4% trail) (2026-01-04 19:03)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0164_IDEA-221` |
+
+**Source**: DATA_ANALYSIS
+**Category**: entry
+**Hypothesis**: Tighter trailing reduces drawdown from peak while keeping winners
+**Result**: FAIL
+
+---
+
+### EXP-0163: TDA-BEST+: 10K Validation Run (2026-01-04 19:03)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.5% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 258 |
+| Run Dir | `models/EXP-0163_IDEA-220` |
+
+**Source**: DATA_ANALYSIS
+**Category**: validation
+**Hypothesis**: Longer test will confirm if +74% P&L is consistent
+**Result**: ERROR
+
+---
+
+
 ### EXP-0160: BEST+: Trailing + TDA regime filter (2026-01-04 18:08)
 
 | Metric | Quick Test (5K) |
