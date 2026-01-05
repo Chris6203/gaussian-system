@@ -96,8 +96,8 @@ Modular feature pipeline:
 ### 1. Clone and Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/gaussian-trading-system.git
-cd gaussian-trading-system
+git clone https://github.com/Chris6203/gaussian-system.git
+cd gaussian-system
 
 # Create virtual environment
 python -m venv venv
@@ -220,7 +220,31 @@ reporter.report_trade_async(
 
 ## Configuration
 
-All configuration is centralized in `config.json`:
+### Server Configuration (server_config.json)
+
+Server IPs are centralized with **automatic localhost fallback**:
+
+```json
+{
+  "primary": {
+    "ip": "192.168.20.235",
+    "description": "Primary server"
+  },
+  "fallback": {
+    "ip": "localhost",
+    "description": "Localhost fallback for standalone operation"
+  },
+  "dashboard": { "port": 5000 },
+  "training_dashboard": { "port": 5001 },
+  "data_manager": { "port": 5050, "timeout_seconds": 3 }
+}
+```
+
+**Behavior:** System checks if primary server is reachable on startup. If not, automatically falls back to localhost for standalone operation.
+
+### Main Configuration (config.json)
+
+All trading configuration is centralized in `config.json`:
 
 ```json
 {
@@ -243,10 +267,23 @@ All configuration is centralized in `config.json`:
   },
   "data_manager": {
     "enabled": true,
-    "base_url": "http://your-server:5050",
     "api_key": "dm_your_api_key_here"
   }
 }
+```
+
+**Note:** `data_manager.base_url` is optional - if not set, uses `server_config.json` with fallback.
+
+### Best Model (best_model.json)
+
+The bot uses `best_model.json` to determine the default model:
+
+```bash
+# Set the best model
+python bot.py --set-best models/run_20260105_123456
+
+# Run with best model (no model path needed)
+python bot.py
 ```
 
 ## Temporal Encoders
@@ -353,7 +390,9 @@ gaussian-system/
 ├── experiments.py          # Entry point: Experiment system
 ├── config.json             # Main configuration (gitignored)
 ├── config.example.json     # Configuration template
-├── server_config.json      # Server IPs for easy migration
+├── config_loader.py        # Server config with localhost fallback
+├── server_config.json      # Server IPs (primary + fallback)
+├── best_model.json         # Default model for bot.py
 │
 ├── core/                   # Core implementations
 │   ├── go_live_only.py

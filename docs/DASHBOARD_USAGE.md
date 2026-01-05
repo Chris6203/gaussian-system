@@ -70,23 +70,30 @@ History: http://localhost:5002
 
 ### server_config.json
 
-The main server IP is configured in `server_config.json`:
+Server IPs are configured in `server_config.json` with **automatic localhost fallback**:
 
 ```json
 {
-  "main_server": {
+  "primary": {
     "ip": "192.168.20.235",
-    "description": "Primary server hosting dashboard and data"
+    "description": "Primary server hosting dashboard and data manager"
   },
-  "dashboard": {
-    "host": "0.0.0.0",
-    "port": 5000,
-    "url": "http://192.168.20.235:5000"
-  }
+  "fallback": {
+    "ip": "localhost",
+    "description": "Localhost fallback for standalone operation"
+  },
+  "dashboard": { "port": 5000 },
+  "training_dashboard": { "port": 5001 },
+  "data_manager": { "port": 5050, "timeout_seconds": 3 }
 }
 ```
 
-**To migrate to a new server**, just update the IP in this file.
+**Behavior:**
+- On startup, system checks if primary server (192.168.20.235:5050) is reachable
+- If unreachable, automatically falls back to localhost for standalone operation
+- No code changes needed when switching between network and standalone modes
+
+**To migrate to a new server**, update `primary.ip` in this file.
 
 ### config.json Dashboard Settings
 

@@ -48,14 +48,15 @@ Edit with your API credentials:
 ```
 
 ### server_config.json
-For remote access, update the server IP:
+Server IPs with automatic localhost fallback:
 ```json
 {
-  "main_server": {
-    "ip": "192.168.20.235"
-  }
+  "primary": { "ip": "192.168.20.235" },
+  "fallback": { "ip": "localhost" },
+  "data_manager": { "port": 5050, "timeout_seconds": 3 }
 }
 ```
+If primary server is unreachable, system falls back to localhost automatically.
 
 ---
 
@@ -83,6 +84,15 @@ Training creates a model directory in `models/run_YYYYMMDD_HHMMSS/`
 ### List Available Models
 ```bash
 python bot.py --list
+```
+
+### Use Best Model (Default)
+```bash
+# Run with the best model (from best_model.json)
+python bot.py
+
+# Set a model as the best
+python bot.py --set-best models/run_20260105_123456
 ```
 
 ### Paper Trading (Default)
@@ -193,11 +203,13 @@ python experiments.py --status
 
 ```
 gaussian-system/
-├── bot.py              # Trading bot entry
-├── dashboard.py        # Dashboard entry
-├── experiments.py      # Experiment entry
-├── config.json         # Configuration
-├── server_config.json  # Server IPs
+├── bot.py              # Trading bot entry point
+├── dashboard.py        # Dashboard entry point
+├── experiments.py      # Experiment entry point
+├── config.json         # Main configuration (gitignored)
+├── config_loader.py    # Server config with localhost fallback
+├── server_config.json  # Server IPs (primary + fallback)
+├── best_model.json     # Default model for bot.py
 │
 ├── core/               # Core implementations
 ├── backend/            # Trading logic
@@ -231,14 +243,15 @@ See also:
 To move the system to a new server:
 
 1. Update `server_config.json` with new IP
-2. Update `config.json` data_manager URL if needed
-3. Ensure firewall allows ports 5000-5002
+2. Ensure firewall allows ports 5000-5002, 5050
+3. No changes needed for standalone mode (auto-fallback to localhost)
 
 ```json
 // server_config.json
 {
-  "main_server": {
-    "ip": "NEW_SERVER_IP"
-  }
+  "primary": { "ip": "NEW_SERVER_IP" },
+  "fallback": { "ip": "localhost" }
 }
 ```
+
+**Standalone Mode:** If primary server is unreachable, system automatically uses localhost. No configuration changes required.

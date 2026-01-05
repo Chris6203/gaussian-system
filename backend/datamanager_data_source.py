@@ -45,7 +45,7 @@ class DataManagerDataSource:
         Initialize Data Manager data source.
 
         Args:
-            base_url: Data Manager server URL (e.g., "http://31.97.215.206:5050")
+            base_url: Data Manager server URL (e.g., "http://192.168.20.235:5050" or "http://localhost:5050")
             api_key: API key for authentication (dm_xxxxx format)
             timeout: Request timeout in seconds
             cache_ttl_seconds: Cache TTL for real-time data
