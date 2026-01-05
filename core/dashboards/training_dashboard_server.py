@@ -110,6 +110,14 @@ app = Flask(__name__,
             template_folder=str(PROJECT_ROOT / 'templates'))
 CORS(app)
 
+# Register scoreboard API blueprint for experiment leaderboard
+try:
+    from backend.dashboard.scoreboard_api import scoreboard_bp
+    app.register_blueprint(scoreboard_bp)
+    print("[DASHBOARD] Scoreboard API registered at /api/scoreboard")
+except ImportError as e:
+    print(f"[DASHBOARD] Warning: Could not load scoreboard API: {e}")
+
 # =============================================================================
 # STATE MANAGEMENT
 # =============================================================================
