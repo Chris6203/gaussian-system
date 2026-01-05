@@ -10,11 +10,12 @@
         "BLOCK_SIGNAL_STRATEGIES": "NEURAL_BEARISH,NEURAL_BULLISH,MOMENTUM_BEARISH"
       },
       "category": "signal_filter",
-      "status": "in_progress",
+      "status": "rejected",
       "priority": 1,
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T13:38:22.254037"
+      "last_result": {
+        "exp_id": "EXP-0173",
+        "per_trade_pnl": -0.2976923076923077,
+        "win_rate": 46.2
       }
     },
     {
@@ -28,11 +29,12 @@
         "DECOUPLE_UNCERTAINTY": "1"
       },
       "category": "confidence_fix",
-      "status": "in_progress",
+      "status": "rejected",
       "priority": 1,
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T13:38:22.254037"
+      "last_result": {
+        "exp_id": "EXP-0174",
+        "per_trade_pnl": null,
+        "win_rate": 43.9
       }
     },
     {
@@ -3311,5 +3313,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-05T13:38:22.254037"
+  "last_updated": "2026-01-05T13:58:58.903328"
 }

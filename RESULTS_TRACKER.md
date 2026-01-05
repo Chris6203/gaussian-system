@@ -2663,6 +2663,41 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0174: Unknown (2026-01-05 13:58)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 43.9% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 40 |
+| Run Dir | `models/EXP-0174_IDEA-272` |
+
+**Source**: META_OPTIMIZER
+**Category**: confidence_fix
+**Hypothesis**: Confidence is frequently inverted - try entropy-based confidence
+**Result**: ERROR
+
+---
+
+### EXP-0173: Unknown (2026-01-05 13:58)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 46.2% |
+| P&L | -0.31% |
+| Per-Trade P&L | $-0.30 |
+| Trades | 52 |
+| Run Dir | `models/EXP-0173_IDEA-273` |
+
+**Source**: META_OPTIMIZER
+**Category**: signal_filter
+**Hypothesis**: Block consistently losing strategies: NEURAL_BEARISH,NEURAL_BULLISH,MOMENTUM_BEARISH
+**Result**: FAIL
+
+---
+
+
 ### EXP-0172: Unknown (2026-01-05 13:27)
 
 | Metric | Quick Test (5K) |
