@@ -38,6 +38,9 @@ TEMPORAL_ENCODER=transformer SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python s
 # Transformer only (+32.65% OOS profit, validated post-bug-fix)
 TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
 
+# Mamba2 State Space Model encoder (Phase 51 - linear complexity SSM)
+TEMPORAL_ENCODER=mamba2 python scripts/train_time_travel.py
+
 # V3 Multi-Horizon Predictor (experimental, needs validation)
 PREDICTOR_ARCH=v3_multi_horizon python scripts/train_time_travel.py
 
