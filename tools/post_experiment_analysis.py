@@ -31,28 +31,40 @@ def load_trades_from_db(run_dir: str) -> list:
     if not os.path.exists(db_path):
         return []
 
-    # Get run time range from run_info.json
-    run_info_path = os.path.join(run_dir, "run_info.json")
-    if not os.path.exists(run_info_path):
-        return []
-
-    with open(run_info_path) as f:
-        run_info = json.load(f)
-
-    start_time = run_info.get("start_time", "")
-    end_time = run_info.get("end_time", datetime.now().isoformat())
+    # Get run_id from the directory name (e.g., EXP-0169_IDEA-268)
+    run_name = os.path.basename(run_dir)
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
+    # Try to load by run_id first
     cursor.execute("""
         SELECT * FROM trades
-        WHERE entry_time >= ? AND entry_time <= ?
-        ORDER BY entry_time
-    """, (start_time, end_time))
+        WHERE run_id = ?
+        ORDER BY timestamp
+    """, (run_name,))
 
     trades = [dict(row) for row in cursor.fetchall()]
+
+    # If no trades found by run_id, try by time range from run_info.json
+    if not trades:
+        run_info_path = os.path.join(run_dir, "run_info.json")
+        if os.path.exists(run_info_path):
+            with open(run_info_path) as f:
+                run_info = json.load(f)
+
+            start_time = run_info.get("start_time", "")
+            end_time = run_info.get("end_time", datetime.now().isoformat())
+
+            cursor.execute("""
+                SELECT * FROM trades
+                WHERE timestamp >= ? AND timestamp <= ?
+                ORDER BY timestamp
+            """, (start_time, end_time))
+
+            trades = [dict(row) for row in cursor.fetchall()]
+
     conn.close()
     return trades
 
@@ -91,30 +103,36 @@ def analyze_trades(trades: list) -> dict:
     }
 
     for trade in trades:
-        pnl = trade.get("pnl", 0) or 0
-        pnl_pct = trade.get("pnl_pct", 0) or 0
+        # Use correct column names from schema
+        pnl = trade.get("profit_loss", 0) or 0
+        entry_price = trade.get("entry_price", 1) or 1
+        exit_price = trade.get("exit_price", entry_price) or entry_price
+        pnl_pct = ((exit_price - entry_price) / entry_price * 100) if entry_price > 0 else 0
+
+        # Get confidence from ml_confidence or calibrated_confidence
+        confidence = trade.get("calibrated_confidence") or trade.get("ml_confidence", 0) or 0
 
         trade_summary = {
             "pnl": pnl,
             "pnl_pct": pnl_pct,
             "option_type": trade.get("option_type", "unknown"),
             "exit_reason": trade.get("exit_reason", "unknown"),
-            "confidence": trade.get("entry_confidence", 0),
-            "signal_strategy": trade.get("signal_strategy", "unknown"),
-            "entry_time": trade.get("entry_time", ""),
-            "hold_minutes": trade.get("hold_minutes", 0),
+            "confidence": confidence,
+            "signal_strategy": trade.get("signal_strategy") or "unknown",
+            "entry_time": trade.get("timestamp", ""),
+            "hold_minutes": trade.get("hold_minutes", 0) or 0,
         }
 
         # Winners vs losers
         if pnl > 0:
             analysis["winners"].append(trade_summary)
-            analysis["confidence_distribution"]["winners"].append(trade.get("entry_confidence", 0))
+            analysis["confidence_distribution"]["winners"].append(confidence)
         else:
             analysis["losers"].append(trade_summary)
-            analysis["confidence_distribution"]["losers"].append(trade.get("entry_confidence", 0))
+            analysis["confidence_distribution"]["losers"].append(confidence)
 
         # By exit reason
-        exit_reason = trade.get("exit_reason", "unknown")
+        exit_reason = trade.get("exit_reason") or "unknown"
         analysis["by_exit_reason"][exit_reason].append(pnl)
 
         # By option type
@@ -122,11 +140,11 @@ def analyze_trades(trades: list) -> dict:
         analysis["by_option_type"][option_type].append(pnl)
 
         # By signal strategy
-        signal_strategy = trade.get("signal_strategy", "unknown")
+        signal_strategy = trade.get("signal_strategy") or "unknown"
         analysis["by_signal_strategy"][signal_strategy].append(pnl)
 
         # By hour
-        entry_time = trade.get("entry_time", "")
+        entry_time = trade.get("timestamp", "")
         if entry_time:
             try:
                 hour = datetime.fromisoformat(entry_time.replace("Z", "+00:00")).hour

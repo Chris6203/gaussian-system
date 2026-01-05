@@ -519,6 +519,33 @@ def select_batch_of_ideas(count: int = 4) -> List[dict]:
     return claimed
 
 
+def run_post_analysis(run_dir: Path):
+    """Run post-experiment analysis to generate ANALYSIS.md with insights."""
+    try:
+        analysis_script = BASE_DIR / "tools" / "post_experiment_analysis.py"
+        if not analysis_script.exists():
+            logger.debug(f"Post-analysis script not found: {analysis_script}")
+            return
+
+        result = subprocess.run(
+            [sys.executable, str(analysis_script), str(run_dir)],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=60  # 1 minute timeout
+        )
+
+        if result.returncode == 0:
+            logger.info(f"[ANALYSIS] Generated ANALYSIS.md for {run_dir.name}")
+        else:
+            logger.debug(f"[ANALYSIS] Analysis failed for {run_dir.name}: {result.stderr[:200]}")
+
+    except subprocess.TimeoutExpired:
+        logger.warning(f"[ANALYSIS] Timeout generating analysis for {run_dir.name}")
+    except Exception as e:
+        logger.debug(f"[ANALYSIS] Error: {e}")
+
+
 def run_experiment(idea: dict, exp_id: str, cycles: int, gpu_id: int = 0) -> dict:
     """Run a single experiment (called in subprocess)."""
     run_name = f"{exp_id}_{idea.get('id', 'unknown')}"
@@ -551,7 +578,12 @@ def run_experiment(idea: dict, exp_id: str, cycles: int, gpu_id: int = 0) -> dic
         # Parse results from SUMMARY.txt
         summary_path = BASE_DIR / run_dir / "SUMMARY.txt"
         if summary_path.exists():
-            return parse_summary(summary_path, run_dir)
+            parsed = parse_summary(summary_path, run_dir)
+
+            # Run post-experiment analysis to generate ANALYSIS.md
+            run_post_analysis(BASE_DIR / run_dir)
+
+            return parsed
         else:
             # Try to extract from stdout
             return parse_stdout(result.stdout, run_dir)
