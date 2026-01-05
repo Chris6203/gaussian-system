@@ -6,22 +6,38 @@ This document tracks the best validated configurations for the Gaussian Options 
 
 ---
 
-## Current Best Results (Post Bug-Fix)
+## 🏆 Current Best Result
 
-| Rank | Run Name | P&L% | WR% | Trades | $/Trade |
-|------|----------|------|-----|--------|---------|
-| 1 | EXP-0067_IDEA-117 | +490.81% | 33.3% | 965 | $25.43 |
-| 2 | EXP-NEW_236 | +468.49% | 44.2% | 79 | $296.51 |
-| 3 | v3_jerry_features | +450.63% | 27.8% | 269 | $83.76 |
-| 4 | v4_skew_partial_20k | +430.98% | 32.3% | 586 | $36.77 |
-| 5 | EXP-NEW_245 | +429.86% | 46.9% | 98 | $219.32 |
-| 6 | test_jerry_improvements | +429.49% | 33.1% | 76 | $282.56 |
-| 7 | dec_validation_v2 | +413.41% | 59.8% | 61 | $338.86 |
-| 8 | EXP-0168_IDEA-267 | +137.28% | 56.7% | 47 | $146.04 |
-| 9 | transformer_baseline_jan2 | +35.44% | 47.0% | 105 | $16.88 |
-| 10 | EXP-0172_IDEA-271 (Mamba2) | +34.85% | 39.8% | 79 | $22.06 |
+| Run | P&L% | Win Rate | $/Trade | Trades | Description |
+|-----|------|----------|---------|--------|-------------|
+| **EXP-0167_IDEA-266** | **+201.88%** | **68.1%** | **$360.50** | 28 | Codex Confidence Fixes |
 
-**Note:** Results filtered to P&L < 500% to exclude pre-bugfix runs.
+This is the highest win rate achieved with significant P&L. The 68.1% win rate is exceptional.
+
+---
+
+## Top Results by Win Rate (min 20 trades)
+
+| Rank | Run Name | P&L% | WR% | $/Trade | Trades |
+|------|----------|------|-----|---------|--------|
+| 🥇 | **EXP-0167_IDEA-266** | +201.88% | **68.1%** | $360.50 | 28 |
+| 🥈 | dec_validation | +519.16% | 60.6% | $412.03 | 63 |
+| 🥉 | dec_validation_v2 | +413.41% | 59.8% | $338.86 | 61 |
+| 4 | EXP-WIN_260 | +62.71% | 57.1% | $142.52 | 22 |
+| 5 | skew_tighter_tp | +130.46% | 56.8% | $67.25 | 97 |
+| 6 | EXP-0168_IDEA-267 | +137.28% | 56.7% | $146.04 | 47 |
+
+## Top Results by P&L% (filtered)
+
+| Rank | Run Name | P&L% | WR% | $/Trade | Trades |
+|------|----------|------|-----|---------|--------|
+| 1 | dec_validation | +519.16% | 60.6% | $412.03 | 63 |
+| 2 | EXP-0067_IDEA-117 | +490.81% | 33.3% | $25.43 | 965 |
+| 3 | EXP-NEW_236 | +468.49% | 44.2% | $296.51 | 79 |
+| 4 | v3_jerry_features | +450.63% | 27.8% | $83.76 | 269 |
+| 5 | v4_skew_partial_20k | +430.98% | 32.3% | $36.77 | 586 |
+
+**Note:** Results filtered to P&L < 600% to exclude pre-bugfix phantom gains.
 
 ---
 
