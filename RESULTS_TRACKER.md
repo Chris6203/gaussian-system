@@ -7430,3 +7430,56 @@ python scripts/train_time_travel.py
 ```
 
 ---
+
+## Phase 51 Mamba2 Results (2026-01-05)
+
+### Experiment Results
+
+| ID | Configuration | P&L | Win Rate | $/Trade |
+|----|---------------|-----|----------|---------|
+| IDEA-269 | Mamba2 baseline (4 layers) | +4.21% | 38.8% | +$2.67 |
+| IDEA-270 | Deep Mamba2 (6 layers) | -4.52% | 39.2% | -$2.86 |
+| **IDEA-271** | **Mamba2 + signal filtering** | **+34.85%** | 39.8% | **+$22.06** |
+
+### Key Finding
+
+Mamba2 alone shows modest improvement (+4.21%), but combined with signal filtering (`BLOCK_SIGNAL_STRATEGIES=MOMENTUM,VOLATILITY_EXPANSION`) achieves **+34.85% P&L**.
+
+Deeper Mamba2 (6 layers) performs worse than 4 layers, suggesting overfitting.
+
+### Best Mamba2 Configuration
+
+```bash
+TEMPORAL_ENCODER=mamba2 \
+MAMBA2_N_LAYERS=4 \
+MAMBA2_D_STATE=64 \
+BLOCK_SIGNAL_STRATEGIES=MOMENTUM,VOLATILITY_EXPANSION \
+python scripts/train_time_travel.py
+```
+
+---
+
+## Layer 2 Meta Optimizer Launch (2026-01-05)
+
+### System Architecture Complete
+
+Built two-layer automated optimization:
+
+1. **Layer 1** (`continuous_optimizer.py`): Tests specific configs 24/7
+2. **Layer 2** (`meta_optimizer.py`): Analyzes all experiments, suggests improvements
+
+### Meta Analysis Findings (247 experiments)
+
+| Metric | Value |
+|--------|-------|
+| Total experiments analyzed | 247 |
+| Confidence inverted | 61% |
+| NEURAL_BEARISH losing | 221 experiments (90%) |
+| NEURAL_BULLISH losing | 159 experiments (64%) |
+
+### Auto-Generated Ideas
+
+- IDEA-272: Entropy confidence fix (`USE_ENTROPY_CONFIDENCE_V2=1`)
+- IDEA-273: Block losing strategies (`BLOCK_SIGNAL_STRATEGIES=NEURAL_BEARISH,NEURAL_BULLISH,MOMENTUM_BEARISH`)
+
+---

@@ -641,3 +641,161 @@ python run.py backfill 30    # Backfill 30 days
 ```
 
 See `data-manager/CLAUDE.md` for details.
+
+## Automated Optimization System (Phase 51+)
+
+Two-layer optimization architecture for continuous improvement:
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Layer 2: Meta Optimizer                     │
+│            (scripts/meta_optimizer.py - every 30 min)        │
+│                                                              │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
+│  │  Read All   │───▶│  Aggregate  │───▶│  Generate   │     │
+│  │ ANALYSIS.md │    │  Patterns   │    │  New Ideas  │     │
+│  └─────────────┘    └─────────────┘    └──────┬──────┘     │
+└────────────────────────────────────────────────┼────────────┘
+                                                 │
+                                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│              .claude/collab/idea_queue.json                  │
+└────────────────────────────────────────────────┬────────────┘
+                                                 │
+                                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Layer 1: Continuous Optimizer                 │
+│          (scripts/continuous_optimizer.py - 24/7)           │
+│                                                              │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
+│  │ Pick Ideas  │───▶│  Run 5K     │───▶│  Auto 10K   │     │
+│  │ from Queue  │    │  Test       │    │  Validation │     │
+│  └─────────────┘    └─────────────┘    └──────┬──────┘     │
+└────────────────────────────────────────────────┼────────────┘
+                                                 │
+                                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│            models/<run>/ANALYSIS.md + SUMMARY.txt            │
+│               (auto-generated post-experiment)               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Layer 1: Continuous Optimizer
+
+Tests specific configurations 24/7:
+
+```bash
+# Start Layer 1 optimizer (runs indefinitely)
+python scripts/continuous_optimizer.py
+
+# Single batch then exit
+python scripts/continuous_optimizer.py --single
+
+# Dry run (no actual experiments)
+python scripts/continuous_optimizer.py --dry-run
+```
+
+**Features:**
+- Pulls ideas from `.claude/collab/idea_queue.json`
+- Runs 5K cycle quick tests
+- Auto-promotes winners (per-trade P&L > $0) to 10K validation
+- Generates ANALYSIS.md for each experiment
+- Git commits results automatically
+
+### Layer 2: Meta Optimizer
+
+Analyzes all experiments and suggests improvements:
+
+```bash
+# Run once
+python scripts/meta_optimizer.py
+
+# Run every 30 minutes (recommended)
+python scripts/meta_optimizer.py --loop --interval 1800
+
+# Preview suggestions without adding to queue
+python scripts/meta_optimizer.py --dry-run
+```
+
+**What it analyzes:**
+- Confidence calibration (inverted in 61% of experiments)
+- Losing signal strategies (NEURAL_BEARISH loses in 221/247 experiments)
+- Winning configuration patterns
+- Optimal env var values
+
+**Output:**
+- Generates new experiment ideas
+- Adds them to idea_queue.json for Layer 1 to test
+
+### Post-Experiment Analysis
+
+Automatically generates ANALYSIS.md with insights:
+
+```bash
+# Analyze single experiment
+python tools/post_experiment_analysis.py models/EXP-0172_IDEA-271
+
+# Backfill analysis for all past experiments
+python tools/backfill_analysis.py
+
+# Re-analyze all experiments
+python tools/backfill_analysis.py --force
+```
+
+**ANALYSIS.md contains:**
+- Win rate and P&L breakdown
+- Confidence calibration check
+- Exit reason performance
+- Signal strategy performance
+- Specific recommendations (e.g., `BLOCK_SIGNAL_STRATEGIES=X,Y`)
+
+### Temporal Encoders
+
+Swappable sequence processing architectures:
+
+| Encoder | Env Var | Complexity | Notes |
+|---------|---------|------------|-------|
+| TCN (default) | `TEMPORAL_ENCODER=tcn` | O(L) | Proven performer |
+| Transformer | `TEMPORAL_ENCODER=transformer` | O(L²) | +32% validated |
+| **Mamba2** | `TEMPORAL_ENCODER=mamba2` | O(L) | **+35% with filters** |
+| LSTM | `TEMPORAL_ENCODER=lstm` | O(L) | Legacy fallback |
+
+**Mamba2 Configuration:**
+```bash
+TEMPORAL_ENCODER=mamba2 \
+MAMBA2_N_LAYERS=4 \
+MAMBA2_D_STATE=64 \
+BLOCK_SIGNAL_STRATEGIES=MOMENTUM,VOLATILITY_EXPANSION \
+python scripts/train_time_travel.py
+```
+
+### Key Findings from Meta Analysis (247 experiments)
+
+| Finding | Recommendation |
+|---------|----------------|
+| 61% have inverted confidence | Use `USE_ENTROPY_CONFIDENCE_V2=1` |
+| NEURAL_BEARISH loses in 90% | Use `BLOCK_SIGNAL_STRATEGIES=NEURAL_BEARISH` |
+| NEURAL_BULLISH loses in 64% | Block this signal type too |
+| Mamba2 + filters = +35% P&L | Best new architecture combo |
+
+### Idea Queue Format
+
+`.claude/collab/idea_queue.json`:
+```json
+{
+  "ideas": [
+    {
+      "id": "IDEA-273",
+      "source": "meta_optimizer",
+      "hypothesis": "Block losing strategies",
+      "env_vars": {"BLOCK_SIGNAL_STRATEGIES": "NEURAL_BEARISH,NEURAL_BULLISH"},
+      "status": "pending",
+      "priority": 1
+    }
+  ]
+}
+```
+
+**Status values:** `pending` → `running` → `passed_quick`/`rejected` → `validated`/`failed_validation`
