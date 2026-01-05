@@ -78,6 +78,8 @@ def start_dashboard(name: str, port: Optional[int] = None) -> subprocess.Popen:
 
     env = os.environ.copy()
     env['DASHBOARD_PORT'] = str(actual_port)
+    # Add project root to Python path for imports
+    env['PYTHONPATH'] = str(BASE_DIR) + os.pathsep + env.get('PYTHONPATH', '')
 
     print(f"Starting {config['description']} on port {actual_port}...")
 
@@ -153,9 +155,6 @@ def run_single_dashboard(name: str, port: Optional[int] = None):
 
     actual_port = port or config['port']
 
-    # Set environment variables
-    os.environ['DASHBOARD_PORT'] = str(actual_port)
-
     print(f"\n=== {config['description'].upper()} ===")
     print(f"Port: {actual_port}")
 
@@ -164,8 +163,22 @@ def run_single_dashboard(name: str, port: Optional[int] = None):
     print(f"URL: http://{main_ip}:{actual_port}")
     print()
 
-    # Execute the dashboard script
-    exec(open(script_path).read())
+    # Set environment and run as subprocess (foreground)
+    env = os.environ.copy()
+    env['DASHBOARD_PORT'] = str(actual_port)
+    # Add project root to Python path for imports
+    env['PYTHONPATH'] = str(BASE_DIR) + os.pathsep + env.get('PYTHONPATH', '')
+
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(script_path)],
+            env=env,
+            cwd=str(BASE_DIR)
+        )
+        sys.exit(proc.returncode)
+    except KeyboardInterrupt:
+        print("\nDashboard stopped.")
+        sys.exit(0)
 
 
 def run_all_dashboards():

@@ -154,6 +154,9 @@ Examples:
     # This imports the existing go_live_only.py logic
     sys.argv = [sys.argv[0], str(model_path)]  # Set up args for go_live_only
 
+    # Add core/ to path for imports (unified_options_trading_bot is in core/)
+    sys.path.insert(0, str(BASE_DIR / "core"))
+
     # Execute go_live_only.py from core/
     exec(open(BASE_DIR / "core" / "go_live_only.py").read())
 
