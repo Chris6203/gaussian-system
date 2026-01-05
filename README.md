@@ -129,18 +129,38 @@ Train the model on historical data:
 python scripts/train_time_travel.py
 ```
 
-### 4. Paper Trading
+### 4. Start Trading Bot
 
 ```bash
-# Set PAPER_ONLY_MODE = True in go_live_only.py
-python go_live_only.py models/run_YYYYMMDD_HHMMSS
+# Paper trading (default)
+python bot.py models/run_YYYYMMDD_HHMMSS
+
+# Live trading
+python bot.py models/run_YYYYMMDD_HHMMSS --live
+
+# List available models
+python bot.py --list
 ```
 
-### 5. Live Trading
+### 5. Start Dashboard
 
 ```bash
-# Set PAPER_ONLY_MODE = False in go_live_only.py
-python go_live_only.py models/run_YYYYMMDD_HHMMSS
+# Start all dashboards
+python dashboard.py
+
+# Or start specific dashboard
+python dashboard.py --live      # Live trading dashboard
+python dashboard.py --training  # Training dashboard
+```
+
+### 6. Run Experiments
+
+```bash
+# Run experiment optimizer
+python experiments.py
+
+# Show experiment status
+python experiments.py --status
 ```
 
 ## Data Manager Setup
@@ -328,41 +348,42 @@ python tools/backfill_analysis.py
 
 ```
 gaussian-system/
-├── backend/                 # Core trading infrastructure
-│   ├── consensus_entry_controller.py
+├── bot.py                  # Entry point: Trading bot
+├── dashboard.py            # Entry point: Unified dashboard
+├── experiments.py          # Entry point: Experiment system
+├── config.json             # Main configuration (gitignored)
+├── config.example.json     # Configuration template
+├── server_config.json      # Server IPs for easy migration
+│
+├── core/                   # Core implementations
+│   ├── go_live_only.py
+│   ├── unified_options_trading_bot.py
+│   └── dashboards/
+│       ├── dashboard_server.py
+│       ├── training_dashboard_server.py
+│       └── history_dashboard_server.py
+│
+├── backend/                # Trading infrastructure
 │   ├── unified_rl_policy.py
 │   ├── multi_dimensional_hmm.py
-│   ├── bot_reporter.py
-│   └── config_schema.py
+│   └── paper_trading_system.py
+│
 ├── bot_modules/            # Neural network components
-│   ├── neural_networks.py  # TCN, Transformer, Mamba2, LSTM
-│   └── gaussian_processor.py
-├── data-manager/           # Centralized data & competition
-│   ├── app/
-│   │   ├── web.py
-│   │   ├── storage.py
-│   │   └── dashboard_template.py
-│   └── run.py
-├── execution/              # Live trading execution
-├── features/               # Feature pipeline
+│   └── neural_networks.py  # TCN, Transformer, Mamba2, LSTM
+│
 ├── scripts/                # Training and optimization
-│   ├── train_time_travel.py        # Main training script
-│   ├── continuous_optimizer.py     # Layer 1 optimizer
-│   └── meta_optimizer.py           # Layer 2 meta analyzer
+│   ├── train_time_travel.py
+│   ├── continuous_optimizer.py
+│   └── meta_optimizer.py
+│
 ├── tools/                  # Analysis utilities
-│   ├── post_experiment_analysis.py # Trade analysis
-│   ├── backfill_analysis.py        # Batch analysis
-│   └── experiments_db.py           # Experiment database
-├── models/                 # Saved experiments
-│   └── run_YYYYMMDD_HHMMSS/
-│       ├── SUMMARY.txt
-│       ├── ANALYSIS.md
-│       ├── env_vars.json
-│       └── state/
-├── .claude/collab/         # AI collaboration files
-│   └── idea_queue.json     # Experiment ideas queue
-├── config.json             # Main configuration
-└── unified_options_trading_bot.py  # Main orchestrator
+├── features/               # Feature pipeline
+├── execution/              # Live trading execution
+├── models/                 # Experiment results
+├── data/                   # Databases
+├── logs/                   # Log files
+├── archive/                # Old/deprecated files
+└── data-manager/           # Data collection service
 ```
 
 ## API Documentation

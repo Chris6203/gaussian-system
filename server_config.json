@@ -1,0 +1,21 @@
+{
+  "_comment": "Server configuration - edit this file to migrate the system to a new server",
+  "main_server": {
+    "ip": "192.168.20.235",
+    "description": "Primary server hosting dashboard and data manager"
+  },
+  "dashboard": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "url": "http://192.168.20.235:5000"
+  },
+  "data_manager": {
+    "host": "192.168.20.235",
+    "port": 5050,
+    "url": "http://192.168.20.235:5050"
+  },
+  "experiment_sync": {
+    "enabled": true,
+    "git_remote": "origin"
+  }
+}

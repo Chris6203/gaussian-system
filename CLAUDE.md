@@ -60,11 +60,17 @@ python scripts/train_rl.py --predictor models/predictor_v2.pt --freeze-predictor
 ### Live Trading
 
 ```bash
-# Paper trading (default - PAPER_ONLY_MODE=True in go_live_only.py)
-python go_live_only.py models/run_YYYYMMDD_HHMMSS
+# Paper trading (default)
+python bot.py models/run_YYYYMMDD_HHMMSS
 
-# Live trading (set PAPER_ONLY_MODE=False in go_live_only.py first!)
-python go_live_only.py models/run_YYYYMMDD_HHMMSS
+# Live trading (creates go_live.flag)
+python bot.py models/run_YYYYMMDD_HHMMSS --live
+
+# List available models
+python bot.py --list
+
+# Check status
+python bot.py --status
 ```
 
 ### Q-Scorer System
@@ -77,14 +83,43 @@ python training/run_q_pipeline.py --horizon 15 --cycles 2500
 set ENTRY_CONTROLLER=q_scorer && python go_live_only.py models/run_YYYYMMDD_HHMMSS
 ```
 
+### Dashboards
+
+```bash
+# Start all dashboards (live:5000, training:5001, history:5002)
+python dashboard.py
+
+# Start specific dashboard
+python dashboard.py --live              # Live trading dashboard only
+python dashboard.py --training          # Training dashboard only
+python dashboard.py --status            # Show dashboard status
+```
+
+### Experiments
+
+```bash
+# Run Layer 1 optimizer (continuous experiments)
+python experiments.py
+
+# Run Layer 2 meta optimizer (analyzes patterns)
+python experiments.py --meta
+
+# Run both layers
+python experiments.py --both
+
+# Show experiment status
+python experiments.py --status
+
+# Add experiment idea
+python experiments.py --add "Test wider stops"
+```
+
 ### Testing & Diagnostics
 
 ```bash
 python -m pytest tests/                    # Run all tests
 python -m pytest tests/test_features.py -v # Single test file
 python scripts/diagnose_win_rate.py        # Debug poor performance
-python unified_dashboard_server.py         # Unified dashboard (port 5003) - RECOMMENDED
-python dashboard_hub_server.py             # Hub only with Agent API (port 5003)
 ```
 
 ### Data Management
@@ -110,11 +145,19 @@ Market Data → Features (50-500 dims) → HMM Regime → Predictor → Entry Po
 
 **"Frozen predictor"** means: predictor still runs every cycle to generate predictions, but its weights are NOT updated during RL training. This prevents conflicting gradients.
 
+### Entry Points (Root Directory)
+
+| Script | Purpose |
+|--------|---------|
+| `bot.py` | Live/paper trading bot entry point |
+| `dashboard.py` | Unified dashboard server |
+| `experiments.py` | Experiment system (Layer 1 + Layer 2) |
+
 ### Key Components
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| Main Orchestrator | `unified_options_trading_bot.py` | Combines all components |
+| Main Orchestrator | `core/unified_options_trading_bot.py` | Combines all components |
 | Neural Predictor | `bot_modules/neural_networks.py` | TCN/LSTM + Bayesian heads + RBF kernels |
 | HMM Regime | `backend/multi_dimensional_hmm.py` | 3×3×3 trend/vol/liquidity detection |
 | Entry Policy | `backend/unified_rl_policy.py` | 18-22 state features → 4 actions (HOLD/CALL/PUT/EXIT) |
@@ -127,7 +170,8 @@ Market Data → Features (50-500 dims) → HMM Regime → Predictor → Entry Po
 
 | Directory | Purpose |
 |-----------|---------|
-| `backend/` | Core trading infrastructure (policies, HMM, execution) |
+| `core/` | Core bot and dashboard implementations |
+| `backend/` | Trading infrastructure (policies, HMM, execution) |
 | `bot_modules/` | Neural networks, features, signals |
 | `execution/` | Live trading execution layer |
 | `features/` | Modular feature pipeline (macro, equity, options, etc.) |
@@ -136,9 +180,35 @@ Market Data → Features (50-500 dims) → HMM Regime → Predictor → Entry Po
 | `experiments/` | Experiment runners (isolated from core) |
 | `tools/` | Analysis utilities |
 | `docs/` | Architecture documentation |
+| `archive/` | Old/deprecated files |
 | `data-manager/` | Separate data collection service |
 
 ## Configuration
+
+### Server Configuration (server_config.json)
+
+For easy system migration, server IPs are centralized in `server_config.json`:
+
+```json
+{
+  "main_server": {
+    "ip": "192.168.20.235",
+    "description": "Primary server hosting dashboard and data"
+  },
+  "dashboard": {
+    "port": 5000,
+    "url": "http://192.168.20.235:5000"
+  },
+  "data_manager": {
+    "port": 5050,
+    "url": "http://192.168.20.235:5050"
+  }
+}
+```
+
+To migrate the system to a new server, update the IP address in this file.
+
+### Main Configuration (config.json)
 
 All configuration via `config.json` (single source of truth). **Note: config.json is gitignored because it contains API keys.**
 

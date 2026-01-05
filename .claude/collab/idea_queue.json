@@ -3310,8 +3310,272 @@
         "TRAIN_MAX_CONF": "0.25",
         "TT_MAX_CYCLES": "10000"
       }
+    },
+    {
+      "id": "IDEA-274",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561794",
+      "category": "architecture",
+      "title": "MAMBA2: Base + Low Conf",
+      "description": "Mamba2 encoder with low confidence filter. Baseline mamba2 test.",
+      "hypothesis": "Mamba2 SSM captures temporal patterns better than TCN/LSTM",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-275",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561804",
+      "category": "architecture",
+      "title": "MAMBA2: + Momentum Winner",
+      "description": "Mamba2 + momentum filter (our $296/trade winner).",
+      "hypothesis": "Mamba2 + momentum = better trend capture",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-276",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561811",
+      "category": "architecture",
+      "title": "MAMBA2: + Fear<40 Winner",
+      "description": "Mamba2 + fear/greed filter (our $252/trade winner).",
+      "hypothesis": "Mamba2 + sentiment = contrarian edge",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "SENTIMENT_FEAR_GREED_MAX": "40"
+      }
+    },
+    {
+      "id": "IDEA-277",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561816",
+      "category": "architecture",
+      "title": "MAMBA2: + TDA 120m Winner",
+      "description": "Mamba2 + TDA 120m window (our $232/trade winner).",
+      "hypothesis": "Mamba2 SSM + longer TDA = regime awareness",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-278",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561819",
+      "category": "architecture",
+      "title": "MAMBA2: Deeper (6 layers)",
+      "description": "Deeper Mamba2 with 6 layers instead of 4.",
+      "hypothesis": "More layers = more complex pattern capture",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "MAMBA2_N_LAYERS": "6",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-279",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561822",
+      "category": "architecture",
+      "title": "MAMBA2: Wider State (128)",
+      "description": "Mamba2 with larger state dimension (128 vs 64).",
+      "hypothesis": "Larger state = more memory for patterns",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "MAMBA2_D_STATE": "128",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-280",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561825",
+      "category": "architecture",
+      "title": "MAMBA2: Higher Expand (3)",
+      "description": "Mamba2 with expansion factor 3 instead of 2.",
+      "hypothesis": "More expansion = richer representations",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "MAMBA2_EXPAND": "3",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-281",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561828",
+      "category": "architecture",
+      "title": "MAMBA2 ULTRA: All Winners",
+      "description": "Mamba2 + all 3 winning filters (Momentum + Fear + TDA 120m).",
+      "hypothesis": "Best encoder + best filters = ultimate combo",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001",
+        "SENTIMENT_FEAR_GREED_MAX": "40"
+      }
+    },
+    {
+      "id": "IDEA-282",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561833",
+      "category": "architecture",
+      "title": "MAMBA2 ULTRA: Deep + Wide + Winners",
+      "description": "Mamba2 6-layer + 128 state + all winning filters.",
+      "hypothesis": "Maximum model capacity + best filters",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "MAMBA2_N_LAYERS": "6",
+        "MAMBA2_D_STATE": "128",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-283",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561836",
+      "category": "architecture",
+      "title": "MAMBA2: + Monday + Morning",
+      "description": "Mamba2 with Monday-only and first-90-min filters.",
+      "hypothesis": "Best time windows + best encoder",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MONDAY_ONLY": "1",
+        "FIRST_90_MIN_ONLY": "1"
+      }
+    },
+    {
+      "id": "IDEA-284",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561840",
+      "category": "validation",
+      "title": "VALIDATE: MAMBA2 + Momentum 10K",
+      "description": "Validate Mamba2 + momentum over 10K cycles.",
+      "hypothesis": "Confirm Mamba2 performance at scale",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001",
+        "TT_MAX_CYCLES": "10000"
+      }
+    },
+    {
+      "id": "IDEA-285",
+      "source": "mamba2_exploration",
+      "timestamp": "2026-01-05T14:06:40.561842",
+      "category": "validation",
+      "title": "VALIDATE: MAMBA2 ULTRA 10K",
+      "description": "Validate best Mamba2 combo over 10K cycles.",
+      "hypothesis": "Confirm ultra combo at scale",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001",
+        "SENTIMENT_FEAR_GREED_MAX": "40",
+        "TT_MAX_CYCLES": "10000"
+      }
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-05T14:00:00.682148"
+  "last_updated": "2026-01-05T14:25:06.219485"
 }
