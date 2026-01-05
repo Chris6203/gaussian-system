@@ -102,7 +102,12 @@ CONFIG = load_config()
 # FLASK APP
 # =============================================================================
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
+# Get project root (two levels up from core/dashboards/)
+PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
+
+app = Flask(__name__,
+            static_folder=str(PROJECT_ROOT / 'static'),
+            template_folder=str(PROJECT_ROOT / 'templates'))
 CORS(app)
 
 # =============================================================================
@@ -563,7 +568,7 @@ def refresh_data(selected_log_file: str = None) -> None:
 @app.route('/')
 def index():
     """Serve the training dashboard HTML."""
-    return send_from_directory('templates', 'training.html')
+    return send_from_directory(str(PROJECT_ROOT / 'templates'), 'training.html')
 
 
 @app.route('/api/data')

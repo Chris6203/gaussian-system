@@ -61,7 +61,12 @@ CONFIG = load_config()
 # FLASK APP
 # =============================================================================
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
+# Get project root (two levels up from core/dashboards/)
+PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
+
+app = Flask(__name__,
+            static_folder=str(PROJECT_ROOT / 'static'),
+            template_folder=str(PROJECT_ROOT / 'templates'))
 CORS(app)
 
 # =============================================================================
@@ -256,7 +261,7 @@ def load_trades_from_db(run_id: str, summary: Dict[str, Any]) -> List[Dict[str, 
 @app.route('/')
 def index():
     """Serve the dashboard HTML."""
-    return send_from_directory('templates', 'history.html')
+    return send_from_directory(str(PROJECT_ROOT / 'templates'), 'history.html')
 
 
 @app.route('/api/models')
