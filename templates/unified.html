@@ -187,8 +187,20 @@
         .model-stats {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 5px;
+            gap: 4px 12px;
             font-size: 0.8rem;
+        }
+
+        .model-stats > div {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .model-stats > div span:last-child {
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+            text-align: right;
         }
 
         .model-detail {
@@ -718,10 +730,10 @@
                     <div class="model-item" onclick="selectModel('${m.run_id}')">
                         <div class="model-name">${m.run_id}</div>
                         <div class="model-stats">
-                            <div><span class="muted">P&L:</span> <span class="${m.pnl >= 0 ? 'positive' : 'negative'}">${m.pnl >= 0 ? '+' : ''}${m.pnl_pct.toFixed(1)}%</span></div>
-                            <div><span class="muted">Win:</span> ${m.win_rate.toFixed(1)}%</div>
-                            <div><span class="muted">Trades:</span> ${m.total_trades}</div>
-                            <div><span class="muted">Cycles:</span> ${m.total_cycles.toLocaleString()}</div>
+                            <div><span class="muted">P&L</span><span class="${m.pnl >= 0 ? 'positive' : 'negative'}">${m.pnl >= 0 ? '+' : ''}${m.pnl_pct.toFixed(1)}%</span></div>
+                            <div><span class="muted">Win</span><span>${m.win_rate.toFixed(1)}%</span></div>
+                            <div><span class="muted">Trades</span><span>${m.total_trades}</span></div>
+                            <div><span class="muted">Cycles</span><span>${m.total_cycles.toLocaleString()}</span></div>
                         </div>
                     </div>
                 `).join('');

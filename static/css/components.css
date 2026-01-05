@@ -92,7 +92,7 @@
 }
 
 .btn.primary:hover {
-    background: #6a4de0;
+    background: var(--accent-hover);
 }
 
 .btn.success {
@@ -222,7 +222,7 @@
 }
 
 .trade-account.paper {
-    background: rgba(124, 92, 255, 0.2);
+    background: var(--accent-dim);
     color: var(--accent);
 }
 
