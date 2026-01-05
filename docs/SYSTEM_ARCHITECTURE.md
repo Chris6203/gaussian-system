@@ -30,16 +30,35 @@
     └───────────────────────┘  └───────────────────────┘  └───────────────────────┘
 ```
 
+### Entry Points (Root Directory)
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `bot.py` | Trading bot | `python bot.py models/run_xxx` |
+| `dashboard.py` | Unified dashboard | `python dashboard.py` |
+| `experiments.py` | Experiment system | `python experiments.py` |
+
 ### Key Files
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| Main Bot | `unified_options_trading_bot.py` | Orchestrates everything |
+| Main Bot | `core/unified_options_trading_bot.py` | Orchestrates everything |
+| Bot Entry | `core/go_live_only.py` | Live/paper trading logic |
 | Neural Network | `bot_modules/neural_networks.py` | Price/direction prediction |
 | HMM Regime | `backend/multi_dimensional_hmm.py` | Market regime detection |
 | RL Policy | `backend/unified_rl_policy.py` | Entry/exit decisions |
 | Signals | `bot_modules/signals.py` | Signal combination |
 | Paper Trading | `backend/paper_trading_system.py` | Trade execution simulation |
+| Live Dashboard | `core/dashboards/dashboard_server.py` | Live trading dashboard |
+| Training Dashboard | `core/dashboards/training_dashboard_server.py` | Training monitoring |
+
+### Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `config.json` | Main configuration (API keys, trading params) |
+| `server_config.json` | Server IPs for easy migration |
+| `config.example.json` | Configuration template |
 
 ---
 

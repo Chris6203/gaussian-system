@@ -1,5 +1,7 @@
 {
     "_README": "Copy this file to config.json and fill in your API keys",
+    "_SERVER_CONFIG": "Server IPs are in server_config.json for easy migration",
+    "_ENTRY_POINTS": "bot.py (trading), dashboard.py (monitoring), experiments.py (optimization)",
     "_AUTHOR": "Chris Peters",
 
     "credentials": {
