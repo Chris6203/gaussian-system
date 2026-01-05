@@ -803,41 +803,63 @@
                 };
             }
 
-            // Trade entry/exit markers from annotations
+            // Trade entry/exit markers - pair entries with exits
             let idx = 0;
             if (liveChartData.annotations) {
+                let pendingEntry = null;
                 for (const a of liveChartData.annotations) {
                     const t = parseLocalTime(a.timestamp);
-                    if (t < cutoff || t > now) continue;
-
                     const price = findNearestPriceLive(a.timestamp);
                     if (!price) continue;
 
-                    const isEntry = a.type === 'entry';
-                    const isCall = a.option_type === 'CALL';
-                    const color = isCall ? '#00d68f' : '#ff5c7c';
+                    if (a.type === 'entry') {
+                        // Store entry for pairing with next exit
+                        pendingEntry = { time: t, price, isCall: a.option_type === 'CALL' };
+                        const dotColor = pendingEntry.isCall ? '#00d68f' : '#ff5c7c';
 
-                    if (isEntry) {
-                        annotations[`e${idx}`] = {
-                            type: 'point',
-                            xValue: t,
-                            yValue: price,
-                            backgroundColor: color,
-                            borderColor: '#fff',
-                            borderWidth: 2,
-                            radius: 5
-                        };
-                    } else {
-                        const pnlColor = (a.pnl || 0) > 0 ? '#00d68f' : '#ff5c7c';
-                        annotations[`x${idx}`] = {
-                            type: 'point',
-                            xValue: t,
-                            yValue: price,
-                            backgroundColor: pnlColor,
-                            borderColor: '#fff',
-                            borderWidth: 2,
-                            radius: 4
-                        };
+                        if (t >= cutoff && t <= now) {
+                            annotations[`e${idx}`] = {
+                                type: 'point',
+                                xValue: t,
+                                yValue: price,
+                                backgroundColor: dotColor,
+                                borderColor: '#fff',
+                                borderWidth: 2,
+                                radius: 6
+                            };
+                        }
+                    } else if (a.type === 'exit' && pendingEntry) {
+                        // Draw exit dot and line from entry to exit
+                        const pnl = a.pnl || 0;
+                        const lineColor = pnl >= 0 ? '#00d68f' : '#ff5c7c';
+                        const dotColor = pendingEntry.isCall ? '#00d68f' : '#ff5c7c';
+
+                        if (t >= cutoff && t <= now) {
+                            // Exit dot (same color as entry based on option type)
+                            annotations[`x${idx}`] = {
+                                type: 'point',
+                                xValue: t,
+                                yValue: price,
+                                backgroundColor: dotColor,
+                                borderColor: '#fff',
+                                borderWidth: 2,
+                                radius: 6
+                            };
+                        }
+
+                        // Line between entry and exit (colored by P&L)
+                        if (pendingEntry.time >= cutoff && t <= now) {
+                            annotations[`l${idx}`] = {
+                                type: 'line',
+                                xMin: pendingEntry.time,
+                                xMax: t,
+                                yMin: pendingEntry.price,
+                                yMax: price,
+                                borderColor: lineColor,
+                                borderWidth: 2
+                            };
+                        }
+                        pendingEntry = null;
                     }
                     idx++;
                 }
@@ -1088,52 +1110,63 @@
                 };
             }
 
+            // Trade entry/exit markers - pair entries with exits from annotations
             let idx = 0;
-            if (trainingChartData.trades) {
-                for (const trade of trainingChartData.trades) {
-                    const entryTime = parseLocalTime(trade.entry_time);
-                    if (entryTime < cutoff || entryTime > now) continue;
-
-                    const price = findNearestPriceTraining(trade.entry_time);
+            if (trainingChartData.annotations) {
+                let pendingEntry = null;
+                for (const a of trainingChartData.annotations) {
+                    const t = parseLocalTime(a.timestamp);
+                    const price = findNearestPriceTraining(a.timestamp);
                     if (!price) continue;
 
-                    const isCall = trade.type?.includes('CALL');
-                    const color = isCall ? '#00d68f' : '#ff5c7c';
+                    if (a.type === 'entry') {
+                        // Store entry for pairing with next exit
+                        pendingEntry = { time: t, price, isCall: a.option_type === 'CALL' };
+                        const dotColor = pendingEntry.isCall ? '#00d68f' : '#ff5c7c';
 
-                    annotations[`e${idx}`] = {
-                        type: 'point',
-                        xValue: entryTime,
-                        yValue: price,
-                        backgroundColor: color,
-                        borderColor: '#fff',
-                        borderWidth: 2,
-                        radius: 5
-                    };
-
-                    if (trade.exit_time && trade.status !== 'OPEN') {
-                        const exitTime = parseLocalTime(trade.exit_time);
-                        if (exitTime >= cutoff && exitTime <= now) {
-                            const exitPrice = findNearestPriceTraining(trade.exit_time);
-                            if (exitPrice) {
-                                const pnlColor = trade.pnl > 0 ? '#00d68f' : '#ff5c7c';
-                                annotations[`x${idx}`] = {
-                                    type: 'point',
-                                    xValue: exitTime,
-                                    yValue: exitPrice,
-                                    backgroundColor: pnlColor,
-                                    borderColor: '#fff',
-                                    borderWidth: 2,
-                                    radius: 4
-                                };
-                                annotations[`l${idx}`] = {
-                                    type: 'line',
-                                    xMin: entryTime, xMax: exitTime,
-                                    yMin: price, yMax: exitPrice,
-                                    borderColor: pnlColor,
-                                    borderWidth: 1.5
-                                };
-                            }
+                        if (t >= cutoff && t <= now) {
+                            annotations[`e${idx}`] = {
+                                type: 'point',
+                                xValue: t,
+                                yValue: price,
+                                backgroundColor: dotColor,
+                                borderColor: '#fff',
+                                borderWidth: 2,
+                                radius: 6
+                            };
                         }
+                    } else if (a.type === 'exit' && pendingEntry) {
+                        // Draw exit dot and line from entry to exit
+                        const pnl = a.pnl || 0;
+                        const lineColor = pnl >= 0 ? '#00d68f' : '#ff5c7c';
+                        const dotColor = pendingEntry.isCall ? '#00d68f' : '#ff5c7c';
+
+                        if (t >= cutoff && t <= now) {
+                            // Exit dot (same color as entry based on option type)
+                            annotations[`x${idx}`] = {
+                                type: 'point',
+                                xValue: t,
+                                yValue: price,
+                                backgroundColor: dotColor,
+                                borderColor: '#fff',
+                                borderWidth: 2,
+                                radius: 6
+                            };
+                        }
+
+                        // Line between entry and exit (colored by P&L)
+                        if (pendingEntry.time >= cutoff && t <= now) {
+                            annotations[`l${idx}`] = {
+                                type: 'line',
+                                xMin: pendingEntry.time,
+                                xMax: t,
+                                yMin: pendingEntry.price,
+                                yMax: price,
+                                borderColor: lineColor,
+                                borderWidth: 2
+                            };
+                        }
+                        pendingEntry = null;
                     }
                     idx++;
                 }
