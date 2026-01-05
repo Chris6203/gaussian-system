@@ -1,0 +1,11 @@
+{
+  "_description": "Current best model for production use. Update with: python bot.py --set-best models/run_xxx",
+  "model_dir": "models/transformer_baseline_jan2",
+  "set_date": "2026-01-05",
+  "set_by": "manual",
+  "notes": "Set as best model on 2026-01-05 15:02",
+  "validation": {
+    "pnl_pct": 35.44,
+    "win_rate": 47.0
+  }
+}
