@@ -40,6 +40,17 @@ print(f"[CONFIG] Data Source: {config.get_data_source()}")
 PAPER_ONLY_MODE = True  # Start in paper mode by default
 GO_LIVE_FLAG_FILE = Path("go_live.flag")
 
+# ============================================================================
+# INVERTED CONFIDENCE FILTER - Only trade when confidence is LOW
+# Data shows: Low conf < 0.25 has 51.7% WR vs ~35% for high conf
+# Set MAX_CONFIDENCE env var to enable (e.g., MAX_CONFIDENCE=0.25)
+# ============================================================================
+MAX_CONFIDENCE = float(os.environ.get('MAX_CONFIDENCE', '1.0'))  # Default: no max
+if MAX_CONFIDENCE < 1.0:
+    print(f"[CONFIG] ** INVERTED CONFIDENCE FILTER ENABLED **")
+    print(f"[CONFIG]    Only trading when confidence < {MAX_CONFIDENCE:.0%}")
+    print(f"[CONFIG]    (Low confidence = better win rate based on data analysis)")
+
 def check_live_mode():
     """Check if we should be in live mode (flag file exists)."""
     return GO_LIVE_FLAG_FILE.exists()
@@ -837,12 +848,23 @@ try:
                 if signal and signal.get('action') != 'HOLD':
                     signals_generated += 1  # Track signal count
                     action = signal.get('action', 'UNKNOWN')
-                    confidence = signal.get('confidence', 0) * 100
-                    
+                    confidence = signal.get('confidence', 0)
+                    confidence_pct = confidence * 100
+
+                    # ===== INVERTED CONFIDENCE FILTER =====
+                    # Data shows low confidence trades have HIGHER win rate
+                    # Block trades where confidence > MAX_CONFIDENCE
+                    if MAX_CONFIDENCE < 1.0 and confidence > MAX_CONFIDENCE:
+                        logger.info(f"[FILTER] 🚫 BLOCKED: Confidence {confidence_pct:.1f}% > {MAX_CONFIDENCE*100:.0f}% max")
+                        logger.info(f"[FILTER] Inverted filter active - only low-conf trades allowed")
+                        print(f"  [FILTER] BLOCKED: conf {confidence_pct:.1f}% > {MAX_CONFIDENCE*100:.0f}% max (inverted)")
+                        # Skip to next cycle - don't execute this trade
+                        continue
+
                     # Log with confidence for dashboard parsing
-                    logger.info(f"FINAL Signal: {action} (confidence: {confidence:.1f}%)")
+                    logger.info(f"FINAL Signal: {action} (confidence: {confidence_pct:.1f}%)")
                     logger.info(f"[SIGNAL] {action} @ ${current_price:.2f}")
-                    print(f"  [SIGNAL] {action} @ ${current_price:.2f} ({confidence:.1f}%)")
+                    print(f"  [SIGNAL] {action} @ ${current_price:.2f} ({confidence_pct:.1f}%)")
                     
                     # ===== CHECK TCN WARMUP STATUS =====
                     # Block live trades until TCN is fully warmed up
