@@ -1,6 +1,63 @@
 {
   "ideas": [
     {
+      "id": "IDEA-269",
+      "source": "phase51_mamba2",
+      "timestamp": "2026-01-05T13:04:50.745939",
+      "hypothesis": "Mamba2 SSM may capture temporal patterns better than TCN for options trading",
+      "description": "Test Mamba2 State Space Model encoder instead of TCN. SSMs have linear complexity and excel at long-range dependencies.",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "MAMBA2_N_LAYERS": "4",
+        "MAMBA2_D_STATE": "64"
+      },
+      "category": "architecture",
+      "status": "in_progress",
+      "priority": 1,
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-05T13:05:56.349683"
+      }
+    },
+    {
+      "id": "IDEA-270",
+      "source": "phase51_mamba2",
+      "timestamp": "2026-01-05T13:04:50.745950",
+      "hypothesis": "Deeper Mamba2 (6 layers) may capture more complex patterns",
+      "description": "Test deeper Mamba2 with 6 layers and larger state dimension for more capacity",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "MAMBA2_N_LAYERS": "6",
+        "MAMBA2_D_STATE": "128"
+      },
+      "category": "architecture",
+      "status": "in_progress",
+      "priority": 2,
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-05T13:05:56.349683"
+      }
+    },
+    {
+      "id": "IDEA-271",
+      "source": "phase51_mamba2",
+      "timestamp": "2026-01-05T13:04:50.745954",
+      "hypothesis": "Mamba2 + signal filtering may combine architecture with best config",
+      "description": "Combine Mamba2 encoder with the winning BLOCK_SIGNAL_STRATEGIES filter",
+      "env_vars": {
+        "TEMPORAL_ENCODER": "mamba2",
+        "MAMBA2_N_LAYERS": "4",
+        "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
+      },
+      "category": "architecture",
+      "status": "in_progress",
+      "priority": 1,
+      "lock": {
+        "machine_id": "lrn-ai-serv1",
+        "locked_at": "2026-01-05T13:05:56.349683"
+      }
+    },
+    {
       "id": "IDEA-264",
       "source": "codex_review",
       "timestamp": "2026-01-05T11:58:56.798766",
@@ -9,7 +66,7 @@
       "description": "Train confidence head with BCE loss to predict P(win). Codex found confidence head was never trained.",
       "hypothesis": "Training confidence with actual win/loss outcomes will make it predictive of win rate",
       "priority": "high",
-      "status": "pending",
+      "status": "already_tested",
       "env_vars": {
         "TRAIN_CONFIDENCE_BCE": "1",
         "CONFIDENCE_BCE_WEIGHT": "0.5",
@@ -32,7 +89,7 @@
       "description": "Use entropy-based confidence and don't penalize by return variance. Codex found original confidence inversely correlates with win rate due to variance penalty.",
       "hypothesis": "Proper entropy confidence + decoupling uncertainty will fix inverted confidence",
       "priority": "high",
-      "status": "pending",
+      "status": "already_tested",
       "env_vars": {
         "USE_ENTROPY_CONFIDENCE_V2": "1",
         "DECOUPLE_UNCERTAINTY": "1",
@@ -55,7 +112,7 @@
       "description": "Enable all Codex-recommended confidence fixes: BCE training + entropy confidence + decoupled uncertainty + temperature scaling.",
       "hypothesis": "Combining all fixes will maximize confidence calibration improvement",
       "priority": "critical",
-      "status": "pending",
+      "status": "already_tested",
       "env_vars": {
         "TRAIN_CONFIDENCE_BCE": "1",
         "CONFIDENCE_BCE_WEIGHT": "0.5",
@@ -81,7 +138,7 @@
       "description": "Apply temperature scaling T=1.5 to direction logits for softer probabilities.",
       "hypothesis": "Temperature scaling alone may improve confidence calibration",
       "priority": "medium",
-      "status": "pending",
+      "status": "already_tested",
       "env_vars": {
         "DIRECTION_TEMPERATURE": "1.5",
         "HARD_TAKE_PROFIT_PCT": "25",
@@ -3216,5 +3273,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-05T12:44:50.395097"
+  "last_updated": "2026-01-05T13:05:56.349683"
 }

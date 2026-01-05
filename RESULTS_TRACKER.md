@@ -7310,3 +7310,71 @@ python scripts/train_time_travel.py
 ```
 
 ---
+
+## Phase 51: Mamba2 State Space Model Integration (2026-01-05)
+
+### Overview
+
+Added Mamba2 (State Space Model) as a swappable temporal encoder option.
+
+### Why Mamba2?
+
+1. **Linear Complexity**: O(L) vs O(L²) for Transformers - better for long sequences
+2. **Selective State Spaces**: Data-dependent parameters learn which information to remember/forget
+3. **No Attention**: Avoids quadratic memory growth
+4. **Proven Performance**: State-of-the-art on many sequence modeling benchmarks
+
+### Implementation Details
+
+**New Classes in `bot_modules/neural_networks.py`:**
+
+1. `Mamba2Block` - Single Mamba2 layer with:
+   - 1D convolution for local context
+   - Selective state space (SSM) with learned A, B, C, D parameters
+   - SiLU gating mechanism
+   - Pre-norm residual connections
+
+2. `OptionsMamba2` - Full encoder with:
+   - Input projection to d_model
+   - N Mamba2 blocks (default: 4)
+   - Attention pooling for sequence → vector
+   - Context projection to 64-dim output
+
+### Configuration
+
+**Environment Variables:**
+```bash
+TEMPORAL_ENCODER=mamba2           # Enable Mamba2 encoder
+MAMBA2_N_LAYERS=4                 # Number of Mamba2 layers (default: 4)
+MAMBA2_D_STATE=64                 # SSM state dimension (default: 64)
+MAMBA2_EXPAND=2                   # Expansion factor (default: 2)
+```
+
+### Encoder Options Summary
+
+| Encoder | Env Var | Complexity | Notes |
+|---------|---------|------------|-------|
+| TCN (default) | `TEMPORAL_ENCODER=tcn` | O(L) | Best tested (+1327% P&L) |
+| Transformer | `TEMPORAL_ENCODER=transformer` | O(L²) | +801% P&L |
+| LSTM | `TEMPORAL_ENCODER=lstm` | O(L) | Legacy fallback |
+| **Mamba2** | `TEMPORAL_ENCODER=mamba2` | O(L) | **NEW - Phase 51** |
+
+### Test Ideas Added to Optimizer
+
+- IDEA-269: Mamba2 SSM baseline (4 layers, d_state=64)
+- IDEA-270: Deep Mamba2 (6 layers, d_state=128)
+- IDEA-271: Mamba2 + Signal Filtering (combine with best config)
+
+### Example Test Command
+
+```bash
+TEMPORAL_ENCODER=mamba2 \
+MAMBA2_N_LAYERS=4 \
+MAMBA2_D_STATE=64 \
+MODEL_RUN_DIR=models/mamba2_test \
+TT_MAX_CYCLES=5000 \
+PAPER_TRADING=True \
+python scripts/train_time_travel.py
+```
+
+---
