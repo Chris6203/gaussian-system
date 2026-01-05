@@ -60,6 +60,30 @@ logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
 
 # ------------------------------------------------------------------------------
+# Confidence Calibration Configuration (Phase 50 - Codex Recommendations)
+# All options are opt-in to preserve existing winning configs
+# ------------------------------------------------------------------------------
+# BCE loss for confidence head - trains confidence to predict P(win)
+TRAIN_CONFIDENCE_BCE = os.environ.get('TRAIN_CONFIDENCE_BCE', '0') == '1'
+CONFIDENCE_BCE_WEIGHT = float(os.environ.get('CONFIDENCE_BCE_WEIGHT', '0.5'))
+
+# Entropy-based confidence from direction probabilities (replaces learned head)
+USE_ENTROPY_CONFIDENCE_V2 = os.environ.get('USE_ENTROPY_CONFIDENCE_V2', '0') == '1'
+
+# Decouple MC uncertainty from confidence (don't penalize by return variance)
+DECOUPLE_UNCERTAINTY = os.environ.get('DECOUPLE_UNCERTAINTY', '0') == '1'
+
+# Temperature scaling for direction logits (calibration)
+DIRECTION_TEMPERATURE = float(os.environ.get('DIRECTION_TEMPERATURE', '1.0'))
+
+# Log confidence calibration debug info
+CONFIDENCE_DEBUG = os.environ.get('CONFIDENCE_DEBUG', '0') == '1'
+
+logger.info(f"[CONF_CAL] TRAIN_CONFIDENCE_BCE={TRAIN_CONFIDENCE_BCE}, BCE_WEIGHT={CONFIDENCE_BCE_WEIGHT}")
+logger.info(f"[CONF_CAL] USE_ENTROPY_CONFIDENCE_V2={USE_ENTROPY_CONFIDENCE_V2}, DECOUPLE_UNCERTAINTY={DECOUPLE_UNCERTAINTY}")
+logger.info(f"[CONF_CAL] DIRECTION_TEMPERATURE={DIRECTION_TEMPERATURE}")
+
+# ------------------------------------------------------------------------------
 # Import Modular Components
 # ------------------------------------------------------------------------------
 # Neural network components (extracted to bot_modules)
@@ -1841,11 +1865,13 @@ class UnifiedOptionsBot:
             outs = []
             for i in range(mc_samples):
                 out = self.model(x, s)
+                # Apply temperature scaling to direction logits before softmax (Phase 50 fix)
+                direction_logits = out["direction"] / DIRECTION_TEMPERATURE
                 outs.append({
                     'return': out["return"].item(),
                     'volatility': out["volatility"].item(),
                     'confidence': out["confidence"].item(),
-                    'direction': torch.softmax(out["direction"], dim=-1).squeeze().cpu().numpy(),
+                    'direction': torch.softmax(direction_logits, dim=-1).squeeze().cpu().numpy(),
                     # Execution heads (predicted by the model, previously unused by the policy)
                     'fillability': out.get("fillability").item() if isinstance(out.get("fillability", None), torch.Tensor) else 0.5,
                     'exp_slippage': out.get("exp_slippage").item() if isinstance(out.get("exp_slippage", None), torch.Tensor) else 0.0,
@@ -1880,11 +1906,44 @@ class UnifiedOptionsBot:
         
         # Average direction probabilities across MC samples
         dirs = np.mean(directions, axis=0)  # [3]
-        
-        # Confidence with Monte Carlo uncertainty consideration
-        base_conf = float(np.mean(confidences))
-        mc_uncertainty = mc_return_std  # Higher std = lower confidence
-        adjusted_conf = base_conf * (1.0 - min(mc_uncertainty * 10, 0.5))  # Reduce confidence if high uncertainty
+
+        # ======================================================================
+        # CONFIDENCE CALCULATION (Phase 50 - Codex fixes)
+        # ======================================================================
+        mc_uncertainty = mc_return_std  # Keep as separate signal
+
+        if USE_ENTROPY_CONFIDENCE_V2:
+            # Entropy-based confidence: low entropy = high certainty = high confidence
+            # Formula: conf = 1 - (entropy / max_entropy) where max_entropy = log(3) for 3 classes
+            eps = 1e-8
+            dirs_clipped = np.clip(dirs, eps, 1.0 - eps)
+            dirs_normalized = dirs_clipped / dirs_clipped.sum()  # Ensure sums to 1
+            entropy = -np.sum(dirs_normalized * np.log(dirs_normalized))
+            max_entropy = np.log(3)  # 3 classes: DOWN, NEUTRAL, UP
+            entropy_conf = 1.0 - (entropy / max_entropy)
+
+            # Also compute margin confidence (gap between top two probs)
+            sorted_probs = np.sort(dirs_normalized)[::-1]
+            margin_conf = sorted_probs[0] - sorted_probs[1]
+
+            # Blend: 70% entropy + 30% margin (like Phase 48)
+            base_conf = 0.7 * entropy_conf + 0.3 * margin_conf
+
+            if CONFIDENCE_DEBUG:
+                logger.info(f"[CONF_DEBUG] entropy={entropy:.4f}, max_entropy={max_entropy:.4f}, "
+                           f"entropy_conf={entropy_conf:.3f}, margin_conf={margin_conf:.3f}, base_conf={base_conf:.3f}")
+        else:
+            # Use learned confidence head (may be untrained!)
+            base_conf = float(np.mean(confidences))
+
+        if DECOUPLE_UNCERTAINTY:
+            # Don't penalize confidence by return variance (Codex recommendation)
+            adjusted_conf = base_conf
+            if CONFIDENCE_DEBUG:
+                logger.info(f"[CONF_DEBUG] Decoupled: base_conf={base_conf:.3f}, mc_uncertainty={mc_uncertainty:.4f} (unused)")
+        else:
+            # Original behavior: reduce confidence if high return uncertainty
+            adjusted_conf = base_conf * (1.0 - min(mc_uncertainty * 10, 0.5))
 
         gfeat = self.gaussian_processor.transform(current_features)
         gconf = float(min(gfeat[0], 1.0)) if len(gfeat) > 0 else 0.5
@@ -2670,6 +2729,19 @@ class UnifiedOptionsBot:
                         vol_loss = self.loss_fn(output["volatility"].squeeze(), target_vol_tensor)
                         total_loss = total_loss + vol_loss * 0.3  # Weight volatility loss
                         loss_components['volatility'] = vol_loss.item()
+
+                    # 4. BCE Confidence Loss (Phase 50 - trains confidence to predict P(win))
+                    # Only enabled when TRAIN_CONFIDENCE_BCE=1
+                    if TRAIN_CONFIDENCE_BCE:
+                        # Target: 1 if trade would be profitable (positive return), 0 otherwise
+                        target_win = 1.0 if target_return > 0 else 0.0
+                        target_win_tensor = self._safe_to_device(torch.tensor([[target_win]], dtype=torch.float32))
+                        conf_output = output["confidence"]  # Already sigmoid'd in model
+                        conf_loss = nn.BCELoss()(conf_output, target_win_tensor)
+                        total_loss = total_loss + conf_loss * CONFIDENCE_BCE_WEIGHT
+                        loss_components['confidence_bce'] = conf_loss.item()
+                        if CONFIDENCE_DEBUG:
+                            logger.info(f"[CONF_TRAIN] target_win={target_win}, pred_conf={conf_output.item():.3f}, bce_loss={conf_loss.item():.4f}")
 
                 # Backward pass with AMP scaling (outside autocast)
                 if self.use_amp and self.grad_scaler is not None:
