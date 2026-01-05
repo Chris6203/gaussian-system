@@ -3574,8 +3574,31 @@
         "SENTIMENT_FEAR_GREED_MAX": "40",
         "TT_MAX_CYCLES": "10000"
       }
+    },
+    {
+      "id": "OFFLINE-0001",
+      "source": "offline_queue",
+      "timestamp": "2026-01-05T15:27:11.056061",
+      "category": "validation",
+      "title": "IDEA-266 20K Validation (68.1% WR)",
+      "description": "Validate exceptional 68.1% WR result with longer run",
+      "status": "completed",
+      "env_vars": {
+        "TRAIN_CONFIDENCE_BCE": "1",
+        "CONFIDENCE_BCE_WEIGHT": "0.5",
+        "USE_ENTROPY_CONFIDENCE_V2": "1",
+        "DECOUPLE_UNCERTAINTY": "1",
+        "DIRECTION_TEMPERATURE": "1.5",
+        "HARD_TAKE_PROFIT_PCT": "25",
+        "TT_MAX_HOLD_MINUTES": "60",
+        "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
+      },
+      "last_result": {
+        "exp_id": "OFFLINE-0001",
+        "completed_at": "2026-01-05T16:59:43"
+      }
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-05T15:36:03.391081"
+  "last_updated": "2026-01-05T17:05:36.685284"
 }

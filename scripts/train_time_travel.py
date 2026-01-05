@@ -3454,6 +3454,54 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception as e:
                                     pass  # Silently continue if ensemble fails
 
+                            # ============= PHASE 52: SELECTIVE FILTERS =============
+                            # These filters were previously NOT implemented (bug discovered 2026-01-05)
+
+                            # MONDAY_ONLY: Only trade on Mondays
+                            if filter_ok and os.environ.get('MONDAY_ONLY', '0') == '1':
+                                weekday = sim_time.weekday()  # 0=Mon, 6=Sun
+                                if weekday != 0:
+                                    filter_ok = False
+                                    filter_reason = f"monday_only (today={['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][weekday]})"
+
+                            # FIRST_90_MIN_ONLY: Only trade first 90 minutes (9:30-11:00)
+                            if filter_ok and os.environ.get('FIRST_90_MIN_ONLY', '0') == '1':
+                                market_open_time = sim_time.replace(hour=9, minute=30, second=0, microsecond=0)
+                                mins_since_open = (sim_time - market_open_time).total_seconds() / 60
+                                if mins_since_open < 0 or mins_since_open > 90:
+                                    filter_ok = False
+                                    filter_reason = f"first_90_min_only ({mins_since_open:.0f}m since open)"
+
+                            # MIN_ABS_MOMENTUM: Require minimum momentum magnitude
+                            if filter_ok and os.environ.get('MIN_ABS_MOMENTUM', ''):
+                                min_mom = float(os.environ.get('MIN_ABS_MOMENTUM', '0'))
+                                mom_5m = momentum_5min if 'momentum_5min' in dir() else 0.0
+                                if abs(mom_5m) < min_mom:
+                                    filter_ok = False
+                                    filter_reason = f"min_abs_momentum ({abs(mom_5m):.5f} < {min_mom})"
+
+                            # SENTIMENT_FEAR_GREED_MAX: Only trade when Fear & Greed below threshold (fear = opportunity)
+                            if filter_ok and os.environ.get('SENTIMENT_FEAR_GREED_MAX', ''):
+                                max_fg = float(os.environ.get('SENTIMENT_FEAR_GREED_MAX', '100'))
+                                fg_value = 50  # Default neutral
+                                if hasattr(bot, 'last_features') and bot.last_features:
+                                    fg_value = bot.last_features.get('fear_greed_value', 50)
+                                if fg_value > max_fg:
+                                    filter_ok = False
+                                    filter_reason = f"fear_greed_high ({fg_value:.0f} > {max_fg})"
+
+                            # TDA_REGIME_FILTER: Only trade when TDA complexity is favorable
+                            if filter_ok and os.environ.get('TDA_REGIME_FILTER', '0') == '1':
+                                max_complexity = float(os.environ.get('TDA_MAX_COMPLEXITY', '0.5'))
+                                tda_complexity = 0.3  # Default
+                                if hasattr(bot, 'last_features') and bot.last_features:
+                                    tda_complexity = bot.last_features.get('tda_complexity', 0.3)
+                                if tda_complexity > max_complexity:
+                                    filter_ok = False
+                                    filter_reason = f"tda_complexity_high ({tda_complexity:.3f} > {max_complexity})"
+
+                            # ============= END PHASE 52 FILTERS =============
+
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
                                 print(f"   [PHASE44] Signal boost: +{phase44_boost:.1%}")

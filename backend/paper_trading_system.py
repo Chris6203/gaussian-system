@@ -4555,6 +4555,37 @@ class PaperTradingSystem:
                 trade.status = OrderStatus.PROFIT_TAKEN
                 self.logger.info(f"🎯 TAKE PROFIT triggered: {tp_pnl_pct:+.1f}% (premium ${current_premium:.2f} >= TP ${trade.take_profit:.2f})")
 
+            # ============= PHASE 52: TRAILING STOP =============
+            # Previously NOT implemented (bug discovered 2026-01-05)
+            if not should_exit and os.environ.get('USE_TRAILING_STOP', '0') == '1':
+                current_pnl_pct = ((current_premium / trade.premium_paid) - 1.0) * 100.0 if trade.premium_paid > 0 else 0
+                activation_pct = float(os.environ.get('TRAILING_ACTIVATION_PCT', '10'))  # Activate at +10%
+                trail_pct = float(os.environ.get('TRAILING_STOP_PCT', '5'))  # Trail 5% behind peak
+
+                # Initialize trailing stop tracking if not present
+                if not hasattr(trade, 'trailing_stop_active'):
+                    trade.trailing_stop_active = False
+                    trade.trailing_stop_peak_pnl = 0.0
+
+                # Activate trailing stop when we hit activation threshold
+                if not trade.trailing_stop_active and current_pnl_pct >= activation_pct:
+                    trade.trailing_stop_active = True
+                    trade.trailing_stop_peak_pnl = current_pnl_pct
+                    self.logger.info(f"📈 TRAILING STOP activated at {current_pnl_pct:+.1f}% (threshold: {activation_pct}%)")
+
+                # Update peak and check for exit
+                if trade.trailing_stop_active:
+                    if current_pnl_pct > trade.trailing_stop_peak_pnl:
+                        trade.trailing_stop_peak_pnl = current_pnl_pct
+
+                    # Exit if we've fallen trail_pct below the peak
+                    trail_threshold = trade.trailing_stop_peak_pnl - trail_pct
+                    if current_pnl_pct <= trail_threshold:
+                        should_exit = True
+                        exit_reason = f"📉 TRAILING STOP (peak: {trade.trailing_stop_peak_pnl:+.1f}%, now: {current_pnl_pct:+.1f}%, trail: {trail_pct}%)"
+                        self.logger.info(f"📉 TRAILING STOP triggered: fell from {trade.trailing_stop_peak_pnl:+.1f}% to {current_pnl_pct:+.1f}%")
+            # ============= END PHASE 52 TRAILING STOP =============
+
             # ============= DYNAMIC HOLD TIME ADJUSTMENT =============
             # Check if live predictions still support our trade direction
             # If bullish predictions + CALL position → extend hold time
