@@ -6,6 +6,9 @@
     <title>Trading Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/components.css">
@@ -359,9 +362,32 @@
         </div>
 
         <div class="card">
-            <h3>Price Chart</h3>
-            <div class="chart-container" style="height: 400px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h3 style="margin: 0;">SPY Price & Trades</h3>
+                    <span class="mono" style="color: var(--cyan);" id="live-chart-price">$---</span>
+                    <span style="color: var(--text-muted);">|</span>
+                    <span style="color: rgba(32, 150, 90, 0.8);">VIX</span>
+                    <span class="mono" style="color: rgba(32, 150, 90, 0.8);" id="live-chart-vix">--</span>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn live-hours active" data-hours="2">2H</button>
+                    <button class="btn live-hours" data-hours="6">6H</button>
+                    <button class="btn live-hours" data-hours="24">1D</button>
+                    <button class="btn live-hours" data-hours="72">3D</button>
+                    <button class="btn" id="live-reset-zoom" title="Reset zoom">↺</button>
+                </div>
+            </div>
+            <div class="chart-container" style="height: 350px; cursor: grab;">
                 <canvas id="live-chart"></canvas>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 15px; background: var(--bg-elevated); font-size: 11px; color: var(--text-dim); border-radius: 0 0 8px 8px;">
+                <div style="display: flex; gap: 12px;">
+                    <span><span style="display: inline-block; width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> CALL</span>
+                    <span><span style="display: inline-block; width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> PUT</span>
+                    <span><span style="display: inline-block; width: 8px; height: 8px; background: rgba(32, 150, 90, 0.7); border-radius: 50%;"></span> VIX</span>
+                </div>
+                <div><span id="live-chart-time">--</span></div>
             </div>
         </div>
 
@@ -420,9 +446,33 @@
         </div>
 
         <div class="card">
-            <h3>Training Progress</h3>
-            <div class="chart-container" style="height: 350px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h3 style="margin: 0;">SPY Price & Trades</h3>
+                    <span class="mono" style="color: var(--cyan);" id="training-chart-price">$---</span>
+                    <span style="color: var(--text-muted);">|</span>
+                    <span style="color: rgba(32, 150, 90, 0.8);">VIX</span>
+                    <span class="mono" style="color: rgba(32, 150, 90, 0.8);" id="training-chart-vix">--</span>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn training-hours active" data-hours="2">2H</button>
+                    <button class="btn training-hours" data-hours="6">6H</button>
+                    <button class="btn training-hours" data-hours="24">1D</button>
+                    <button class="btn training-hours" data-hours="72">3D</button>
+                    <button class="btn" id="training-reset-zoom" title="Reset zoom">↺</button>
+                </div>
+            </div>
+            <div class="chart-container" style="height: 320px; cursor: grab;">
                 <canvas id="training-chart"></canvas>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 15px; background: var(--bg-elevated); font-size: 11px; color: var(--text-dim); border-radius: 0 0 8px 8px;">
+                <div style="display: flex; gap: 12px;">
+                    <span><span style="display: inline-block; width: 8px; height: 8px; background: var(--green); border-radius: 50%;"></span> CALL</span>
+                    <span><span style="display: inline-block; width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span> PUT</span>
+                    <span><span style="display: inline-block; width: 8px; height: 8px; background: var(--cyan); border-radius: 50%;"></span> TCN</span>
+                    <span><span style="display: inline-block; width: 8px; height: 8px; background: rgba(32, 150, 90, 0.7); border-radius: 50%;"></span> VIX</span>
+                </div>
+                <div>Cycle <span id="training-chart-cycle" style="color: var(--cyan);">0</span> • <span id="training-chart-time">--</span></div>
             </div>
         </div>
     </div>
@@ -595,7 +645,8 @@
                 document.getElementById('live-positions').textContent = data.tradier_positions || 0;
                 document.getElementById('live-tradier').textContent = fmt.currency(data.tradier_balance || 0);
 
-                // Load chart
+                // Initialize and load chart
+                if (!liveChart) initLiveChart();
                 loadLiveChart();
 
                 // Recent trades
@@ -613,60 +664,225 @@
             }
         }
 
+        let liveChartHours = 2;
+        let liveChartData = null;
+
+        function initLiveChart() {
+            const ctx = document.getElementById('live-chart').getContext('2d');
+            if (liveChart) liveChart.destroy();
+
+            liveChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'SPY',
+                            data: [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'VIX',
+                            data: [],
+                            borderColor: 'rgba(32, 150, 90, 0.7)',
+                            backgroundColor: 'rgba(32, 150, 90, 0.05)',
+                            borderWidth: 1.8,
+                            fill: false,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            yAxisID: 'y2'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(18, 18, 26, 0.95)',
+                            titleColor: '#f0f0f5',
+                            bodyColor: '#8888a0',
+                            borderColor: '#2a2a3a',
+                            borderWidth: 1
+                        },
+                        annotation: { annotations: {} },
+                        zoom: {
+                            pan: { enabled: true, mode: 'x' },
+                            zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MM/dd' } },
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#555566', maxTicksLimit: 8 }
+                        },
+                        y: {
+                            position: 'left',
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#555566', callback: v => '$' + v.toFixed(0) }
+                        },
+                        y2: {
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: 'rgba(32, 150, 90, 0.6)', callback: v => v.toFixed(1) },
+                            title: { display: true, text: 'VIX', color: 'rgba(32, 150, 90, 0.7)', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
         async function loadLiveChart() {
             try {
                 const resp = await fetch('/api/live/chart');
-                const data = await resp.json();
-
-                if (!data.spy_prices || data.spy_prices.length === 0) return;
-
-                const ctx = document.getElementById('live-chart').getContext('2d');
-
-                if (liveChart) liveChart.destroy();
-
-                // Handle both array format [ts, price] and object format {timestamp, close}
-                const chartData = data.spy_prices.map(p => {
-                    if (Array.isArray(p)) {
-                        return { x: new Date(p[0]), y: p[1] };
-                    } else {
-                        return { x: new Date(p.timestamp), y: p.close };
-                    }
-                });
-
-                // Add trade annotations if available
-                const annotations = (data.annotations || []).map(a => ({
-                    x: new Date(a.timestamp),
-                    label: a.label,
-                    type: a.type
-                }));
-
-                liveChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [{
-                            label: 'SPY',
-                            data: chartData,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true,
-                            tension: 0.1,
-                            pointRadius: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { type: 'time', grid: { color: '#2a2a3a' }, ticks: { color: '#888' } },
-                            y: { grid: { color: '#2a2a3a' }, ticks: { color: '#888' } }
-                        }
-                    }
-                });
+                if (!resp.ok) return;
+                liveChartData = await resp.json();
+                updateLiveChart();
             } catch (e) {
                 console.error('Error loading live chart:', e);
             }
         }
+
+        function updateLiveChart() {
+            if (!liveChart || !liveChartData?.spy_prices?.length) return;
+
+            const now = liveChartData.simulated_time
+                ? parseLocalTime(liveChartData.simulated_time)
+                : new Date();
+
+            const cutoff = new Date(now.getTime() - liveChartHours * 60 * 60 * 1000);
+
+            // SPY prices - handle both array and object format
+            const prices = liveChartData.spy_prices
+                .filter(p => {
+                    const ts = Array.isArray(p) ? p[0] : p.timestamp;
+                    const t = parseLocalTime(ts);
+                    return t >= cutoff && t <= now;
+                })
+                .map(p => {
+                    if (Array.isArray(p)) {
+                        return { x: parseLocalTime(p[0]), y: p[1] };
+                    } else {
+                        return { x: parseLocalTime(p.timestamp), y: p.close };
+                    }
+                });
+
+            liveChart.data.datasets[0].data = prices;
+
+            // VIX prices if available
+            if (liveChartData.vix_prices?.length) {
+                const vixData = liveChartData.vix_prices
+                    .filter(p => {
+                        const t = parseLocalTime(p.timestamp);
+                        return t >= cutoff && t <= now;
+                    })
+                    .map(p => ({ x: parseLocalTime(p.timestamp), y: p.close }));
+                liveChart.data.datasets[1].data = vixData;
+            }
+
+            // Trade annotations
+            const annotations = {};
+
+            // NOW marker
+            if (prices.length > 0) {
+                annotations.now = {
+                    type: 'line',
+                    xMin: now, xMax: now,
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    label: { display: true, content: 'NOW', position: 'start', backgroundColor: '#3b82f6', color: '#fff', font: { size: 9 }, padding: 3 }
+                };
+            }
+
+            // Trade entry/exit markers from annotations
+            let idx = 0;
+            if (liveChartData.annotations) {
+                for (const a of liveChartData.annotations) {
+                    const t = parseLocalTime(a.timestamp);
+                    if (t < cutoff || t > now) continue;
+
+                    const price = findNearestPriceLive(a.timestamp);
+                    if (!price) continue;
+
+                    const isEntry = a.type === 'entry';
+                    const isCall = a.option_type === 'CALL';
+                    const color = isCall ? '#00d68f' : '#ff5c7c';
+
+                    if (isEntry) {
+                        annotations[`e${idx}`] = {
+                            type: 'point',
+                            xValue: t,
+                            yValue: price,
+                            backgroundColor: color,
+                            borderColor: '#fff',
+                            borderWidth: 2,
+                            radius: 5
+                        };
+                    } else {
+                        const pnlColor = (a.pnl || 0) > 0 ? '#00d68f' : '#ff5c7c';
+                        annotations[`x${idx}`] = {
+                            type: 'point',
+                            xValue: t,
+                            yValue: price,
+                            backgroundColor: pnlColor,
+                            borderColor: '#fff',
+                            borderWidth: 2,
+                            radius: 4
+                        };
+                    }
+                    idx++;
+                }
+            }
+
+            liveChart.options.plugins.annotation.annotations = annotations;
+            liveChart.update('none');
+
+            // Update header stats
+            const lastPrice = prices.length > 0 ? prices[prices.length - 1].y : 0;
+            document.getElementById('live-chart-price').textContent = lastPrice > 0 ? '$' + lastPrice.toFixed(2) : '$---';
+            document.getElementById('live-chart-time').textContent = now.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            if (liveChartData.vix_prices?.length) {
+                const latestVix = liveChartData.vix_prices[liveChartData.vix_prices.length - 1].close;
+                document.getElementById('live-chart-vix').textContent = latestVix.toFixed(2);
+            }
+        }
+
+        function findNearestPriceLive(ts) {
+            if (!liveChartData?.spy_prices?.length) return null;
+            const target = parseLocalTime(ts).getTime();
+            let nearest = liveChartData.spy_prices[0];
+            let nearestTs = Array.isArray(nearest) ? nearest[0] : nearest.timestamp;
+            let minDiff = Math.abs(parseLocalTime(nearestTs).getTime() - target);
+            for (const p of liveChartData.spy_prices) {
+                const pTs = Array.isArray(p) ? p[0] : p.timestamp;
+                const diff = Math.abs(parseLocalTime(pTs).getTime() - target);
+                if (diff < minDiff) { minDiff = diff; nearest = p; }
+            }
+            return Array.isArray(nearest) ? nearest[1] : nearest.close;
+        }
+
+        // Live chart controls
+        document.querySelectorAll('.live-hours').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.live-hours').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                liveChartHours = parseInt(this.dataset.hours);
+                updateLiveChart();
+                liveChart?.resetZoom();
+            });
+        });
+
+        document.getElementById('live-reset-zoom')?.addEventListener('click', () => liveChart?.resetZoom());
 
         // ==================== TRAINING ====================
         async function loadTraining() {
@@ -718,94 +934,259 @@
 
                 document.getElementById('run-status').textContent = `Last update: ${data.last_update || '--'}`;
 
-                // Render P&L chart from trades
-                renderTrainingChart(data);
+                // Initialize and load the SPY price chart
+                initTrainingChart();
+                loadTrainingChartData();
             } catch (e) {
                 console.error('Error loading training data:', e);
             }
         }
 
-        function renderTrainingChart(data) {
-            const trades = data.log_trades || [];
-            if (trades.length === 0) {
-                if (trainingChart) trainingChart.destroy();
-                return;
-            }
+        let trainingChartHours = 2;
+        let trainingChartData = null;
 
-            // Build cumulative P&L data
-            const initialBalance = data.initial_balance || 5000;
-            let cumPnl = 0;
-            const pnlData = trades.map((t, i) => {
-                cumPnl += (t.pnl || 0);
-                return {
-                    x: i + 1,
-                    y: cumPnl,
-                    pnl: t.pnl,
-                    type: t.type
-                };
-            });
-
-            // Add starting point
-            pnlData.unshift({ x: 0, y: 0 });
-
+        function initTrainingChart() {
             const ctx = document.getElementById('training-chart').getContext('2d');
             if (trainingChart) trainingChart.destroy();
-
-            // Color the line based on final P&L
-            const finalPnl = pnlData[pnlData.length - 1].y;
-            const lineColor = finalPnl >= 0 ? 'rgb(0, 214, 143)' : 'rgb(255, 92, 124)';
-            const fillColor = finalPnl >= 0 ? 'rgba(0, 214, 143, 0.1)' : 'rgba(255, 92, 124, 0.1)';
 
             trainingChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    datasets: [{
-                        label: 'Cumulative P&L',
-                        data: pnlData,
-                        borderColor: lineColor,
-                        backgroundColor: fillColor,
-                        fill: true,
-                        tension: 0.1,
-                        pointRadius: 0
-                    }]
+                    datasets: [
+                        {
+                            label: 'SPY',
+                            data: [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'TCN Future',
+                            data: [],
+                            borderColor: 'rgba(0, 200, 255, 0.8)',
+                            borderWidth: 2.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'VIX',
+                            data: [],
+                            borderColor: 'rgba(32, 150, 90, 0.7)',
+                            backgroundColor: 'rgba(32, 150, 90, 0.05)',
+                            borderWidth: 1.8,
+                            fill: false,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            yAxisID: 'y2'
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            callbacks: {
-                                label: (ctx) => {
-                                    const point = pnlData[ctx.dataIndex];
-                                    if (point.pnl !== undefined) {
-                                        return `P&L: $${point.y.toFixed(2)} (Trade: ${point.pnl >= 0 ? '+' : ''}$${point.pnl.toFixed(2)})`;
-                                    }
-                                    return `P&L: $${point.y.toFixed(2)}`;
-                                }
-                            }
+                            backgroundColor: 'rgba(18, 18, 26, 0.95)',
+                            titleColor: '#f0f0f5',
+                            bodyColor: '#8888a0',
+                            borderColor: '#2a2a3a',
+                            borderWidth: 1,
+                            filter: (item) => item.datasetIndex < 3
+                        },
+                        annotation: { annotations: {} },
+                        zoom: {
+                            pan: { enabled: true, mode: 'x' },
+                            zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
                         }
                     },
                     scales: {
                         x: {
-                            type: 'linear',
-                            title: { display: true, text: 'Trade #', color: '#888' },
-                            grid: { color: '#2a2a3a' },
-                            ticks: { color: '#888' }
+                            type: 'time',
+                            time: { displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MM/dd' } },
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#555566', maxTicksLimit: 8 }
                         },
                         y: {
-                            title: { display: true, text: 'Cumulative P&L ($)', color: '#888' },
-                            grid: { color: '#2a2a3a' },
-                            ticks: { color: '#888' }
+                            position: 'left',
+                            grid: { color: 'rgba(42, 42, 58, 0.5)' },
+                            ticks: { color: '#555566', callback: v => '$' + v.toFixed(0) }
+                        },
+                        y2: {
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: 'rgba(32, 150, 90, 0.6)', callback: v => v.toFixed(1) },
+                            title: { display: true, text: 'VIX', color: 'rgba(32, 150, 90, 0.7)', font: { size: 10 } }
                         }
                     }
                 }
             });
         }
 
+        async function loadTrainingChartData() {
+            try {
+                const resp = await fetch('/api/training/chart');
+                if (!resp.ok) return;
+                trainingChartData = await resp.json();
+                updateTrainingChart();
+            } catch (e) {
+                console.error('Training chart error:', e);
+            }
+        }
+
+        function parseLocalTime(ts) {
+            if (!ts) return new Date();
+            return new Date(ts.replace('T', ' '));
+        }
+
+        function updateTrainingChart() {
+            if (!trainingChart || !trainingChartData?.spy_prices?.length) return;
+
+            const now = trainingChartData.simulated_time
+                ? parseLocalTime(trainingChartData.simulated_time)
+                : parseLocalTime(trainingChartData.spy_prices[trainingChartData.spy_prices.length - 1].timestamp);
+
+            const cutoff = new Date(now.getTime() - trainingChartHours * 60 * 60 * 1000);
+
+            // SPY prices
+            const prices = trainingChartData.spy_prices
+                .filter(p => {
+                    const t = parseLocalTime(p.timestamp);
+                    return t >= cutoff && t <= now;
+                })
+                .map(p => ({ x: parseLocalTime(p.timestamp), y: p.close }));
+
+            trainingChart.data.datasets[0].data = prices;
+
+            // VIX prices
+            if (trainingChartData.vix_prices?.length) {
+                const vixData = trainingChartData.vix_prices
+                    .filter(p => {
+                        const t = parseLocalTime(p.timestamp);
+                        return t >= cutoff && t <= now;
+                    })
+                    .map(p => ({ x: parseLocalTime(p.timestamp), y: p.close }));
+                trainingChart.data.datasets[2].data = vixData;
+            }
+
+            // Trade annotations
+            const annotations = {};
+            if (trainingChartData.simulated_time && prices.length > 0) {
+                annotations.now = {
+                    type: 'line',
+                    xMin: now, xMax: now,
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    label: { display: true, content: 'NOW', position: 'start', backgroundColor: '#3b82f6', color: '#fff', font: { size: 9 }, padding: 3 }
+                };
+            }
+
+            let idx = 0;
+            if (trainingChartData.trades) {
+                for (const trade of trainingChartData.trades) {
+                    const entryTime = parseLocalTime(trade.entry_time);
+                    if (entryTime < cutoff || entryTime > now) continue;
+
+                    const price = findNearestPriceTraining(trade.entry_time);
+                    if (!price) continue;
+
+                    const isCall = trade.type?.includes('CALL');
+                    const color = isCall ? '#00d68f' : '#ff5c7c';
+
+                    annotations[`e${idx}`] = {
+                        type: 'point',
+                        xValue: entryTime,
+                        yValue: price,
+                        backgroundColor: color,
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        radius: 5
+                    };
+
+                    if (trade.exit_time && trade.status !== 'OPEN') {
+                        const exitTime = parseLocalTime(trade.exit_time);
+                        if (exitTime >= cutoff && exitTime <= now) {
+                            const exitPrice = findNearestPriceTraining(trade.exit_time);
+                            if (exitPrice) {
+                                const pnlColor = trade.pnl > 0 ? '#00d68f' : '#ff5c7c';
+                                annotations[`x${idx}`] = {
+                                    type: 'point',
+                                    xValue: exitTime,
+                                    yValue: exitPrice,
+                                    backgroundColor: pnlColor,
+                                    borderColor: '#fff',
+                                    borderWidth: 2,
+                                    radius: 4
+                                };
+                                annotations[`l${idx}`] = {
+                                    type: 'line',
+                                    xMin: entryTime, xMax: exitTime,
+                                    yMin: price, yMax: exitPrice,
+                                    borderColor: pnlColor,
+                                    borderWidth: 1.5
+                                };
+                            }
+                        }
+                    }
+                    idx++;
+                }
+            }
+
+            trainingChart.options.plugins.annotation.annotations = annotations;
+            trainingChart.update('none');
+
+            // Update header stats
+            document.getElementById('training-chart-cycle').textContent = trainingChartData.cycles || 0;
+            document.getElementById('training-chart-time').textContent = trainingChartData.simulated_time
+                ? parseLocalTime(trainingChartData.simulated_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '--';
+            document.getElementById('training-chart-price').textContent = trainingChartData.current_price > 0
+                ? '$' + trainingChartData.current_price.toFixed(2) : '$---';
+
+            if (trainingChartData.vix_prices?.length) {
+                const latestVix = trainingChartData.vix_prices[trainingChartData.vix_prices.length - 1].close;
+                document.getElementById('training-chart-vix').textContent = latestVix.toFixed(2);
+            }
+        }
+
+        function findNearestPriceTraining(ts) {
+            if (!trainingChartData?.spy_prices?.length) return null;
+            const target = parseLocalTime(ts).getTime();
+            let nearest = trainingChartData.spy_prices[0];
+            let minDiff = Math.abs(parseLocalTime(nearest.timestamp).getTime() - target);
+            for (const p of trainingChartData.spy_prices) {
+                const diff = Math.abs(parseLocalTime(p.timestamp).getTime() - target);
+                if (diff < minDiff) { minDiff = diff; nearest = p; }
+            }
+            return nearest.close;
+        }
+
+        // Training chart controls
+        document.querySelectorAll('.training-hours').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.training-hours').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                trainingChartHours = parseInt(this.dataset.hours);
+                updateTrainingChart();
+                trainingChart?.resetZoom();
+            });
+        });
+
+        document.getElementById('training-reset-zoom')?.addEventListener('click', () => trainingChart?.resetZoom());
+
         function refreshTraining() {
             loadTraining();
-            if (selectedRun) selectRun(selectedRun);
+            if (selectedRun) {
+                selectRun(selectedRun);
+                loadTrainingChartData();
+            }
         }
 
         // ==================== HISTORY ====================
