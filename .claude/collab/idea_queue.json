@@ -9,7 +9,7 @@
       "description": "Train confidence head with BCE loss to predict P(win). Codex found confidence head was never trained.",
       "hypothesis": "Training confidence with actual win/loss outcomes will make it predictive of win rate",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
         "TRAIN_CONFIDENCE_BCE": "1",
         "CONFIDENCE_BCE_WEIGHT": "0.5",
@@ -32,7 +32,7 @@
       "description": "Use entropy-based confidence and don't penalize by return variance. Codex found original confidence inversely correlates with win rate due to variance penalty.",
       "hypothesis": "Proper entropy confidence + decoupling uncertainty will fix inverted confidence",
       "priority": "high",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
         "USE_ENTROPY_CONFIDENCE_V2": "1",
         "DECOUPLE_UNCERTAINTY": "1",
@@ -55,7 +55,7 @@
       "description": "Enable all Codex-recommended confidence fixes: BCE training + entropy confidence + decoupled uncertainty + temperature scaling.",
       "hypothesis": "Combining all fixes will maximize confidence calibration improvement",
       "priority": "critical",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
         "TRAIN_CONFIDENCE_BCE": "1",
         "CONFIDENCE_BCE_WEIGHT": "0.5",
@@ -81,7 +81,7 @@
       "description": "Apply temperature scaling T=1.5 to direction logits for softer probabilities.",
       "hypothesis": "Temperature scaling alone may improve confidence calibration",
       "priority": "medium",
-      "status": "rejected",
+      "status": "pending",
       "env_vars": {
         "DIRECTION_TEMPERATURE": "1.5",
         "HARD_TAKE_PROFIT_PCT": "25",
@@ -103,16 +103,17 @@
       "description": "Test entropy-based confidence V2 in isolation to measure its impact.",
       "hypothesis": "Entropy confidence alone may significantly improve win rate correlation",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_ENTROPY_CONFIDENCE_V2": "1",
         "HARD_TAKE_PROFIT_PCT": "25",
         "TT_MAX_HOLD_MINUTES": "60",
         "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T12:24:18.211266"
+      "last_result": {
+        "exp_id": "EXP-0169",
+        "per_trade_pnl": -0.073,
+        "win_rate": 50.0
       }
     },
     {
@@ -3215,5 +3216,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-05T12:24:18.211266"
+  "last_updated": "2026-01-05T12:44:50.395097"
 }

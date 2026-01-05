@@ -2663,6 +2663,24 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0169: Phase 50: Entropy V2 Only (no other changes) (2026-01-05 12:44)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 50.0% |
+| P&L | -0.03% |
+| Per-Trade P&L | $-0.07 |
+| Trades | 20 |
+| Run Dir | `models/EXP-0169_IDEA-268` |
+
+**Source**: CODEX_REVIEW
+**Category**: confidence_calibration
+**Hypothesis**: Entropy confidence alone may significantly improve win rate correlation
+**Result**: FAIL
+
+---
+
+
 ### EXP-0167: Phase 50: All Codex Fixes Combined (2026-01-05 12:23)
 
 | Metric | Quick Test (5K) |
