@@ -2663,6 +2663,75 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0167: Phase 50: All Codex Fixes Combined (2026-01-05 12:23)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 68.1% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 28 |
+| Run Dir | `models/EXP-0167_IDEA-266` |
+
+**Source**: CODEX_REVIEW
+**Category**: confidence_calibration
+**Hypothesis**: Combining all fixes will maximize confidence calibration improvement
+**Result**: ERROR
+
+---
+
+### EXP-0166: Phase 50: Entropy Confidence V2 + Decoupled Uncertainty (2026-01-05 12:23)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 54.1% |
+| P&L | -0.24% |
+| Per-Trade P&L | $-0.32 |
+| Trades | 37 |
+| Run Dir | `models/EXP-0166_IDEA-265` |
+
+**Source**: CODEX_REVIEW
+**Category**: confidence_calibration
+**Hypothesis**: Proper entropy confidence + decoupling uncertainty will fix inverted confidence
+**Result**: FAIL
+
+---
+
+### EXP-0165: Phase 50: BCE Confidence Training (2026-01-05 12:23)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 51.1% |
+| P&L | -0.7% |
+| Per-Trade P&L | $-0.75 |
+| Trades | 47 |
+| Run Dir | `models/EXP-0165_IDEA-264` |
+
+**Source**: CODEX_REVIEW
+**Category**: confidence_calibration
+**Hypothesis**: Training confidence with actual win/loss outcomes will make it predictive of win rate
+**Result**: FAIL
+
+---
+
+### EXP-0168: Phase 50: Temperature Scaling Only (T=1.5) (2026-01-05 12:23)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 56.7% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 47 |
+| Run Dir | `models/EXP-0168_IDEA-267` |
+
+**Source**: CODEX_REVIEW
+**Category**: confidence_calibration
+**Hypothesis**: Temperature scaling alone may improve confidence calibration
+**Result**: ERROR
+
+---
+
+
 ### EXP-0164: TDA-BEST+: Tighter Trailing (8% activate, 4% trail) (2026-01-04 19:03)
 
 | Metric | Quick Test (5K) |

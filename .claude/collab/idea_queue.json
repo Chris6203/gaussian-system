@@ -9,7 +9,7 @@
       "description": "Train confidence head with BCE loss to predict P(win). Codex found confidence head was never trained.",
       "hypothesis": "Training confidence with actual win/loss outcomes will make it predictive of win rate",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TRAIN_CONFIDENCE_BCE": "1",
         "CONFIDENCE_BCE_WEIGHT": "0.5",
@@ -17,9 +17,10 @@
         "TT_MAX_HOLD_MINUTES": "60",
         "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T12:02:19.686894"
+      "last_result": {
+        "exp_id": "EXP-0165",
+        "per_trade_pnl": -0.7480851063829786,
+        "win_rate": 51.1
       }
     },
     {
@@ -31,7 +32,7 @@
       "description": "Use entropy-based confidence and don't penalize by return variance. Codex found original confidence inversely correlates with win rate due to variance penalty.",
       "hypothesis": "Proper entropy confidence + decoupling uncertainty will fix inverted confidence",
       "priority": "high",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "USE_ENTROPY_CONFIDENCE_V2": "1",
         "DECOUPLE_UNCERTAINTY": "1",
@@ -39,9 +40,10 @@
         "TT_MAX_HOLD_MINUTES": "60",
         "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T12:02:19.686894"
+      "last_result": {
+        "exp_id": "EXP-0166",
+        "per_trade_pnl": -0.32351351351351354,
+        "win_rate": 54.1
       }
     },
     {
@@ -53,7 +55,7 @@
       "description": "Enable all Codex-recommended confidence fixes: BCE training + entropy confidence + decoupled uncertainty + temperature scaling.",
       "hypothesis": "Combining all fixes will maximize confidence calibration improvement",
       "priority": "critical",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "TRAIN_CONFIDENCE_BCE": "1",
         "CONFIDENCE_BCE_WEIGHT": "0.5",
@@ -64,9 +66,10 @@
         "TT_MAX_HOLD_MINUTES": "60",
         "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T12:02:19.686894"
+      "last_result": {
+        "exp_id": "EXP-0167",
+        "per_trade_pnl": null,
+        "win_rate": 68.1
       }
     },
     {
@@ -78,16 +81,17 @@
       "description": "Apply temperature scaling T=1.5 to direction logits for softer probabilities.",
       "hypothesis": "Temperature scaling alone may improve confidence calibration",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "rejected",
       "env_vars": {
         "DIRECTION_TEMPERATURE": "1.5",
         "HARD_TAKE_PROFIT_PCT": "25",
         "TT_MAX_HOLD_MINUTES": "60",
         "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
       },
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T12:02:19.686894"
+      "last_result": {
+        "exp_id": "EXP-0168",
+        "per_trade_pnl": null,
+        "win_rate": 56.7
       }
     },
     {
@@ -3207,5 +3211,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-05T12:02:19.686894"
+  "last_updated": "2026-01-05T12:23:16.456829"
 }
