@@ -2663,6 +2663,58 @@ Improve the best-performing baseline (pre-trained model with -1.4% P&L) through 
 
 ## Automated Optimization Results
 
+### EXP-0172: Unknown (2026-01-05 13:27)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.8% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 79 |
+| Run Dir | `models/EXP-0172_IDEA-271` |
+
+**Source**: PHASE51_MAMBA2
+**Category**: architecture
+**Hypothesis**: Mamba2 + signal filtering may combine architecture with best config
+**Result**: ERROR
+
+---
+
+### EXP-0170: Unknown (2026-01-05 13:27)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 38.8% |
+| P&L | N/A% |
+| Per-Trade P&L | N/A |
+| Trades | 79 |
+| Run Dir | `models/EXP-0170_IDEA-269` |
+
+**Source**: PHASE51_MAMBA2
+**Category**: architecture
+**Hypothesis**: Mamba2 SSM may capture temporal patterns better than TCN for options trading
+**Result**: ERROR
+
+---
+
+### EXP-0171: Unknown (2026-01-05 13:27)
+
+| Metric | Quick Test (5K) |
+|--------|------------|
+| Win Rate | 39.2% |
+| P&L | -4.52% |
+| Per-Trade P&L | $-2.86 |
+| Trades | 79 |
+| Run Dir | `models/EXP-0171_IDEA-270` |
+
+**Source**: PHASE51_MAMBA2
+**Category**: architecture
+**Hypothesis**: Deeper Mamba2 (6 layers) may capture more complex patterns
+**Result**: FAIL
+
+---
+
+
 ### EXP-0169: Phase 50: Entropy V2 Only (no other changes) (2026-01-05 12:44)
 
 | Metric | Quick Test (5K) |

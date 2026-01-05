@@ -12,11 +12,12 @@
         "MAMBA2_D_STATE": "64"
       },
       "category": "architecture",
-      "status": "in_progress",
+      "status": "rejected",
       "priority": 1,
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T13:05:56.349683"
+      "last_result": {
+        "exp_id": "EXP-0170",
+        "per_trade_pnl": null,
+        "win_rate": 38.8
       }
     },
     {
@@ -31,11 +32,12 @@
         "MAMBA2_D_STATE": "128"
       },
       "category": "architecture",
-      "status": "in_progress",
+      "status": "rejected",
       "priority": 2,
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T13:05:56.349683"
+      "last_result": {
+        "exp_id": "EXP-0171",
+        "per_trade_pnl": -2.857594936708861,
+        "win_rate": 39.2
       }
     },
     {
@@ -50,11 +52,12 @@
         "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
       },
       "category": "architecture",
-      "status": "in_progress",
+      "status": "rejected",
       "priority": 1,
-      "lock": {
-        "machine_id": "lrn-ai-serv1",
-        "locked_at": "2026-01-05T13:05:56.349683"
+      "last_result": {
+        "exp_id": "EXP-0172",
+        "per_trade_pnl": null,
+        "win_rate": 39.8
       }
     },
     {
@@ -3273,5 +3276,5 @@
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-05T13:05:56.349683"
+  "last_updated": "2026-01-05T13:27:18.523705"
 }
