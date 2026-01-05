@@ -25,6 +25,9 @@ from backend.time_utils import get_market_time
 from config_loader import load_config
 config = load_config("config.json")
 
+# Regime-based dynamic configuration
+from backend.learned_regime_configs import RegimeConfigSelector, get_regime_config
+
 # Get symbol from config
 SYMBOL = config.get_symbol()
 print(f"[CONFIG] Trading Symbol: {SYMBOL}")
@@ -207,6 +210,11 @@ if hasattr(bot, 'disable_live_data_fetch'):
 bot.paper_trader.simulation_mode = False
 bot.paper_trader.time_travel_mode = False
 logger.info("[LIVE] Live mode enabled")
+
+# Initialize regime-based configuration selector
+regime_selector = RegimeConfigSelector()
+current_regime_config = None
+logger.info("[REGIME] Regime-based configuration enabled - will adapt to VIX levels")
 
 # Verify paper trading balance (separate from live Tradier balance)
 paper_balance_actual = bot.paper_trader.current_balance
@@ -435,6 +443,7 @@ try:
                     logger.debug(f"[DB] Could not save prices: {db_err}")
                 
                 # ===== LOG VIX VALUE FOR DASHBOARD =====
+                vix_value = None
                 try:
                     vix_data = bot.data_source.get_data('^VIX', period='1d', interval='1m')
                     if not vix_data.empty:
@@ -444,6 +453,48 @@ try:
                         print(f"  [DATA] VIX: ${vix_value:.2f}")
                 except Exception as vix_err:
                     logger.debug(f"[VIX] Could not fetch VIX: {vix_err}")
+
+                # ===== REGIME-BASED CONFIG SWITCHING =====
+                # Dynamically adjust trading parameters based on VIX regime
+                if vix_value is not None:
+                    try:
+                        # Get HMM trend if available
+                        hmm_trend = 0.5  # Default neutral
+                        if hasattr(bot, 'current_hmm_regime') and bot.current_hmm_regime:
+                            hmm_trend = bot.current_hmm_regime.get('trend_normalized', 0.5)
+
+                        # Get regime config
+                        new_regime_config = regime_selector.get_config(vix_value, hmm_trend)
+
+                        # Log if regime changed
+                        if current_regime_config != new_regime_config:
+                            current_regime_config = new_regime_config
+                            logger.info(f"[REGIME] Active: {new_regime_config.regime_name} "
+                                       f"(from {new_regime_config.source_experiment})")
+                            logger.info(f"[REGIME] Settings: stop={new_regime_config.stop_loss_pct}%, "
+                                       f"tp={new_regime_config.take_profit_pct}%, "
+                                       f"conf={new_regime_config.min_confidence:.0%}, "
+                                       f"scale={new_regime_config.position_scale:.1f}x")
+                            print(f"  [REGIME] {new_regime_config.regime_name}")
+
+                        # Apply regime config to paper trader
+                        if hasattr(bot, 'paper_trader') and bot.paper_trader:
+                            pt = bot.paper_trader
+                            # Update exit parameters
+                            if hasattr(pt, 'stop_loss_pct'):
+                                pt.stop_loss_pct = new_regime_config.stop_loss_pct
+                            if hasattr(pt, 'take_profit_pct'):
+                                pt.take_profit_pct = new_regime_config.take_profit_pct
+                            if hasattr(pt, 'max_hold_minutes'):
+                                pt.max_hold_minutes = new_regime_config.max_hold_minutes
+                            if hasattr(pt, 'position_scale'):
+                                pt.position_scale = new_regime_config.position_scale
+
+                            # Store regime config reference
+                            bot.current_regime_config = new_regime_config
+
+                    except Exception as regime_err:
+                        logger.debug(f"[REGIME] Could not update regime config: {regime_err}")
                 
                 # ===== FETCH ALL CONFIGURED SYMBOLS =====
                 # Fetch every cycle - data auto-persists to historical DB via DataManager
@@ -860,6 +911,16 @@ try:
                         print(f"  [FILTER] BLOCKED: conf {confidence_pct:.1f}% > {MAX_CONFIDENCE*100:.0f}% max (inverted)")
                         # Skip to next cycle - don't execute this trade
                         continue
+
+                    # ===== REGIME-BASED MINIMUM CONFIDENCE FILTER =====
+                    # Block trades below regime's minimum confidence threshold
+                    if current_regime_config is not None:
+                        regime_min_conf = current_regime_config.min_confidence
+                        if confidence < regime_min_conf:
+                            logger.info(f"[REGIME] 🚫 BLOCKED: Confidence {confidence_pct:.1f}% < {regime_min_conf*100:.0f}% regime min")
+                            logger.info(f"[REGIME] Current regime ({current_regime_config.regime_name}) requires higher confidence")
+                            print(f"  [REGIME] BLOCKED: conf {confidence_pct:.1f}% < {regime_min_conf*100:.0f}% regime min")
+                            continue
 
                     # Log with confidence for dashboard parsing
                     logger.info(f"FINAL Signal: {action} (confidence: {confidence_pct:.1f}%)")
