@@ -1,8 +1,27 @@
 # Best Trading Configurations
 
-**Last Updated**: 2026-01-03
+**Last Updated**: 2026-01-05
 
 This document tracks the best validated configurations for the Gaussian Options Trading Bot.
+
+---
+
+## Current Best Results (Post Bug-Fix)
+
+| Rank | Run Name | P&L% | WR% | Trades | $/Trade |
+|------|----------|------|-----|--------|---------|
+| 1 | EXP-0067_IDEA-117 | +490.81% | 33.3% | 965 | $25.43 |
+| 2 | EXP-NEW_236 | +468.49% | 44.2% | 79 | $296.51 |
+| 3 | v3_jerry_features | +450.63% | 27.8% | 269 | $83.76 |
+| 4 | v4_skew_partial_20k | +430.98% | 32.3% | 586 | $36.77 |
+| 5 | EXP-NEW_245 | +429.86% | 46.9% | 98 | $219.32 |
+| 6 | test_jerry_improvements | +429.49% | 33.1% | 76 | $282.56 |
+| 7 | dec_validation_v2 | +413.41% | 59.8% | 61 | $338.86 |
+| 8 | EXP-0168_IDEA-267 | +137.28% | 56.7% | 47 | $146.04 |
+| 9 | transformer_baseline_jan2 | +35.44% | 47.0% | 105 | $16.88 |
+| 10 | EXP-0172_IDEA-271 (Mamba2) | +34.85% | 39.8% | 79 | $22.06 |
+
+**Note:** Results filtered to P&L < 500% to exclude pre-bugfix runs.
 
 ---
 
@@ -14,7 +33,7 @@ A P&L calculation bug was fixed on 2026-01-01. **All results before this date sh
 
 ## Validated Best Configuration
 
-### Transformer Encoder (+32.65% OOS Profit)
+### Transformer Encoder (+35.44% P&L)
 
 **Status**: VALIDATED - Best performing post-bug-fix
 
@@ -38,9 +57,10 @@ python scripts/train_time_travel.py
 | PnL Calibration | Enabled | Gates on P(profit) >= 42% |
 
 **Results**:
-- OOS P&L: +32.65%
-- Win Rate: ~45%
-- Validated on 20K+ cycles
+- OOS P&L: +35.44%
+- Win Rate: 47%
+- Per-Trade P&L: $16.88
+- Validated on 5K cycles
 
 ---
 
@@ -173,7 +193,7 @@ MODEL_RUN_DIR=models/my_test python scripts/train_time_travel.py
 
 1. **Win rate is a red herring** - 40% win rate can make money with proper position sizing
 2. **Edge comes from skew** - Fat-tail winners matter more than high win rate
-3. **Transformer > TCN** - Validated +32.65% vs TCN's period-sensitive results
+3. **Transformer > TCN** - Validated +35.44% vs TCN's period-sensitive results
 4. **Exit management > Entry selection** - Cutting losses fast is more important than picking winners
 5. **Condor regime = inverse filter** - Iron Condor logic can filter out choppy markets
 
