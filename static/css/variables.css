@@ -18,7 +18,9 @@
     --text-muted: #555566;
 
     /* Accent Colors */
-    --accent: #7c5cff;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --accent-dim: rgba(59, 130, 246, 0.15);
     --cyan: #00c8ff;
     --yellow: #ffc233;
     --gold: #f59e0b;

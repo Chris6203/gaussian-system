@@ -204,6 +204,63 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Skeleton Loading Animation */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-card) 50%, var(--bg-elevated) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-sm);
+        }
+
+        .skeleton-text {
+            height: 14px;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-text.short { width: 60%; }
+        .skeleton-text.medium { width: 80%; }
+        .skeleton-text.full { width: 100%; }
+
+        .skeleton-row {
+            display: flex;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .skeleton-cell {
+            height: 16px;
+            flex: 1;
+        }
+
+        .skeleton-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .skeleton-stat {
+            height: 40px;
+            width: 100%;
+        }
+
+        /* Fade in animation for loaded content */
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -248,7 +305,12 @@
         <!-- Scoreboard -->
         <div class="card">
             <h3>Experiment Scoreboard</h3>
-            <div id="scoreboard-content">Loading scoreboard...</div>
+            <div id="scoreboard-content">
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+            </div>
         </div>
     </div>
 
@@ -293,7 +355,11 @@
 
         <div class="card" style="margin-top: 20px;">
             <h3>Recent Trades</h3>
-            <div id="live-trades">Loading...</div>
+            <div id="live-trades">
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+            </div>
         </div>
     </div>
 
@@ -354,13 +420,16 @@
         <div class="page-header">
             <h1>Model History</h1>
             <div class="header-actions">
-                <span id="model-count" class="muted">Loading...</span>
+                <span id="model-count" class="muted"><span class="skeleton" style="display:inline-block;width:80px;height:14px;"></span></span>
             </div>
         </div>
 
         <div class="model-grid">
             <div class="model-sidebar" id="model-list">
-                <div class="loading">Loading models...</div>
+                <div class="skeleton-card"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-text short"></div></div>
+                <div class="skeleton-card"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-text short"></div></div>
+                <div class="skeleton-card"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-text short"></div></div>
+                <div class="skeleton-card"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-text short"></div></div>
             </div>
             <div class="model-detail" id="model-detail">
                 <div class="empty-state">
@@ -486,7 +555,9 @@
                 }
 
                 html += '</tbody></table>';
-                document.getElementById('scoreboard-content').innerHTML = html;
+                const scoreboardEl = document.getElementById('scoreboard-content');
+                scoreboardEl.innerHTML = html;
+                scoreboardEl.classList.add('fade-in');
             } catch (e) {
                 document.getElementById('scoreboard-content').innerHTML = '<div class="error">Error loading scoreboard</div>';
             }
@@ -547,7 +618,7 @@
                         datasets: [{
                             label: 'SPY',
                             data: data.spy_prices.map(p => ({ x: new Date(p[0]), y: p[1] })),
-                            borderColor: '#6366f1',
+                            borderColor: '#3b82f6',
                             backgroundColor: 'rgba(99, 102, 241, 0.1)',
                             fill: true,
                             tension: 0.1,
@@ -654,6 +725,7 @@
                         </div>
                     </div>
                 `).join('');
+                container.classList.add('fade-in');
             } catch (e) {
                 console.error('Error loading history:', e);
             }
@@ -665,6 +737,22 @@
             // Update selection UI
             document.querySelectorAll('.model-item').forEach(el => el.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
+
+            // Show loading skeleton in detail panel
+            document.getElementById('model-detail').innerHTML = `
+                <div class="skeleton skeleton-text medium" style="height:24px;margin-bottom:15px;"></div>
+                <div class="skeleton skeleton-text short" style="margin-bottom:20px;"></div>
+                <div class="stats-row" style="margin: 20px 0;">
+                    <div class="stat-card"><div class="skeleton skeleton-stat"></div></div>
+                    <div class="stat-card"><div class="skeleton skeleton-stat"></div></div>
+                    <div class="stat-card"><div class="skeleton skeleton-stat"></div></div>
+                    <div class="stat-card"><div class="skeleton skeleton-stat"></div></div>
+                </div>
+                <div class="skeleton skeleton-text short" style="height:20px;margin:20px 0;"></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+                <div class="skeleton-row"><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div><div class="skeleton skeleton-cell"></div></div>
+            `;
 
             try {
                 const [modelResp, tradesResp] = await Promise.all([
@@ -682,7 +770,8 @@
 
                 const pnlClass = model.pnl >= 0 ? 'positive' : 'negative';
 
-                document.getElementById('model-detail').innerHTML = `
+                const detailEl = document.getElementById('model-detail');
+                detailEl.innerHTML = `
                     <h2>${model.run_id}</h2>
                     <p class="muted">Timestamp: ${model.timestamp || 'Unknown'}</p>
 
@@ -705,11 +794,12 @@
                         </div>
                     </div>
 
-                    <h3>Trade History (${tradesData.trade_count || 0} trades)</h3>
+                    <h3>Trade History (${tradesData.trade_count || 0}${tradesData.has_more ? ` of ${tradesData.total_count.toLocaleString()}` : ''} trades)${tradesData.has_more ? ' <span style="color:var(--gold);font-size:0.8rem;">(showing most recent)</span>' : ''}</h3>
                     <div style="max-height: 400px; overflow-y: auto;">
                         ${renderTradesTable(tradesData.trades || [], { emptyMessage: 'No trades' })}
                     </div>
                 `;
+                detailEl.classList.add('fade-in');
             } catch (e) {
                 document.getElementById('model-detail').innerHTML = `<div class="error">Error loading model</div>`;
             }
