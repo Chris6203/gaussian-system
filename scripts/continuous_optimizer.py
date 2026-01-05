@@ -546,6 +546,44 @@ def run_post_analysis(run_dir: Path):
         logger.debug(f"[ANALYSIS] Error: {e}")
 
 
+# Track experiment count for periodic GitHub updates
+_experiment_count = 0
+_last_github_update = 0
+
+def maybe_update_github_results(force: bool = False):
+    """Update GitHub with latest results periodically (every 10 experiments)."""
+    global _experiment_count, _last_github_update
+    _experiment_count += 1
+
+    # Update every 10 experiments or if forced
+    if not force and (_experiment_count - _last_github_update) < 10:
+        return
+
+    try:
+        update_script = BASE_DIR / "scripts" / "update_results_github.py"
+        if not update_script.exists():
+            return
+
+        result = subprocess.run(
+            [sys.executable, str(update_script)],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=120  # 2 minute timeout
+        )
+
+        if result.returncode == 0:
+            logger.info("[GITHUB] Updated results on GitHub")
+            _last_github_update = _experiment_count
+        else:
+            logger.debug(f"[GITHUB] Update failed: {result.stderr[:200]}")
+
+    except subprocess.TimeoutExpired:
+        logger.warning("[GITHUB] Timeout updating GitHub")
+    except Exception as e:
+        logger.debug(f"[GITHUB] Error: {e}")
+
+
 def run_experiment(idea: dict, exp_id: str, cycles: int, gpu_id: int = 0) -> dict:
     """Run a single experiment (called in subprocess)."""
     run_name = f"{exp_id}_{idea.get('id', 'unknown')}"
@@ -582,6 +620,9 @@ def run_experiment(idea: dict, exp_id: str, cycles: int, gpu_id: int = 0) -> dic
 
             # Run post-experiment analysis to generate ANALYSIS.md
             run_post_analysis(BASE_DIR / run_dir)
+
+            # Periodically update GitHub with latest results
+            maybe_update_github_results()
 
             return parsed
         else:
