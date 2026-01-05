@@ -216,11 +216,17 @@ def load_decision_records(run_id: str, limit: int = 100) -> List[Dict[str, Any]]
         return []
 
 
-def load_trades_from_db(run_id: str, summary: Dict[str, Any]) -> List[Dict[str, Any]]:
+def load_trades_from_db(run_id: str, summary: Dict[str, Any], limit: int = 500, offset: int = 0) -> List[Dict[str, Any]]:
     """Load trades from paper_trading.db for a given model run.
 
-    Currently loads all trades. In the future, we could link trades to model runs
-    via a run_id column in the trades table.
+    Args:
+        run_id: Model run ID
+        summary: Model summary data
+        limit: Max trades to return (default 500)
+        offset: Offset for pagination (default 0)
+
+    Returns:
+        List of trade dicts
     """
     db_path = Path('data/paper_trading.db')
     if not db_path.exists():
@@ -232,25 +238,36 @@ def load_trades_from_db(run_id: str, summary: Dict[str, Any]) -> List[Dict[str, 
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        # For now, load all completed trades
-        # TODO: Add run_id column to trades table to link trades to specific runs
+        # Get total count first
+        cursor.execute("""
+            SELECT COUNT(*) FROM trades
+            WHERE status IS NOT NULL AND status != 'OPEN'
+        """)
+        total_count = cursor.fetchone()[0]
+
+        # Load trades with pagination to prevent browser crash
+        # Order by timestamp DESC to show most recent first
         cursor.execute("""
             SELECT * FROM trades
             WHERE status IS NOT NULL AND status != 'OPEN'
-            ORDER BY timestamp ASC
-        """)
+            ORDER BY timestamp DESC
+            LIMIT ? OFFSET ?
+        """, (limit, offset))
 
         rows = cursor.fetchall()
 
         for row in rows:
             trade = dict(row)
+            trade['_total_count'] = total_count  # Attach total for response
             trades.append(trade)
 
         conn.close()
 
     except Exception as e:
         print(f"Error loading trades from DB: {e}")
+        total_count = 0
 
+    # Return trades with total count attached to first trade
     return trades
 
 
@@ -298,6 +315,12 @@ def get_model(run_id: str):
 @app.route('/api/model/<run_id>/trades')
 def get_model_trades(run_id: str):
     """Get trades for a model from paper_trading.db."""
+    from flask import request
+
+    # Get pagination params (default limit 500 to prevent browser crash)
+    limit = min(request.args.get('limit', 500, type=int), 2000)
+    offset = request.args.get('offset', 0, type=int)
+
     # First get the model summary to get timestamp
     models_dir = Path(CONFIG['models_dir'])
     summary_path = models_dir / run_id / 'SUMMARY.txt'
@@ -306,8 +329,8 @@ def get_model_trades(run_id: str):
     if not summary:
         return jsonify({'error': f'Model {run_id} not found'}), 404
 
-    # Load trades from database
-    db_trades = load_trades_from_db(run_id, summary)
+    # Load trades from database (with limit)
+    db_trades = load_trades_from_db(run_id, summary, limit=limit, offset=offset)
 
     # Format trades for the frontend
     trades = []
@@ -340,9 +363,16 @@ def get_model_trades(run_id: str):
 
         trades.append(trade)
 
+    # Get total count from first trade if available
+    total_count = db_trades[0].get('_total_count', len(trades)) if db_trades else len(trades)
+
     return jsonify({
         'trades': trades,
         'trade_count': len(trades),
+        'total_count': total_count,
+        'limit': limit,
+        'offset': offset,
+        'has_more': (offset + len(trades)) < total_count,
         'model_timestamp': summary.get('timestamp', ''),
         'source': 'paper_trading.db'
     })

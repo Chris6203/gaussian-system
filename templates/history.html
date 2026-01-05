@@ -538,7 +538,7 @@
                     </div>
 
                     <div class="summary-section">
-                        <h3>Trade History (${trades.length} trades)</h3>
+                        <h3>Trade History (${trades.length}${tradesData.has_more ? ` of ${tradesData.total_count.toLocaleString()}` : ''} trades)${tradesData.has_more ? ' <span style="color:#f59e0b;font-size:0.8rem;">(showing most recent)</span>' : ''}</h3>
                         <div class="trades-scroll">
                             <table class="trades-table">
                                 <thead>
