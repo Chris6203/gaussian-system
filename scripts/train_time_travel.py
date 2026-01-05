@@ -8,7 +8,9 @@ import sys
 import os
 
 # GAUSSIAN STANDALONE: Add parent directory to path so we can import local modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _project_root)
+sys.path.insert(0, os.path.join(_project_root, "core"))  # unified_options_trading_bot is in core/
 
 # Dashboard heartbeat for tracking running experiments
 try:
