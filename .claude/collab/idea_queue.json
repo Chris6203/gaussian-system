@@ -1,6 +1,97 @@
 {
   "ideas": [
     {
+      "id": "IDEA-264",
+      "source": "codex_review",
+      "timestamp": "2026-01-05T11:58:56.798766",
+      "category": "confidence_calibration",
+      "title": "Phase 50: BCE Confidence Training",
+      "description": "Train confidence head with BCE loss to predict P(win). Codex found confidence head was never trained.",
+      "hypothesis": "Training confidence with actual win/loss outcomes will make it predictive of win rate",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "TRAIN_CONFIDENCE_BCE": "1",
+        "CONFIDENCE_BCE_WEIGHT": "0.5",
+        "HARD_TAKE_PROFIT_PCT": "25",
+        "TT_MAX_HOLD_MINUTES": "60",
+        "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
+      }
+    },
+    {
+      "id": "IDEA-265",
+      "source": "codex_review",
+      "timestamp": "2026-01-05T11:58:56.798778",
+      "category": "confidence_calibration",
+      "title": "Phase 50: Entropy Confidence V2 + Decoupled Uncertainty",
+      "description": "Use entropy-based confidence and don't penalize by return variance. Codex found original confidence inversely correlates with win rate due to variance penalty.",
+      "hypothesis": "Proper entropy confidence + decoupling uncertainty will fix inverted confidence",
+      "priority": "high",
+      "status": "pending",
+      "env_vars": {
+        "USE_ENTROPY_CONFIDENCE_V2": "1",
+        "DECOUPLE_UNCERTAINTY": "1",
+        "HARD_TAKE_PROFIT_PCT": "25",
+        "TT_MAX_HOLD_MINUTES": "60",
+        "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
+      }
+    },
+    {
+      "id": "IDEA-266",
+      "source": "codex_review",
+      "timestamp": "2026-01-05T11:58:56.798782",
+      "category": "confidence_calibration",
+      "title": "Phase 50: All Codex Fixes Combined",
+      "description": "Enable all Codex-recommended confidence fixes: BCE training + entropy confidence + decoupled uncertainty + temperature scaling.",
+      "hypothesis": "Combining all fixes will maximize confidence calibration improvement",
+      "priority": "critical",
+      "status": "pending",
+      "env_vars": {
+        "TRAIN_CONFIDENCE_BCE": "1",
+        "CONFIDENCE_BCE_WEIGHT": "0.5",
+        "USE_ENTROPY_CONFIDENCE_V2": "1",
+        "DECOUPLE_UNCERTAINTY": "1",
+        "DIRECTION_TEMPERATURE": "1.5",
+        "HARD_TAKE_PROFIT_PCT": "25",
+        "TT_MAX_HOLD_MINUTES": "60",
+        "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
+      }
+    },
+    {
+      "id": "IDEA-267",
+      "source": "codex_review",
+      "timestamp": "2026-01-05T11:58:56.798786",
+      "category": "confidence_calibration",
+      "title": "Phase 50: Temperature Scaling Only (T=1.5)",
+      "description": "Apply temperature scaling T=1.5 to direction logits for softer probabilities.",
+      "hypothesis": "Temperature scaling alone may improve confidence calibration",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "DIRECTION_TEMPERATURE": "1.5",
+        "HARD_TAKE_PROFIT_PCT": "25",
+        "TT_MAX_HOLD_MINUTES": "60",
+        "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
+      }
+    },
+    {
+      "id": "IDEA-268",
+      "source": "codex_review",
+      "timestamp": "2026-01-05T11:58:56.798789",
+      "category": "confidence_calibration",
+      "title": "Phase 50: Entropy V2 Only (no other changes)",
+      "description": "Test entropy-based confidence V2 in isolation to measure its impact.",
+      "hypothesis": "Entropy confidence alone may significantly improve win rate correlation",
+      "priority": "medium",
+      "status": "pending",
+      "env_vars": {
+        "USE_ENTROPY_CONFIDENCE_V2": "1",
+        "HARD_TAKE_PROFIT_PCT": "25",
+        "TT_MAX_HOLD_MINUTES": "60",
+        "BLOCK_SIGNAL_STRATEGIES": "MOMENTUM,VOLATILITY_EXPANSION"
+      }
+    },
+    {
       "id": "IDEA-143",
       "source": "phase45_analysis",
       "timestamp": "2026-01-03T17:21:32.707253",
@@ -2249,8 +2340,856 @@
         "per_trade_pnl": -0.2976923076923077,
         "win_rate": 46.2
       }
+    },
+    {
+      "id": "IDEA-222",
+      "source": "selectivity_analysis",
+      "timestamp": "2026-01-04T20:32:08.132177",
+      "category": "entry",
+      "title": "SELECTIVE: Ultra-Low Conf (<0.20)",
+      "description": "Push confidence cap even lower. IDEA-217 showed $168/trade at <0.25. Try <0.20 for even higher quality.",
+      "hypothesis": "Even lower confidence = even higher per-trade profit",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.20"
+      }
+    },
+    {
+      "id": "IDEA-223",
+      "source": "selectivity_analysis",
+      "timestamp": "2026-01-04T20:32:08.132186",
+      "category": "entry",
+      "title": "SELECTIVE: Low Conf + High HMM Confidence",
+      "description": "Low model confidence BUT high HMM regime confidence. Model uncertain, regime clear.",
+      "hypothesis": "Clear regime + uncertain model = best contrarian signal",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_HMM_CONFIDENCE": "0.7"
+      }
+    },
+    {
+      "id": "IDEA-224",
+      "source": "selectivity_analysis",
+      "timestamp": "2026-01-04T20:32:08.132190",
+      "category": "entry",
+      "title": "SELECTIVE: Low Conf + Morning Only (9:30-11:30)",
+      "description": "Combine low confidence with morning session only. Mornings have cleaner trends.",
+      "hypothesis": "Morning + low conf = highest quality trades",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MORNING_ONLY": "1"
+      }
+    },
+    {
+      "id": "IDEA-225",
+      "source": "selectivity_analysis",
+      "timestamp": "2026-01-04T20:32:08.132193",
+      "category": "validation",
+      "title": "SELECTIVE: IDEA-217 10K Validation",
+      "description": "Validate the $168/trade result over 10K cycles.",
+      "hypothesis": "Selective strategy should maintain high per-trade P&L over longer test",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "TT_MAX_CYCLES": "10000"
+      }
+    },
+    {
+      "id": "IDEA-226",
+      "source": "selectivity_analysis",
+      "timestamp": "2026-01-04T20:32:08.132200",
+      "category": "entry",
+      "title": "SELECTIVE: Low Conf + TDA Complexity Threshold",
+      "description": "Only trade when TDA complexity is low (trending, not choppy).",
+      "hypothesis": "Low complexity = clean trends = better trades",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "TDA_MAX_COMPLEXITY": "0.3"
+      }
+    },
+    {
+      "id": "IDEA-227",
+      "source": "fine_tuning",
+      "timestamp": "2026-01-05T00:32:06.380461",
+      "category": "entry",
+      "title": "FINETUNE: Conf 0.22 (between 0.20 and 0.25)",
+      "description": "IDEA-222 (0.20) had 0 trades, IDEA-217 (0.25) had 22 trades. Try 0.22 to find optimal threshold.",
+      "hypothesis": "0.22 might hit the perfect selectivity balance",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.22"
+      }
+    },
+    {
+      "id": "IDEA-228",
+      "source": "fine_tuning",
+      "timestamp": "2026-01-05T00:32:06.380470",
+      "category": "entry",
+      "title": "FINETUNE: Conf 0.23",
+      "description": "Another point between 0.20 and 0.25.",
+      "hypothesis": "Finding the exact optimal confidence threshold",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.23"
+      }
+    },
+    {
+      "id": "IDEA-229",
+      "source": "fine_tuning",
+      "timestamp": "2026-01-05T00:32:06.380474",
+      "category": "exit",
+      "title": "FINETUNE: 217 + Tighter Trail (8%/4%)",
+      "description": "Keep 217 conf threshold but tighten trailing stop to lock profits faster.",
+      "hypothesis": "Tighter trailing preserves more gains per trade",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "8",
+        "TRAILING_STOP_PCT": "4",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-230",
+      "source": "fine_tuning",
+      "timestamp": "2026-01-05T00:32:06.380477",
+      "category": "exit",
+      "title": "FINETUNE: 217 + Wider Trail (12%/6%)",
+      "description": "Let winners run longer with wider trailing stop.",
+      "hypothesis": "Wider trailing captures bigger moves",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "12",
+        "TRAILING_STOP_PCT": "6",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-231",
+      "source": "validation",
+      "timestamp": "2026-01-05T00:32:06.380480",
+      "category": "validation",
+      "title": "VALIDATE: 217 at 20K cycles",
+      "description": "Extended validation of best strategy over 20K cycles.",
+      "hypothesis": "$168/trade should hold over longer period",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "TT_MAX_CYCLES": "20000"
+      }
+    },
+    {
+      "id": "IDEA-232",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507322",
+      "category": "entry",
+      "title": "TDA: Shorter Window (30m) + Low Conf",
+      "description": "TDA with 30-minute window captures faster patterns. Combined with low conf filter.",
+      "hypothesis": "Shorter TDA window = more responsive regime detection",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "30",
+        "TRAIN_MAX_CONF": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-233",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507337",
+      "category": "entry",
+      "title": "TDA: Longer Window (120m) + Low Conf",
+      "description": "TDA with 2-hour window captures longer trends.",
+      "hypothesis": "Longer TDA window = more stable regime signals",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25"
+      }
+    },
+    {
+      "id": "IDEA-234",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507341",
+      "category": "entry",
+      "title": "Low Conf + Low VIX (<20)",
+      "description": "Only trade in calm markets. Low VIX = more predictable.",
+      "hypothesis": "Calm markets + uncertain model = cleaner signals",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MAX_VIX": "20"
+      }
+    },
+    {
+      "id": "IDEA-235",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507348",
+      "category": "entry",
+      "title": "Low Conf + High VIX (>20)",
+      "description": "Only trade in volatile markets. Higher premiums.",
+      "hypothesis": "Volatile markets have bigger moves to capture",
+      "priority": "medium",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_VIX": "20"
+      }
+    },
+    {
+      "id": "IDEA-236",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507352",
+      "category": "entry",
+      "title": "Low Conf + Strong Momentum (>0.001)",
+      "description": "Only trade when there is clear momentum.",
+      "hypothesis": "Momentum confirms direction even when model uncertain",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-237",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507355",
+      "category": "entry",
+      "title": "Low Conf + Strong HMM Trend (>0.7 or <0.3)",
+      "description": "Only trade when HMM shows strong directional trend.",
+      "hypothesis": "Clear HMM regime + uncertain model = best entries",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "HMM_STRONG_TREND": "1"
+      }
+    },
+    {
+      "id": "IDEA-238",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507358",
+      "category": "exit",
+      "title": "Low Conf + Quick Exit (15 min max hold)",
+      "description": "Shorter max hold time to reduce theta decay.",
+      "hypothesis": "Quick exits preserve premium value",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "TT_MAX_HOLD_MINUTES": "15"
+      }
+    },
+    {
+      "id": "IDEA-239",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507361",
+      "category": "exit",
+      "title": "Low Conf + Tight Stop (-5%)",
+      "description": "Tighter stop loss to cut losers faster.",
+      "hypothesis": "Smaller losses = better per-trade P&L",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "TT_STOP_LOSS_PCT": "5"
+      }
+    },
+    {
+      "id": "IDEA-240",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507365",
+      "category": "entry",
+      "title": "Low Conf + Fear & Greed < 40 (Fearful)",
+      "description": "Trade only when market is fearful. Contrarian.",
+      "hypothesis": "Fear = oversold = better long entries",
+      "priority": "medium",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "SENTIMENT_FEAR_GREED_MAX": "40"
+      }
+    },
+    {
+      "id": "IDEA-241",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507370",
+      "category": "entry",
+      "title": "Low Conf + Contrarian PCR (High Put/Call)",
+      "description": "Trade when put/call ratio is high (bearish sentiment).",
+      "hypothesis": "High PCR = contrarian long opportunity",
+      "priority": "medium",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_PCR": "1.2"
+      }
+    },
+    {
+      "id": "IDEA-242",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507373",
+      "category": "entry",
+      "title": "ULTRA: Low Conf + Low VIX + Strong HMM",
+      "description": "Triple filter: uncertain model, calm market, clear regime.",
+      "hypothesis": "Multiple quality filters = highest quality trades",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MAX_VIX": "20",
+        "HMM_STRONG_TREND": "1"
+      }
+    },
+    {
+      "id": "IDEA-243",
+      "source": "exploration",
+      "timestamp": "2026-01-05T00:41:59.507376",
+      "category": "entry",
+      "title": "ULTRA: Low Conf + Momentum + Quick Exit",
+      "description": "Momentum-confirmed entries with fast exits.",
+      "hypothesis": "Momentum + quick exit = capture moves efficiently",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "8",
+        "TRAILING_STOP_PCT": "4",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001",
+        "TT_MAX_HOLD_MINUTES": "20"
+      }
+    },
+    {
+      "id": "IDEA-244",
+      "source": "web_research",
+      "timestamp": "2026-01-05T00:43:31.438618",
+      "category": "entry",
+      "title": "RESEARCH: Contrarian SMA5 Signal",
+      "description": "Research shows 75%+ WR with contrarian SMA5: go bearish on SMA buy signal, bullish on SMA sell signal.",
+      "hypothesis": "Contrarian to short-term momentum = catching reversals",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "CONTRARIAN_SMA": "1"
+      }
+    },
+    {
+      "id": "IDEA-245",
+      "source": "web_research",
+      "timestamp": "2026-01-05T00:43:31.438629",
+      "category": "entry",
+      "title": "RESEARCH: Monday Only (Best 0DTE Day)",
+      "description": "Research shows Monday is most profitable for 0DTE, Tue/Thu/Fri negative P&L.",
+      "hypothesis": "Weekend gap and Monday momentum = cleaner setups",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MONDAY_ONLY": "1"
+      }
+    },
+    {
+      "id": "IDEA-246",
+      "source": "web_research",
+      "timestamp": "2026-01-05T00:43:31.438633",
+      "category": "entry",
+      "title": "RESEARCH: First 90 Min Only (9:30-11:00)",
+      "description": "Research: 60% of daily range forms in first 60-90 min. Best setups early.",
+      "hypothesis": "Morning session has cleanest momentum and trends",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "FIRST_90_MIN_ONLY": "1"
+      }
+    },
+    {
+      "id": "IDEA-247",
+      "source": "web_research",
+      "timestamp": "2026-01-05T00:43:31.438636",
+      "category": "exit",
+      "title": "RESEARCH: Exit by 3PM (Avoid Late Whipsaw)",
+      "description": "Research: Exit before 3PM to avoid extreme gamma risk in final hour.",
+      "hypothesis": "Early exit avoids unpredictable late-day volatility",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "EXIT_BY_3PM": "1"
+      }
+    },
+    {
+      "id": "IDEA-248",
+      "source": "web_research",
+      "timestamp": "2026-01-05T00:43:31.438643",
+      "category": "entry",
+      "title": "RESEARCH: 4-Regime Filter (Vol+Trend)",
+      "description": "Research: Classify into 4 regimes using ATR+ADX. Low vol trending = momentum, High vol ranging = mean revert.",
+      "hypothesis": "Regime-specific strategies improve consistency",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "FOUR_REGIME_FILTER": "1"
+      }
+    },
+    {
+      "id": "IDEA-249",
+      "source": "web_research",
+      "timestamp": "2026-01-05T00:43:31.438647",
+      "category": "entry",
+      "title": "RESEARCH: Positive Gamma Fade (Mean Revert)",
+      "description": "When dealers are long gamma, fade extremes - sell rallies, buy dips.",
+      "hypothesis": "Positive GEX = stabilizing force, mean reversion works",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "POSITIVE_GAMMA_FADE": "1"
+      }
+    },
+    {
+      "id": "IDEA-250",
+      "source": "web_research",
+      "timestamp": "2026-01-05T00:43:31.438650",
+      "category": "entry",
+      "title": "RESEARCH: Skip Tue/Thu/Fri (Negative P&L Days)",
+      "description": "Research: Tuesday, Thursday, Friday had negative P&L for 0DTE.",
+      "hypothesis": "Avoiding bad days improves overall performance",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "SKIP_TUE_THU_FRI": "1"
+      }
+    },
+    {
+      "id": "IDEA-251",
+      "source": "web_research",
+      "timestamp": "2026-01-05T00:43:31.438653",
+      "category": "entry",
+      "title": "ULTRA: Monday + First 90 Min + Low Conf",
+      "description": "Combine best day (Monday) with best time (first 90 min) with low confidence filter.",
+      "hypothesis": "Triple time filter = highest quality window",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MONDAY_ONLY": "1",
+        "FIRST_90_MIN_ONLY": "1"
+      }
+    },
+    {
+      "id": "IDEA-252",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.575994",
+      "category": "entry",
+      "title": "WINNER+: Momentum + Tighter Trail (8%/4%)",
+      "description": "Build on EXP-NEW_236 ($296/trade). Add tighter trailing to lock profits faster.",
+      "hypothesis": "Momentum signals + quick profit lock = even better",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "8",
+        "TRAILING_STOP_PCT": "4",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-253",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576007",
+      "category": "entry",
+      "title": "WINNER+: Momentum + Stronger (>0.002)",
+      "description": "Even stronger momentum filter to be more selective.",
+      "hypothesis": "Higher momentum threshold = fewer but better trades",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.002"
+      }
+    },
+    {
+      "id": "IDEA-254",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576011",
+      "category": "validation",
+      "title": "VALIDATE: Momentum Winner 10K",
+      "description": "Validate EXP-NEW_236 over 10K cycles.",
+      "hypothesis": "$296/trade should hold over longer test",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001",
+        "TT_MAX_CYCLES": "10000"
+      }
+    },
+    {
+      "id": "IDEA-255",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576017",
+      "category": "entry",
+      "title": "WINNER+: Fear<40 + Momentum",
+      "description": "Combine two winners: Fear & Greed < 40 + strong momentum.",
+      "hypothesis": "Fearful market + momentum confirmation = high quality",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "SENTIMENT_FEAR_GREED_MAX": "40",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-256",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576031",
+      "category": "entry",
+      "title": "WINNER+: Fear<30 (More Fearful)",
+      "description": "Even more fearful market filter.",
+      "hypothesis": "Extreme fear = extreme opportunity",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "SENTIMENT_FEAR_GREED_MAX": "30"
+      }
+    },
+    {
+      "id": "IDEA-257",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576034",
+      "category": "validation",
+      "title": "VALIDATE: Fear<40 Winner 10K",
+      "description": "Validate EXP-NEW_240 over 10K cycles.",
+      "hypothesis": "$252/trade should hold",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "SENTIMENT_FEAR_GREED_MAX": "40",
+        "TT_MAX_CYCLES": "10000"
+      }
+    },
+    {
+      "id": "IDEA-258",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576037",
+      "category": "entry",
+      "title": "WINNER+: TDA 120m + Momentum",
+      "description": "Combine TDA 120m window with momentum filter.",
+      "hypothesis": "Longer TDA + momentum = trend following",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001"
+      }
+    },
+    {
+      "id": "IDEA-259",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576040",
+      "category": "entry",
+      "title": "WINNER+: TDA 120m + Fear<40",
+      "description": "Combine TDA 120m window with fear filter.",
+      "hypothesis": "Longer TDA + fear = catching bottoms",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25",
+        "SENTIMENT_FEAR_GREED_MAX": "40"
+      }
+    },
+    {
+      "id": "IDEA-260",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576043",
+      "category": "entry",
+      "title": "ULTRA: All 3 Winners Combined",
+      "description": "Combine all winners: TDA 120m + Momentum + Fear<40.",
+      "hypothesis": "Triple winner filter = ultimate selectivity",
+      "priority": "critical",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001",
+        "SENTIMENT_FEAR_GREED_MAX": "40"
+      }
+    },
+    {
+      "id": "IDEA-261",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576048",
+      "category": "entry",
+      "title": "ULTRA: Momentum + Monday Only",
+      "description": "Best momentum filter + best day of week.",
+      "hypothesis": "Momentum on Monday = cleanest trends",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001",
+        "MONDAY_ONLY": "1"
+      }
+    },
+    {
+      "id": "IDEA-262",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576051",
+      "category": "entry",
+      "title": "ULTRA: Momentum + First 90 Min",
+      "description": "Best momentum filter + best time window.",
+      "hypothesis": "Morning momentum = strongest signals",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TRAIN_MAX_CONF": "0.25",
+        "MIN_ABS_MOMENTUM": "0.001",
+        "FIRST_90_MIN_ONLY": "1"
+      }
+    },
+    {
+      "id": "IDEA-263",
+      "source": "winner_analysis",
+      "timestamp": "2026-01-05T10:54:36.576053",
+      "category": "validation",
+      "title": "VALIDATE: TDA 120m Winner 10K",
+      "description": "Validate EXP-NEW_233 over 10K cycles.",
+      "hypothesis": "$232/trade should hold",
+      "priority": "high",
+      "status": "in_progress",
+      "env_vars": {
+        "USE_TRAILING_STOP": "1",
+        "TRAILING_ACTIVATION_PCT": "10",
+        "TRAILING_STOP_PCT": "5",
+        "ENABLE_TDA": "1",
+        "TDA_REGIME_FILTER": "1",
+        "TDA_WINDOW_SIZE": "120",
+        "TRAIN_MAX_CONF": "0.25",
+        "TT_MAX_CYCLES": "10000"
+      }
     }
   ],
   "next_id": 198,
-  "last_updated": "2026-01-04T19:03:35.792896"
+  "last_updated": "2026-01-05T11:57:18.940145"
 }

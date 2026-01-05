@@ -7130,3 +7130,96 @@ python scripts/train_time_travel.py
 4. **Trade analysis reveals actionable patterns** - Looking at actual trades shows what works
 
 ---
+
+## Phase 50: Confidence Calibration Fixes (2026-01-04) - Codex Review
+
+### Goal
+Fix the inverted confidence issue identified in Phase 48/49 where lower confidence trades win more.
+
+### Codex Analysis Findings
+
+Codex reviewed our architecture and identified **4 critical issues**:
+
+1. **HIGH: Confidence head never trained**
+   - Location: `bot_modules/neural_networks.py:725-790`
+   - The model defines a confidence head but no loss term trains it
+   - Confidence outputs are essentially random noise
+
+2. **MEDIUM: Entropy-based confidence not implemented**
+   - Location: `unified_options_trading_bot.py:1843-1898`
+   - Despite `USE_ENTROPY_CONFIDENCE` env var, the actual entropy calculation wasn't in the inference path
+
+3. **MEDIUM: Confidence penalized by return variance**
+   - Location: `unified_options_trading_bot.py:1877-1887`
+   - `adjusted_conf = base_conf * (1.0 - min(mc_uncertainty * 10, 0.5))`
+   - In high-volatility profitable moves, variance goes UP, pushing confidence DOWN when trades WIN
+
+4. **LOW: Temperature scaling not applied**
+   - Location: `unified_options_trading_bot.py:1848`
+   - `CONFIDENCE_TEMPERATURE` wasn't applied to direction logits before softmax
+
+### Fixes Implemented (All Opt-In)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TRAIN_CONFIDENCE_BCE` | 0 | Train confidence head with BCE loss targeting P(win) |
+| `CONFIDENCE_BCE_WEIGHT` | 0.5 | Weight of BCE loss in total training loss |
+| `USE_ENTROPY_CONFIDENCE_V2` | 0 | Use proper entropy-based confidence from direction probs |
+| `DECOUPLE_UNCERTAINTY` | 0 | Don't penalize confidence by MC return variance |
+| `DIRECTION_TEMPERATURE` | 1.0 | Temperature scaling for direction logits |
+| `CONFIDENCE_DEBUG` | 0 | Log detailed confidence calculation info |
+
+### Implementation Details
+
+**1. BCE Confidence Loss (lines 2733-2744):**
+```python
+if TRAIN_CONFIDENCE_BCE:
+    target_win = 1.0 if target_return > 0 else 0.0
+    conf_loss = nn.BCELoss()(output["confidence"], target_win_tensor)
+    total_loss = total_loss + conf_loss * CONFIDENCE_BCE_WEIGHT
+```
+
+**2. Entropy-Based Confidence V2 (lines 1915-1934):**
+```python
+if USE_ENTROPY_CONFIDENCE_V2:
+    entropy = -np.sum(dirs_normalized * np.log(dirs_normalized))
+    max_entropy = np.log(3)  # 3 classes
+    entropy_conf = 1.0 - (entropy / max_entropy)
+    margin_conf = sorted_probs[0] - sorted_probs[1]
+    base_conf = 0.7 * entropy_conf + 0.3 * margin_conf
+```
+
+**3. Temperature Scaling (line 1869):**
+```python
+direction_logits = out["direction"] / DIRECTION_TEMPERATURE
+```
+
+**4. Uncertainty Decoupling (lines 1939-1946):**
+```python
+if DECOUPLE_UNCERTAINTY:
+    adjusted_conf = base_conf  # Don't penalize by variance
+```
+
+### Test Ideas Added to Optimizer
+
+- IDEA-264: BCE Confidence Training
+- IDEA-265: Entropy Confidence V2 + Decoupled Uncertainty
+- IDEA-266: All Codex Fixes Combined
+- IDEA-267: Temperature Scaling Only (T=1.5)
+- IDEA-268: Entropy V2 Only
+
+### Recommended Test Configuration
+
+```bash
+# Test all Codex fixes with Phase 49 best config
+TRAIN_CONFIDENCE_BCE=1 \
+USE_ENTROPY_CONFIDENCE_V2=1 \
+DECOUPLE_UNCERTAINTY=1 \
+DIRECTION_TEMPERATURE=1.5 \
+HARD_TAKE_PROFIT_PCT=25 \
+TT_MAX_HOLD_MINUTES=60 \
+BLOCK_SIGNAL_STRATEGIES="MOMENTUM,VOLATILITY_EXPANSION" \
+python scripts/train_time_travel.py
+```
+
+---
