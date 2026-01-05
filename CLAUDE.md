@@ -80,7 +80,7 @@ python bot.py --status
 python training/run_q_pipeline.py --horizon 15 --cycles 2500
 
 # Deploy Q-scorer
-set ENTRY_CONTROLLER=q_scorer && python go_live_only.py models/run_YYYYMMDD_HHMMSS
+ENTRY_CONTROLLER=q_scorer python bot.py models/run_YYYYMMDD_HHMMSS
 ```
 
 ### Dashboards
@@ -387,7 +387,7 @@ SQLite in `data/`:
 5. **Sequence length = 60**: Models expect exactly 60 timesteps
 6. **config.json has API keys**: It's gitignored, don't commit it
 7. **Settlement T+1**: Options settle next business day
-8. **Paper vs live**: Check `PAPER_ONLY_MODE` in `go_live_only.py`
+8. **Paper vs live**: Use `python bot.py model --live` for live, default is paper
 9. **Q-Scorer Q_INVERT_FIX=1**: Required to fix anti-selection bug
 10. **Walk-forward split**: Q-scorer uses time-ordered split, not random
 
@@ -475,37 +475,33 @@ See `docs/SYSTEM_ARCHITECTURE.md` "Debugging Win Rate" section. Quick reference:
 
 ## Dashboards
 
-### Unified Dashboard (Recommended - Port 5003)
+### Dashboard System
 
-Single dashboard server combining all functionality with tab-based navigation:
+The unified `dashboard.py` manages all dashboards:
 
 ```bash
-python unified_dashboard_server.py  # All-in-one dashboard on port 5003
+python dashboard.py                # Start all dashboards
+python dashboard.py --live         # Live trading only (port 5000)
+python dashboard.py --training     # Training monitor only (port 5001)
+python dashboard.py --history      # Model history only (port 5002)
+python dashboard.py --status       # Check what's running
 ```
 
-**Features:**
-- **Hub Tab** - Experiment scoreboard, remote machines, overview
-- **Live Tab** - Live trading with Tradier integration
-- **Training Tab** - Real-time training monitoring with run selector
-- **History Tab** - Browse past model runs and SUMMARY.txt data
-- **Remote Ingestion** - Training machines can push data to central dashboard
-- **Agent API** - REST endpoints for AI collaboration
-
-**URLs:**
-- `/` or `/hub` - Hub/overview (scoreboard, remote machines)
-- `/live` - Live trading monitor
-- `/training` - Training experiment monitor
-- `/history` - Past model runs
+| Dashboard | Port | Purpose |
+|-----------|------|---------|
+| Live | 5000 | Live/paper trading monitor |
+| Training | 5001 | Training experiment monitor |
+| History | 5002 | Browse past model runs |
 
 **Multi-Machine Setup:**
 ```
-┌─────────────────┐     POST /api/remote/heartbeat
+┌─────────────────┐
 │ Training Box 1  │────────────────────┐
 └─────────────────┘                    │
                                        ▼
 ┌─────────────────┐     ┌──────────────────────────┐
-│ Training Box 2  │────▶│   Unified Dashboard      │
-└─────────────────┘     │   (central server)       │
+│ Training Box 2  │────▶│   Dashboard Server       │
+└─────────────────┘     │   (192.168.20.235)       │
                         └──────────────────────────┘
 ┌─────────────────┐              ▲
 │ Live Trading    │──────────────┘
@@ -513,21 +509,7 @@ python unified_dashboard_server.py  # All-in-one dashboard on port 5003
 └─────────────────┘
 ```
 
-**On training machines (optional remote client):**
-```bash
-DASHBOARD_URL=http://central-server:5003 python scripts/dashboard_remote_client.py
-```
-
-### Legacy Dashboards (Still Available)
-
-Individual dashboard servers are still available if needed:
-
-| Dashboard | Port | Command | Purpose |
-|-----------|------|---------|---------|
-| Hub | 5003 | `python dashboard_hub_server.py` | Scoreboard + Agent API only |
-| Training | 5001 | `python training_dashboard_server.py` | Training monitoring only |
-| Live | 5000 | `python dashboard_server.py` | Live trading only |
-| History | 5002 | `python history_dashboard_server.py` | Model history only |
+Server IP is configured in `server_config.json` for easy migration.
 
 ### Dashboard Front-End Structure
 
