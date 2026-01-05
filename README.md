@@ -10,11 +10,19 @@ A sophisticated algorithmic options trading platform combining Bayesian neural n
 This system implements a multi-component trading architecture:
 
 - **Bayesian Neural Networks** with Gaussian kernel processors for price/volatility prediction
-- **Multi-dimensional HMM** for market regime detection (trend/volatility/liquidity)
-- **Reinforcement Learning (PPO)** for entry/exit decisions
-- **Consensus Entry Controller** with 8 signal agreement system
-- **Central Data Manager** for multi-bot competition and leaderboard tracking
+- **Swappable Temporal Encoders** - TCN, Transformer, **Mamba2 (State Space Model)**
+- **Multi-dimensional HMM** (3×3×3 = 27 states) for market regime detection
+- **Two-Layer Automated Optimization** - continuous experimentation with AI-driven improvement
+- **Post-Experiment Analysis** - automatic trade pattern analysis and recommendations
 - Paper trading and live execution via Tradier API
+
+### Latest Results (Phase 51)
+
+| Configuration | P&L | Win Rate |
+|---------------|-----|----------|
+| Mamba2 + Signal Filtering | **+34.85%** | 39.8% |
+| Transformer + Skew Exits | +32.65% | 38.2% |
+| TCN Baseline | +4.21% | 38.8% |
 
 ## Architecture
 
@@ -221,6 +229,92 @@ All configuration is centralized in `config.json`:
 }
 ```
 
+## Temporal Encoders
+
+The predictor supports multiple temporal encoding architectures:
+
+| Encoder | Description | Best For |
+|---------|-------------|----------|
+| `tcn` | Temporal Convolutional Network (default) | Fast training, baseline |
+| `transformer` | 2-layer causal transformer with RoPE | Complex patterns |
+| `mamba2` | State Space Model (SSD formulation) | **Best P&L (+34.85%)** |
+| `lstm` | Bidirectional LSTM | Sequential patterns |
+
+```bash
+# Use different encoders
+TEMPORAL_ENCODER=mamba2 python scripts/train_time_travel.py
+TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+```
+
+### Mamba2 Architecture
+
+Pure PyTorch implementation of Mamba2 (Structured State-space Duality):
+- Selective state spaces with data-dependent parameters
+- 1D convolution for local context
+- Learned gating for input/output projections
+- No CUDA kernels required
+
+## Two-Layer Automated Optimization
+
+The system includes a sophisticated two-layer optimization architecture:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 2: META OPTIMIZER                       │
+│  scripts/meta_optimizer.py (runs every 30 min)                  │
+│  • Reads all ANALYSIS.md files from experiments                 │
+│  • Aggregates patterns (confidence inversions, losing signals)  │
+│  • Generates new experiment suggestions                         │
+│  • Feeds ideas to Layer 1 queue                                 │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ idea_queue.json
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 1: CONTINUOUS OPTIMIZER                 │
+│  scripts/continuous_optimizer.py (runs continuously)            │
+│  • Pulls ideas from queue                                       │
+│  • Runs experiments with 5K cycles                              │
+│  • Saves results to models/<run>/                               │
+│  • Triggers post-experiment analysis                            │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    POST-EXPERIMENT ANALYSIS                      │
+│  tools/post_experiment_analysis.py                              │
+│  • Analyzes all trades from experiment                          │
+│  • Compares winners vs losers                                   │
+│  • Identifies losing signal strategies                          │
+│  • Generates ANALYSIS.md with recommendations                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Running the Optimization System
+
+```bash
+# Start Layer 1 (continuous experiment runner)
+nohup python scripts/continuous_optimizer.py --loop > /tmp/optimizer.log 2>&1 &
+
+# Start Layer 2 (meta analyzer - every 30 min)
+nohup python scripts/meta_optimizer.py --loop --interval 1800 > /tmp/meta_optimizer.log 2>&1 &
+
+# Run analysis on a single experiment
+python tools/post_experiment_analysis.py models/run_20260105_123456
+
+# Backfill analysis for all past experiments
+python tools/backfill_analysis.py
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `scripts/continuous_optimizer.py` | Layer 1 - runs experiments from queue |
+| `scripts/meta_optimizer.py` | Layer 2 - analyzes patterns, suggests new configs |
+| `tools/post_experiment_analysis.py` | Generates ANALYSIS.md with trade insights |
+| `tools/backfill_analysis.py` | Batch analysis for past experiments |
+| `.claude/collab/idea_queue.json` | Experiment idea queue |
+
 ## Entry Controllers
 
 | Type | Description |
@@ -241,7 +335,7 @@ gaussian-system/
 │   ├── bot_reporter.py
 │   └── config_schema.py
 ├── bot_modules/            # Neural network components
-│   ├── neural_networks.py
+│   ├── neural_networks.py  # TCN, Transformer, Mamba2, LSTM
 │   └── gaussian_processor.py
 ├── data-manager/           # Centralized data & competition
 │   ├── app/
@@ -251,7 +345,22 @@ gaussian-system/
 │   └── run.py
 ├── execution/              # Live trading execution
 ├── features/               # Feature pipeline
-├── scripts/                # Training and utilities
+├── scripts/                # Training and optimization
+│   ├── train_time_travel.py        # Main training script
+│   ├── continuous_optimizer.py     # Layer 1 optimizer
+│   └── meta_optimizer.py           # Layer 2 meta analyzer
+├── tools/                  # Analysis utilities
+│   ├── post_experiment_analysis.py # Trade analysis
+│   ├── backfill_analysis.py        # Batch analysis
+│   └── experiments_db.py           # Experiment database
+├── models/                 # Saved experiments
+│   └── run_YYYYMMDD_HHMMSS/
+│       ├── SUMMARY.txt
+│       ├── ANALYSIS.md
+│       ├── env_vars.json
+│       └── state/
+├── .claude/collab/         # AI collaboration files
+│   └── idea_queue.json     # Experiment ideas queue
 ├── config.json             # Main configuration
 └── unified_options_trading_bot.py  # Main orchestrator
 ```
@@ -294,6 +403,22 @@ GET /api/v1/leaderboard?metric=total_pnl&hours=24
 ```http
 GET /api/v1/bots/{bot_id}/config/export
 ```
+
+## Environment Variables
+
+Key environment variables for configuration:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TEMPORAL_ENCODER` | `tcn` | Temporal encoder: `tcn`, `transformer`, `mamba2`, `lstm` |
+| `PREDICTOR_ARCH` | `v2_slim_bayesian` | Predictor architecture |
+| `MODEL_RUN_DIR` | auto | Output directory for experiment |
+| `TT_MAX_CYCLES` | 5000 | Number of training cycles |
+| `PAPER_TRADING` | True | Enable paper trading mode |
+| `BLOCK_SIGNAL_STRATEGIES` | - | Comma-separated signals to block |
+| `HARD_STOP_LOSS_PCT` | 8 | Stop loss percentage |
+| `HARD_TAKE_PROFIT_PCT` | 15 | Take profit percentage |
+| `MAX_HOLD_MINUTES` | 45 | Maximum position hold time |
 
 ## Testing
 
