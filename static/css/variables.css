@@ -1,0 +1,54 @@
+/**
+ * Shared CSS Variables - Dashboard Theme
+ * Used by: Live, Training, Hub, History dashboards
+ */
+
+:root {
+    /* Background Colors */
+    --bg-dark: #0a0a0f;
+    --bg-card: #12121a;
+    --bg-elevated: #1a1a24;
+
+    /* Border */
+    --border: #2a2a3a;
+
+    /* Text Colors */
+    --text: #f0f0f5;
+    --text-dim: #8888a0;
+    --text-muted: #555566;
+
+    /* Accent Colors */
+    --accent: #7c5cff;
+    --cyan: #00c8ff;
+    --yellow: #ffc233;
+    --gold: #f59e0b;
+
+    /* Status Colors */
+    --green: #00d68f;
+    --green-dim: rgba(0, 214, 143, 0.15);
+    --red: #ff5c7c;
+    --red-dim: rgba(255, 92, 124, 0.15);
+
+    /* Spacing */
+    --gap-xs: 4px;
+    --gap-sm: 6px;
+    --gap-md: 12px;
+    --gap-lg: 16px;
+
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 10px;
+
+    /* Fonts */
+    --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    --font-body: 'Outfit', 'Segoe UI', -apple-system, sans-serif;
+
+    /* Font Sizes */
+    --text-xs: 9px;
+    --text-sm: 11px;
+    --text-base: 13px;
+    --text-lg: 15px;
+    --text-xl: 18px;
+}

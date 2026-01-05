@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 
 from backend.dashboard.state import TrainingState, TradeRecord, ValidatedPrediction
@@ -102,7 +102,7 @@ CONFIG = load_config()
 # FLASK APP
 # =============================================================================
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
 # =============================================================================
@@ -563,7 +563,7 @@ def refresh_data(selected_log_file: str = None) -> None:
 @app.route('/')
 def index():
     """Serve the training dashboard HTML."""
-    return send_file('training_dashboard.html')
+    return send_from_directory('templates', 'training.html')
 
 
 @app.route('/api/data')

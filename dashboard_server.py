@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 import logging
 
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 
 from backend.dashboard.state import TrainingState, TradeRecord, ValidatedPrediction
@@ -110,7 +110,7 @@ CONFIG = load_config()
 # FLASK APP
 # =============================================================================
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
 # =============================================================================
@@ -841,7 +841,7 @@ def refresh_data() -> None:
 @app.route('/')
 def index():
     """Serve the dashboard HTML."""
-    return send_file('dashboard.html')
+    return send_from_directory('templates', 'dashboard.html')
 
 
 @app.route('/api/data')

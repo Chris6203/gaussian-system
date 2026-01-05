@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/chart.css">
+    <style>
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .tab-btn {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+            background: var(--bg-hover);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-btn .badge {
+            background: var(--accent);
+            color: var(--bg-dark);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            padding: 20px;
+            min-height: calc(100vh - 60px);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* Remote Machines Panel */
+        .remote-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .remote-panel h3 {
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .machine-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .machine-card {
+            background: var(--bg-hover);
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .machine-card.active {
+            border-left: 3px solid var(--green);
+        }
+
+        .machine-card.inactive {
+            border-left: 3px solid var(--text-muted);
+            opacity: 0.6;
+        }
+
+        /* Run selector */
+        .run-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .run-selector select {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            min-width: 300px;
+        }
+
+        /* Model List (History) */
+        .model-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            min-height: 600px;
+        }
+
+        .model-sidebar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: calc(100vh - 150px);
+        }
+
+        .model-item {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .model-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .model-item.selected {
+            background: var(--bg-hover);
+            border-left: 3px solid var(--accent);
+        }
+
+        .model-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .model-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            font-size: 0.8rem;
+        }
+
+        .model-detail {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .model-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn {{ 'active' if active_tab == 'hub' else '' }}" onclick="switchTab('hub')">
+            Hub
+        </button>
+        <button class="tab-btn {{ 'active' if active_tab == 'live' else '' }}" onclick="switchTab('live')">
+            Live Trading
+        </button>
+        <button class="tab-btn {{ 'active' if active_tab == 'training' else '' }}" onclick="switchTab('training')">
+            Training <span class="badge" id="active-runs-badge">0</span>
+        </button>
+        <button class="tab-btn {{ 'active' if active_tab == 'history' else '' }}" onclick="switchTab('history')">
+            History
+        </button>
+        <div style="flex: 1;"></div>
+        <span id="clock" style="padding: 15px; color: var(--text-muted); font-family: monospace;"></span>
+    </nav>
+
+    <!-- Hub Tab -->
+    <div id="tab-hub" class="tab-content {{ 'active' if active_tab == 'hub' else '' }}">
+        <div class="page-header">
+            <h1>Dashboard Hub</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="refreshHub()">Refresh</button>
+            </div>
+        </div>
+
+        <!-- Remote Machines -->
+        <div class="remote-panel">
+            <h3>Connected Machines</h3>
+            <div class="machine-list" id="machine-list">
+                <div class="machine-card active">
+                    <strong>Local</strong><br>
+                    <span class="muted">This machine</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scoreboard -->
+        <div class="card">
+            <h3>Experiment Scoreboard</h3>
+            <div id="scoreboard-content">Loading scoreboard...</div>
+        </div>
+    </div>
+
+    <!-- Live Tab -->
+    <div id="tab-live" class="tab-content {{ 'active' if active_tab == 'live' else '' }}">
+        <div class="page-header">
+            <h1>Live Trading</h1>
+            <div class="header-actions">
+                <span id="live-status" class="badge">Connecting...</span>
+            </div>
+        </div>
+
+        <div class="stats-row" id="live-stats">
+            <div class="stat-card">
+                <div class="label">Balance</div>
+                <div class="value" id="live-balance">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">P&L</div>
+                <div class="value" id="live-pnl">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Win Rate</div>
+                <div class="value" id="live-winrate">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Positions</div>
+                <div class="value" id="live-positions">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Tradier</div>
+                <div class="value" id="live-tradier">--</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Price Chart</h3>
+            <div class="chart-container" style="height: 400px;">
+                <canvas id="live-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <h3>Recent Trades</h3>
+            <div id="live-trades">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Training Tab -->
+    <div id="tab-training" class="tab-content {{ 'active' if active_tab == 'training' else '' }}">
+        <div class="page-header">
+            <h1>Training Monitor</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="refreshTraining()">Refresh</button>
+            </div>
+        </div>
+
+        <div class="run-selector">
+            <label>Active Run:</label>
+            <select id="run-select" onchange="selectRun(this.value)">
+                <option value="">Select a run...</option>
+            </select>
+            <span id="run-status" class="muted"></span>
+        </div>
+
+        <div class="stats-row" id="training-stats">
+            <div class="stat-card">
+                <div class="label">Cycles</div>
+                <div class="value" id="training-cycles">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">P&L</div>
+                <div class="value" id="training-pnl">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Win Rate</div>
+                <div class="value" id="training-winrate">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Trades</div>
+                <div class="value" id="training-trades">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Signals</div>
+                <div class="value" id="training-signals">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Phase</div>
+                <div class="value" id="training-phase">--</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Training Progress</h3>
+            <div class="chart-container" style="height: 350px;">
+                <canvas id="training-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Tab -->
+    <div id="tab-history" class="tab-content {{ 'active' if active_tab == 'history' else '' }}">
+        <div class="page-header">
+            <h1>Model History</h1>
+            <div class="header-actions">
+                <span id="model-count" class="muted">Loading...</span>
+            </div>
+        </div>
+
+        <div class="model-grid">
+            <div class="model-sidebar" id="model-list">
+                <div class="loading">Loading models...</div>
+            </div>
+            <div class="model-detail" id="model-detail">
+                <div class="empty-state">
+                    <h3>Select a Model</h3>
+                    <p>Choose a model from the list to view details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared JS -->
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/components.js"></script>
+
+    <script>
+        // State
+        let currentTab = '{{ active_tab }}';
+        let selectedRun = null;
+        let selectedModel = null;
+        let liveChart = null;
+        let trainingChart = null;
+        let refreshIntervals = {};
+
+        // Tab switching
+        function switchTab(tab) {
+            // Update URL without reload
+            history.pushState({}, '', '/' + (tab === 'hub' ? '' : tab));
+
+            // Update UI
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`.tab-btn:nth-child(${['hub', 'live', 'training', 'history'].indexOf(tab) + 1})`).classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+
+            currentTab = tab;
+
+            // Load tab data
+            if (tab === 'hub') loadHub();
+            else if (tab === 'live') loadLive();
+            else if (tab === 'training') loadTraining();
+            else if (tab === 'history') loadHistory();
+        }
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // ==================== HUB ====================
+        async function loadHub() {
+            loadMachines();
+            loadScoreboard();
+        }
+
+        async function loadMachines() {
+            try {
+                const resp = await fetch('/api/remote/machines');
+                const data = await resp.json();
+
+                const container = document.getElementById('machine-list');
+                let html = `
+                    <div class="machine-card active">
+                        <strong>Local</strong><br>
+                        <span class="muted">This machine</span>
+                    </div>
+                `;
+
+                for (const m of data.machines || []) {
+                    html += `
+                        <div class="machine-card ${m.status}">
+                            <strong>${m.hostname || m.machine_id}</strong><br>
+                            <span class="muted">${m.runs?.length || 0} runs</span>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('Error loading machines:', e);
+            }
+        }
+
+        async function loadScoreboard() {
+            try {
+                const resp = await fetch('/api/scoreboard?limit=20&sort=pnl_pct&order=desc');
+                const data = await resp.json();
+
+                if (!data.experiments || data.experiments.length === 0) {
+                    document.getElementById('scoreboard-content').innerHTML = '<div class="empty-state">No experiments yet</div>';
+                    return;
+                }
+
+                let html = `
+                    <table class="trades-table">
+                        <thead>
+                            <tr>
+                                <th>Run ID</th>
+                                <th>P&L %</th>
+                                <th>Win Rate</th>
+                                <th>Trades</th>
+                                <th>Cycles</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                for (const exp of data.experiments) {
+                    const pnlClass = exp.pnl_pct >= 0 ? 'positive' : 'negative';
+                    html += `
+                        <tr>
+                            <td>${exp.run_id || '-'}</td>
+                            <td class="${pnlClass}">${exp.pnl_pct >= 0 ? '+' : ''}${(exp.pnl_pct || 0).toFixed(1)}%</td>
+                            <td>${(exp.win_rate || 0).toFixed(1)}%</td>
+                            <td>${exp.total_trades || 0}</td>
+                            <td>${(exp.total_cycles || 0).toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+
+                html += '</tbody></table>';
+                document.getElementById('scoreboard-content').innerHTML = html;
+            } catch (e) {
+                document.getElementById('scoreboard-content').innerHTML = '<div class="error">Error loading scoreboard</div>';
+            }
+        }
+
+        function refreshHub() {
+            loadHub();
+        }
+
+        // ==================== LIVE ====================
+        async function loadLive() {
+            try {
+                const resp = await fetch('/api/live/data');
+                const data = await resp.json();
+
+                document.getElementById('live-status').textContent = data.tradier_is_sandbox ? 'SANDBOX' : 'LIVE';
+                document.getElementById('live-status').className = 'badge ' + (data.tradier_is_sandbox ? '' : 'live');
+
+                document.getElementById('live-balance').textContent = fmt.currency(data.current_balance || 0);
+                document.getElementById('live-pnl').textContent = fmt.currency(data.pnl || 0, true);
+                document.getElementById('live-pnl').className = 'value ' + (data.pnl >= 0 ? 'positive' : 'negative');
+                document.getElementById('live-winrate').textContent = fmt.pct(data.win_rate || 0);
+                document.getElementById('live-positions').textContent = data.tradier_positions || 0;
+                document.getElementById('live-tradier').textContent = fmt.currency(data.tradier_balance || 0);
+
+                // Load chart
+                loadLiveChart();
+
+                // Recent trades
+                if (data.recent_trades && data.recent_trades.length > 0) {
+                    document.getElementById('live-trades').innerHTML = renderTradesTable(
+                        data.recent_trades.slice(0, 10),
+                        { emptyMessage: 'No trades yet' }
+                    );
+                } else {
+                    document.getElementById('live-trades').innerHTML = '<div class="empty-state">No trades yet</div>';
+                }
+            } catch (e) {
+                console.error('Error loading live data:', e);
+                document.getElementById('live-status').textContent = 'OFFLINE';
+            }
+        }
+
+        async function loadLiveChart() {
+            try {
+                const resp = await fetch('/api/live/chart');
+                const data = await resp.json();
+
+                if (!data.spy_prices || data.spy_prices.length === 0) return;
+
+                const ctx = document.getElementById('live-chart').getContext('2d');
+
+                if (liveChart) liveChart.destroy();
+
+                liveChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'SPY',
+                            data: data.spy_prices.map(p => ({ x: new Date(p[0]), y: p[1] })),
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            fill: true,
+                            tension: 0.1,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { type: 'time', grid: { color: '#2a2a3a' }, ticks: { color: '#888' } },
+                            y: { grid: { color: '#2a2a3a' }, ticks: { color: '#888' } }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Error loading live chart:', e);
+            }
+        }
+
+        // ==================== TRAINING ====================
+        async function loadTraining() {
+            // Load runs list
+            try {
+                const resp = await fetch('/api/training/runs');
+                const data = await resp.json();
+
+                const select = document.getElementById('run-select');
+                select.innerHTML = '<option value="">Select a run...</option>';
+
+                const activeCount = data.active_count || 0;
+                document.getElementById('active-runs-badge').textContent = activeCount;
+
+                for (const run of data.runs || []) {
+                    const opt = document.createElement('option');
+                    opt.value = run.log_file;
+                    opt.textContent = `${run.run_name} ${run.is_active ? '(ACTIVE)' : ''} - ${run.size_mb}MB`;
+                    if (run.source !== 'local') opt.textContent += ` [${run.source}]`;
+                    select.appendChild(opt);
+                }
+
+                // Auto-select first active run
+                const activeRun = data.runs?.find(r => r.is_active);
+                if (activeRun) {
+                    select.value = activeRun.log_file;
+                    selectRun(activeRun.log_file);
+                }
+            } catch (e) {
+                console.error('Error loading training runs:', e);
+            }
+        }
+
+        async function selectRun(logFile) {
+            selectedRun = logFile;
+            if (!logFile) return;
+
+            try {
+                const resp = await fetch(`/api/training/data?log_file=${encodeURIComponent(logFile)}`);
+                const data = await resp.json();
+
+                document.getElementById('training-cycles').textContent = (data.cycles || 0).toLocaleString();
+                document.getElementById('training-pnl').textContent = fmt.currency(data.pnl || 0, true);
+                document.getElementById('training-pnl').className = 'value ' + (data.pnl >= 0 ? 'positive' : 'negative');
+                document.getElementById('training-winrate').textContent = fmt.pct(data.win_rate || 0);
+                document.getElementById('training-trades').textContent = data.trades || 0;
+                document.getElementById('training-signals').textContent = data.signals || 0;
+                document.getElementById('training-phase').textContent = data.phase || '--';
+
+                document.getElementById('run-status').textContent = `Last update: ${data.last_update || '--'}`;
+            } catch (e) {
+                console.error('Error loading training data:', e);
+            }
+        }
+
+        function refreshTraining() {
+            loadTraining();
+            if (selectedRun) selectRun(selectedRun);
+        }
+
+        // ==================== HISTORY ====================
+        async function loadHistory() {
+            try {
+                const resp = await fetch('/api/history/models');
+                const data = await resp.json();
+
+                document.getElementById('model-count').textContent = `${data.count} models`;
+
+                const container = document.getElementById('model-list');
+
+                if (!data.models || data.models.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No models found</div>';
+                    return;
+                }
+
+                container.innerHTML = data.models.map(m => `
+                    <div class="model-item" onclick="selectModel('${m.run_id}')">
+                        <div class="model-name">${m.run_id}</div>
+                        <div class="model-stats">
+                            <div><span class="muted">P&L:</span> <span class="${m.pnl >= 0 ? 'positive' : 'negative'}">${m.pnl >= 0 ? '+' : ''}${m.pnl_pct.toFixed(1)}%</span></div>
+                            <div><span class="muted">Win:</span> ${m.win_rate.toFixed(1)}%</div>
+                            <div><span class="muted">Trades:</span> ${m.total_trades}</div>
+                            <div><span class="muted">Cycles:</span> ${m.total_cycles.toLocaleString()}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Error loading history:', e);
+            }
+        }
+
+        async function selectModel(runId) {
+            selectedModel = runId;
+
+            // Update selection UI
+            document.querySelectorAll('.model-item').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            try {
+                const [modelResp, tradesResp] = await Promise.all([
+                    fetch(`/api/history/model/${runId}`),
+                    fetch(`/api/history/model/${runId}/trades`)
+                ]);
+
+                const model = await modelResp.json();
+                const tradesData = await tradesResp.json();
+
+                if (model.error) {
+                    document.getElementById('model-detail').innerHTML = `<div class="error">${model.error}</div>`;
+                    return;
+                }
+
+                const pnlClass = model.pnl >= 0 ? 'positive' : 'negative';
+
+                document.getElementById('model-detail').innerHTML = `
+                    <h2>${model.run_id}</h2>
+                    <p class="muted">Timestamp: ${model.timestamp || 'Unknown'}</p>
+
+                    <div class="stats-row" style="margin: 20px 0;">
+                        <div class="stat-card">
+                            <div class="label">P&L</div>
+                            <div class="value ${pnlClass}">${model.pnl >= 0 ? '+' : ''}$${Math.abs(model.pnl).toFixed(2)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Return</div>
+                            <div class="value ${pnlClass}">${model.pnl_pct >= 0 ? '+' : ''}${model.pnl_pct.toFixed(2)}%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Win Rate</div>
+                            <div class="value">${model.win_rate.toFixed(1)}%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Trades</div>
+                            <div class="value">${model.total_trades}</div>
+                        </div>
+                    </div>
+
+                    <h3>Trade History (${tradesData.trade_count || 0} trades)</h3>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        ${renderTradesTable(tradesData.trades || [], { emptyMessage: 'No trades' })}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('model-detail').innerHTML = `<div class="error">Error loading model</div>`;
+            }
+        }
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load initial tab
+            if (currentTab === 'hub') loadHub();
+            else if (currentTab === 'live') loadLive();
+            else if (currentTab === 'training') loadTraining();
+            else if (currentTab === 'history') loadHistory();
+
+            // Auto-refresh live and training tabs
+            setInterval(() => {
+                if (currentTab === 'live') loadLive();
+                if (currentTab === 'training' && selectedRun) selectRun(selectedRun);
+            }, 5000);
+
+            // Refresh machines periodically
+            setInterval(loadMachines, 30000);
+        });
+    </script>
+</body>
+</html>

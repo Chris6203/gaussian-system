@@ -1,0 +1,160 @@
+/**
+ * Chart Styles - Chart.js specific styles
+ * Used by: Live, Training dashboards
+ */
+
+/* Chart Section Container */
+.chart-section {
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    width: 100%;
+}
+
+/* Chart Header */
+.chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.chart-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.chart-title .price {
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    margin-left: 8px;
+}
+
+.chart-title .vix {
+    color: rgba(32, 150, 90, 0.8);
+    font-family: var(--font-mono);
+}
+
+.chart-title .separator {
+    color: var(--text-muted);
+    margin: 0 8px;
+}
+
+/* Chart Controls */
+.chart-controls {
+    display: flex;
+    gap: var(--gap-sm);
+}
+
+/* Chart Hint */
+.chart-hint {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    padding: 4px 14px;
+}
+
+/* Chart Container */
+.chart-container {
+    height: 280px;
+    padding: 8px;
+    cursor: grab;
+}
+
+.chart-container:active {
+    cursor: grabbing;
+}
+
+.chart-container canvas {
+    touch-action: none;
+}
+
+/* Taller Chart Variant */
+.chart-container.tall {
+    height: 400px;
+}
+
+/* Shorter Chart Variant */
+.chart-container.short {
+    height: 200px;
+}
+
+/* Chart Footer */
+.chart-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--bg-elevated);
+    font-size: var(--text-sm);
+    color: var(--text-dim);
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+/* Chart Legend */
+.chart-legend {
+    display: flex;
+    gap: 12px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* Chart Update Counter */
+.chart-updates {
+    font-family: var(--font-mono);
+}
+
+/* Mini P&L Chart (for modals) */
+.pnl-chart-container {
+    height: 200px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    margin-bottom: 16px;
+}
+
+/* Equity Curve */
+.equity-curve {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.equity-curve.positive {
+    stroke: var(--green);
+}
+
+.equity-curve.negative {
+    stroke: var(--red);
+}
+
+/* Trade Markers on Chart */
+.trade-marker {
+    cursor: pointer;
+}
+
+.trade-marker.win {
+    fill: var(--green);
+}
+
+.trade-marker.loss {
+    fill: var(--red);
+}
+
+/* Chart Annotation Styles (for chartjs-plugin-annotation) */
+.chart-annotation-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+}

@@ -5,32 +5,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Training Dashboard</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+
+    <!-- Shared CSS (variables, reset, base styles) -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
-    <style>
-        :root {
-            --bg-dark: #0a0a0f;
-            --bg-card: #12121a;
-            --bg-elevated: #1a1a24;
-            --border: #2a2a3a;
-            --text: #f0f0f5;
-            --text-dim: #8888a0;
-            --text-muted: #555566;
-            --accent: #7c5cff;
-            --green: #00d68f;
-            --green-dim: rgba(0, 214, 143, 0.15);
-            --red: #ff5c7c;
-            --red-dim: rgba(255, 92, 124, 0.15);
-            --yellow: #ffc233;
-            --cyan: #00c8ff;
-        }
 
+    <!-- Page-specific styles (uses shared CSS variables from above) -->
+    <style>
         * {
             margin: 0;
             padding: 0;
@@ -45,7 +35,7 @@
         }
 
         .mono {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', var(--font-mono), monospace;
         }
 
         /* Header */
@@ -766,28 +756,14 @@
         </div>
     </div>
 
+    <!-- Shared utilities -->
+    <script src="/static/js/utils.js"></script>
+
     <script>
         const API_URL = '/api/data';
         const REFRESH_MS = 1500;
 
-        const fmt = {
-            currency: (v, sign = false) => {
-                if (v == null) return '--';
-                const s = sign && v >= 0 ? '+' : '';
-                return `${s}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            },
-            pct: (v, sign = false) => {
-                if (v == null) return '--';
-                const s = sign && v >= 0 ? '+' : '';
-                return `${s}${v.toFixed(1)}%`;
-            },
-            runtime: (s) => {
-                const h = Math.floor(s / 3600);
-                const m = Math.floor((s % 3600) / 60);
-                const sec = Math.floor(s % 60);
-                return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-            }
-        };
+        // Uses fmt from shared utils.js (currency, pct, runtime already defined)
 
         // Chart
         let spyChart = null;

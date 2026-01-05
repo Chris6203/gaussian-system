@@ -80,8 +80,8 @@ set ENTRY_CONTROLLER=q_scorer && python go_live_only.py models/run_YYYYMMDD_HHMM
 python -m pytest tests/                    # Run all tests
 python -m pytest tests/test_features.py -v # Single test file
 python scripts/diagnose_win_rate.py        # Debug poor performance
-python training_dashboard_server.py        # Web dashboard (port 5001)
-python dashboard_hub_server.py             # Unified hub with Agent API (port 5003)
+python unified_dashboard_server.py         # Unified dashboard (port 5003) - RECOMMENDED
+python dashboard_hub_server.py             # Hub only with Agent API (port 5003)
 ```
 
 ### Data Management
@@ -402,35 +402,83 @@ See `docs/SYSTEM_ARCHITECTURE.md` "Debugging Win Rate" section. Quick reference:
 
 ## Dashboards
 
-The system has multiple dashboards for monitoring and analysis:
+### Unified Dashboard (Recommended - Port 5003)
 
-### Dashboard Hub (NEW - Port 5003)
-
-Unified dashboard with scoreboard, trade browser, and agent API:
+Single dashboard server combining all functionality with tab-based navigation:
 
 ```bash
-python dashboard_hub_server.py  # Hub on port 5003
+python unified_dashboard_server.py  # All-in-one dashboard on port 5003
 ```
 
 **Features:**
-- Experiment Scoreboard - Sort/filter all 240+ experiments (click column headers to sort)
-- Run Detail Modal - Click any run name to see P&L chart and trade history
-- Trade Browser - Browse/filter trades with aggregations
-- Agent API - REST endpoints for AI collaboration
-- Links to existing Training and Live dashboards
+- **Hub Tab** - Experiment scoreboard, remote machines, overview
+- **Live Tab** - Live trading with Tradier integration
+- **Training Tab** - Real-time training monitoring with run selector
+- **History Tab** - Browse past model runs and SUMMARY.txt data
+- **Remote Ingestion** - Training machines can push data to central dashboard
+- **Agent API** - REST endpoints for AI collaboration
 
-**Access URLs:**
-- Local: `http://localhost:5003/`
-- Network: `http://192.168.20.235/gaussian/` (via nginx)
-- External: `http://50.127.71.5/gaussian/` (if gateway configured)
+**URLs:**
+- `/` or `/hub` - Hub/overview (scoreboard, remote machines)
+- `/live` - Live trading monitor
+- `/training` - Training experiment monitor
+- `/history` - Past model runs
 
-### Existing Dashboards
+**Multi-Machine Setup:**
+```
+┌─────────────────┐     POST /api/remote/heartbeat
+│ Training Box 1  │────────────────────┐
+└─────────────────┘                    │
+                                       ▼
+┌─────────────────┐     ┌──────────────────────────┐
+│ Training Box 2  │────▶│   Unified Dashboard      │
+└─────────────────┘     │   (central server)       │
+                        └──────────────────────────┘
+┌─────────────────┐              ▲
+│ Live Trading    │──────────────┘
+│ Machine         │
+└─────────────────┘
+```
+
+**On training machines (optional remote client):**
+```bash
+DASHBOARD_URL=http://central-server:5003 python scripts/dashboard_remote_client.py
+```
+
+### Legacy Dashboards (Still Available)
+
+Individual dashboard servers are still available if needed:
 
 | Dashboard | Port | Command | Purpose |
 |-----------|------|---------|---------|
-| Training | 5001 | `python training_dashboard_server.py` | Real-time training monitoring |
-| Live | 5000 | `python dashboard_server.py` | Live trading with Tradier |
-| History | 5002 | `python history_dashboard_server.py` | Browse past models |
+| Hub | 5003 | `python dashboard_hub_server.py` | Scoreboard + Agent API only |
+| Training | 5001 | `python training_dashboard_server.py` | Training monitoring only |
+| Live | 5000 | `python dashboard_server.py` | Live trading only |
+| History | 5002 | `python history_dashboard_server.py` | Model history only |
+
+### Dashboard Front-End Structure
+
+Shared CSS/JS files for consistent styling:
+
+```
+static/
+  css/
+    variables.css   # Shared colors, spacing
+    base.css        # Reset, typography, layout
+    components.css  # Cards, tables, buttons, modals
+    chart.css       # Chart.js styles
+  js/
+    utils.js        # fmt.currency(), fmt.pct(), etc.
+    api.js          # DashboardAPI fetch wrapper
+    chart-config.js # Chart.js factory functions
+    components.js   # Render helpers
+templates/
+    unified.html    # Unified tabbed dashboard
+    hub.html        # Hub-only template
+    training.html   # Training-only template
+    dashboard.html  # Live-only template
+    history.html    # History-only template
+```
 
 ## Agent API for AI Collaboration
 

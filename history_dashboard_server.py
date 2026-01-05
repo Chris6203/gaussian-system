@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 
 # Version
@@ -61,7 +61,7 @@ CONFIG = load_config()
 # FLASK APP
 # =============================================================================
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
 # =============================================================================
@@ -256,7 +256,7 @@ def load_trades_from_db(run_id: str, summary: Dict[str, Any]) -> List[Dict[str, 
 @app.route('/')
 def index():
     """Serve the dashboard HTML."""
-    return send_file('history_dashboard.html')
+    return send_from_directory('templates', 'history.html')
 
 
 @app.route('/api/models')
