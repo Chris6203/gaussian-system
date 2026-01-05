@@ -33,20 +33,25 @@ sys.path.insert(0, str(BASE_DIR))
 
 # Dashboard configurations
 DASHBOARDS = {
+    'unified': {
+        'script': 'core/dashboards/unified_dashboard_server.py',
+        'port': 5001,
+        'description': 'Unified dashboard (hub, live, training, history)'
+    },
     'live': {
         'script': 'core/dashboards/dashboard_server.py',
         'port': 5000,
-        'description': 'Live trading dashboard'
+        'description': 'Live trading dashboard (legacy)'
     },
     'training': {
         'script': 'core/dashboards/training_dashboard_server.py',
         'port': 5001,
-        'description': 'Training/simulation dashboard'
+        'description': 'Training/simulation dashboard (legacy)'
     },
     'history': {
         'script': 'core/dashboards/history_dashboard_server.py',
         'port': 5002,
-        'description': 'Historical model browser'
+        'description': 'Historical model browser (legacy)'
     }
 }
 
@@ -182,7 +187,7 @@ def run_single_dashboard(name: str, port: Optional[int] = None):
 
 
 def run_all_dashboards():
-    """Run all dashboards as background processes."""
+    """Run all legacy dashboards as background processes (not unified)."""
     global processes
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -191,16 +196,18 @@ def run_all_dashboards():
     server_config = load_server_config()
     main_ip = server_config.get('main_server', {}).get('ip', 'localhost')
 
-    print("\n=== Starting All Dashboards ===\n")
+    print("\n=== Starting Legacy Dashboards ===\n")
+    print("Note: Use 'python dashboard.py' (no args) for the unified dashboard.\n")
 
-    for name, config in DASHBOARDS.items():
+    legacy_dashboards = {k: v for k, v in DASHBOARDS.items() if k != 'unified'}
+    for name, config in legacy_dashboards.items():
         proc = start_dashboard(name)
         if proc:
             processes.append(proc)
             time.sleep(1)  # Give each server time to start
 
-    print("\nAll dashboards started:")
-    for name, config in DASHBOARDS.items():
+    print("\nLegacy dashboards started:")
+    for name, config in legacy_dashboards.items():
         print(f"  {config['description']:30} http://{main_ip}:{config['port']}")
 
     print("\nPress Ctrl+C to stop all dashboards\n")
@@ -232,10 +239,11 @@ Examples:
         """
     )
 
-    parser.add_argument("--live", action="store_true", help="Run live trading dashboard")
-    parser.add_argument("--training", action="store_true", help="Run training dashboard")
-    parser.add_argument("--history", action="store_true", help="Run history dashboard")
-    parser.add_argument("--all", action="store_true", help="Run all dashboards (default)")
+    parser.add_argument("--unified", action="store_true", help="Run unified dashboard (default)")
+    parser.add_argument("--live", action="store_true", help="Run live trading dashboard (legacy)")
+    parser.add_argument("--training", action="store_true", help="Run training dashboard (legacy)")
+    parser.add_argument("--history", action="store_true", help="Run history dashboard (legacy)")
+    parser.add_argument("--all", action="store_true", help="Run all legacy dashboards")
     parser.add_argument("--port", type=int, help="Custom port (for single dashboard mode)")
     parser.add_argument("--status", action="store_true", help="Show dashboard status")
 
@@ -247,6 +255,8 @@ Examples:
 
     # Determine which dashboard(s) to run
     selected = []
+    if args.unified:
+        selected.append('unified')
     if args.live:
         selected.append('live')
     if args.training:
@@ -254,8 +264,13 @@ Examples:
     if args.history:
         selected.append('history')
 
-    if len(selected) == 0 or args.all:
-        # Run all dashboards
+    if len(selected) == 0:
+        # Default: run unified dashboard
+        run_single_dashboard('unified', args.port)
+        return
+
+    if args.all:
+        # Run all legacy dashboards
         run_all_dashboards()
     elif len(selected) == 1:
         # Run single dashboard in foreground
