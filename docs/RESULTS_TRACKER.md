@@ -7840,3 +7840,30 @@ This is why HIGH_MIN_RET (+423% P&L) performed well - it inadvertently filtered 
 - `CLAUDE.md`: Updated with confidence calibration findings
 
 ---
+
+### Entropy Confidence Test Results (2026-01-06)
+
+Using `USE_ENTROPY_CONFIDENCE=1` to replace broken confidence head with direction entropy:
+
+| Metric | Value |
+|--------|-------|
+| P&L | **+18.10%** |
+| Win Rate | 36.8% |
+| Trades | 275 |
+| P&L/DD | 0.22 |
+
+**Conclusion**: Entropy confidence is an improvement over the broken confidence head (+18.1% vs potential losses), but not as effective as simply filtering with `TRAIN_MAX_CONF=0.25` (+423% for HIGH_MIN_RET).
+
+**Recommended approach**: Use `TRAIN_MAX_CONF=0.25` to filter out broken high-confidence signals.
+
+### Pretraining Script
+
+`scripts/pretrain_confidence.py` created to offline-train confidence head with BCE loss.
+Currently running on 2.87M samples from historical datasets.
+
+Usage after pretraining completes:
+```bash
+LOAD_PRETRAINED=1 PRETRAINED_MODEL_PATH=models/pretrained_bce.pt python scripts/train_time_travel.py
+```
+
+---
