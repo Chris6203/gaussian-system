@@ -231,6 +231,14 @@ class XGBoostExitPolicy:
         """Fallback simple rules when ML not ready"""
         cfg = self.config
 
+        # MIN_HOLD_BEFORE_EXIT: Prevent early loss exits (analysis shows winners hold 14min avg)
+        # Only block loss exits - still allow take profit and expiry exits
+        min_hold = float(os.environ.get('MIN_HOLD_BEFORE_EXIT', '0'))
+        if min_hold > 0 and time_held_minutes < min_hold and pnl_pct < cfg.fallback_take_profit:
+            # Don't exit early unless hitting stop loss (catastrophic) or take profit (good)
+            if pnl_pct > cfg.fallback_stop_loss:
+                return False, 0.2, f'⏳ MIN HOLD (rule): {time_held_minutes:.0f}m < {min_hold:.0f}m required'
+
         # Take profit
         if pnl_pct >= cfg.fallback_take_profit:
             return True, 0.95, f'💰 TAKE PROFIT (rule): +{pnl_pct:.1f}%'

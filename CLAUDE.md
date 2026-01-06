@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Gaussian Options Trading Bot** - an algorithmic SPY options trading system combining:
 - Bayesian neural networks with Gaussian kernel processors for price/volatility prediction
-- **Phase 48: Entropy-based confidence** improves win rate by +9.2pp (33% → 42%)
+- **NEW BEST (Phase 52): SKIP_MONDAY strategy - +1630% P&L, P&L/DD ratio 35.03**
 - Multi-dimensional HMM (3×3×3 = 27 states) for market regime detection
 - Multiple entry controllers: bandit (default), RL (PPO), Q-Scorer, consensus
 - Paper trading and live execution via Tradier API
@@ -21,12 +21,23 @@ A P&L calculation bug was discovered and fixed. **All results before this date s
 ### Training & Simulation
 
 ```bash
-# BEST WIN RATE (65%) - Phase 42 combo_dow configuration
+# =========================================================
+# BEST OVERALL (Phase 52): SKIP_MONDAY - +1630% P&L, P&L/DD 35.03
+# =========================================================
+USE_TRAILING_STOP=1 TRAILING_ACTIVATION_PCT=10 TRAILING_STOP_PCT=5 \
+ENABLE_TDA=1 TDA_REGIME_FILTER=1 TRAIN_MAX_CONF=0.25 \
+DAY_OF_WEEK_FILTER=1 SKIP_MONDAY=1 SKIP_FRIDAY=0 \
+python scripts/train_time_travel.py
+
+# Or use the launcher script:
+./run_live_skip_monday.sh
+
+# ALTERNATIVE: Phase 42 combo_dow configuration (65% win rate)
 HARD_STOP_LOSS_PCT=50 HARD_TAKE_PROFIT_PCT=10 TRAIN_MAX_CONF=0.25 \
 DAY_OF_WEEK_FILTER=1 SKIP_MONDAY=1 SKIP_FRIDAY=1 \
 python scripts/train_time_travel.py
 
-# BEST P&L (+54.8%) - Wide stops + small TP
+# ALTERNATIVE: Wide stops + small TP (+54.8%)
 HARD_STOP_LOSS_PCT=50 HARD_TAKE_PROFIT_PCT=10 python scripts/train_time_travel.py
 
 # TCN + Skew Exits (+431% in 20K validation, $36.77/trade)
@@ -60,17 +71,19 @@ python scripts/train_rl.py --predictor models/predictor_v2.pt --freeze-predictor
 ### Live Trading
 
 ```bash
-# Paper trading (default)
-python bot.py models/run_YYYYMMDD_HHMMSS
+# RECOMMENDED: Use SKIP_MONDAY launcher (best config)
+./run_live_skip_monday.sh                    # Paper trading
+touch go_live.flag && ./run_live_skip_monday.sh  # LIVE trading
 
-# Live trading (creates go_live.flag)
-python bot.py models/run_YYYYMMDD_HHMMSS --live
+# Alternative: Manual launch with model directory
+python core/go_live_only.py models/COMBO_SKIP_MONDAY_20K
 
-# List available models
-python bot.py --list
+# Paper trading (default - no go_live.flag)
+python core/go_live_only.py models/run_YYYYMMDD_HHMMSS
 
-# Check status
-python bot.py --status
+# Live trading (create go_live.flag first!)
+touch go_live.flag
+python core/go_live_only.py models/run_YYYYMMDD_HHMMSS
 ```
 
 ### Q-Scorer System

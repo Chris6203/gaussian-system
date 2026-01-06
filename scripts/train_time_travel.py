@@ -160,11 +160,43 @@ except ImportError:
     AlignmentDiagnosticsTracker = None
     AlignedStepState = None
 
+# Quantor Regime Filter and Fuzzy Sizing (from Jerry Mahabub & John Draper)
+try:
+    from integrations.quantor import (
+        RegimeFilter, MarketRegime,
+        FuzzyPositionSizer, FuzzyMemberships,
+        VolatilityAnalyzer
+    )
+    QUANTOR_AVAILABLE = True
+except ImportError:
+    QUANTOR_AVAILABLE = False
+    RegimeFilter = None
+    MarketRegime = None
+    FuzzyPositionSizer = None
+    FuzzyMemberships = None
+    VolatilityAnalyzer = None
+
 # Alignment config from environment
 ALIGNMENT_ENABLED = os.environ.get('ALIGNMENT_ENABLED', '1') == '1'
 ALIGNMENT_FAIL_FAST = os.environ.get('ALIGNMENT_FAIL_FAST', '1') == '1'
 ALIGNMENT_MAX_LAG_SEC = float(os.environ.get('ALIGNMENT_MAX_LAG_SEC', '600'))
 ALIGNMENT_IV_DECAY_HALF_LIFE = float(os.environ.get('ALIGNMENT_IV_DECAY_HALF_LIFE', '300'))
+
+# Quantor Regime Filter config
+QUANTOR_REGIME_FILTER = os.environ.get('QUANTOR_REGIME_FILTER', '0') == '1'
+QUANTOR_CRASH_BLOCK = os.environ.get('QUANTOR_CRASH_BLOCK', '1') == '1'
+QUANTOR_DIRECTION_FILTER = os.environ.get('QUANTOR_DIRECTION_FILTER', '1') == '1'
+
+# Quantor Fuzzy Position Sizing config
+QUANTOR_FUZZY_SIZING = os.environ.get('QUANTOR_FUZZY_SIZING', '0') == '1'
+QUANTOR_MIN_FUZZY_CONF = float(os.environ.get('QUANTOR_MIN_FUZZY_CONF', '0.4'))
+QUANTOR_FUZZY_SCALE = os.environ.get('QUANTOR_FUZZY_SCALE', '1') == '1'
+
+# Quantor Volatility Analytics config
+QUANTOR_VOL_ANALYTICS = os.environ.get('QUANTOR_VOL_ANALYTICS', '0') == '1'
+QUANTOR_VRP_FILTER = os.environ.get('QUANTOR_VRP_FILTER', '0') == '1'
+QUANTOR_DYNAMIC_STOPS = os.environ.get('QUANTOR_DYNAMIC_STOPS', '0') == '1'
+QUANTOR_ATR_STOP_MULT = float(os.environ.get('QUANTOR_ATR_STOP_MULT', '2.0'))
 
 # Log loaded configuration
 logger.info(f"[CONFIG] Entry controller: {ENTRY_CONTROLLER_TYPE}")
@@ -177,6 +209,8 @@ if RSI_MACD_FILTER_ENABLED:
     logger.info(f"[CONFIG] RSI+MACD filter ENABLED: RSI oversold<{RSI_OVERSOLD_THRESHOLD}, overbought>{RSI_OVERBOUGHT_THRESHOLD}, MACD={MACD_CONFIRM_ENABLED}")
 if JERRY_FEATURES_ENABLED or JERRY_FILTER_ENABLED:
     logger.info(f"[CONFIG] Jerry integration: features={JERRY_FEATURES_ENABLED}, filter={JERRY_FILTER_ENABLED} (threshold={JERRY_FILTER_THRESHOLD})")
+if QUANTOR_AVAILABLE and (QUANTOR_REGIME_FILTER or QUANTOR_FUZZY_SIZING or QUANTOR_VOL_ANALYTICS):
+    logger.info(f"[CONFIG] Quantor-MTFuzz: regime={QUANTOR_REGIME_FILTER}, fuzzy={QUANTOR_FUZZY_SIZING} (min={QUANTOR_MIN_FUZZY_CONF}), vol={QUANTOR_VOL_ANALYTICS}")
 
 if TT_QUIET:
     _orig_print = builtins.print
@@ -1796,6 +1830,29 @@ if ALIGNMENT_TRACKING_AVAILABLE and ALIGNMENT_ENABLED:
     alignment_tracker = AlignmentDiagnosticsTracker(alignment_config)
     alignment_aligner = DataAligner(alignment_config)
     logger.info("[OK] Data alignment tracker initialized")
+
+# Initialize Quantor regime filter and fuzzy position sizer (Jerry Mahabub & John Draper)
+quantor_regime_filter = None
+quantor_fuzzy_sizer = None
+quantor_vol_analyzer = None
+quantor_stats = {"regime_blocked": 0, "fuzzy_scaled": 0, "vrp_blocked": 0, "trades_evaluated": 0}
+
+print(f"[*] QUANTOR_AVAILABLE={QUANTOR_AVAILABLE}, REGIME={QUANTOR_REGIME_FILTER}, FUZZY={QUANTOR_FUZZY_SIZING}")
+if QUANTOR_AVAILABLE and (QUANTOR_REGIME_FILTER or QUANTOR_FUZZY_SIZING or QUANTOR_VOL_ANALYTICS):
+    if QUANTOR_REGIME_FILTER:
+        quantor_regime_filter = RegimeFilter()
+        print(f"[*] Quantor regime filter initialized (crash_block={QUANTOR_CRASH_BLOCK}, direction_filter={QUANTOR_DIRECTION_FILTER})")
+        logger.info("[OK] Quantor regime filter initialized (crash_block=%s, direction_filter=%s)",
+                   QUANTOR_CRASH_BLOCK, QUANTOR_DIRECTION_FILTER)
+    if QUANTOR_FUZZY_SIZING:
+        quantor_fuzzy_sizer = FuzzyPositionSizer()
+        print(f"[*] Quantor fuzzy position sizer initialized (min_conf={QUANTOR_MIN_FUZZY_CONF:.2f}, scale={QUANTOR_FUZZY_SCALE})")
+        logger.info("[OK] Quantor fuzzy position sizer initialized (min_conf=%.2f, scale=%s)",
+                   QUANTOR_MIN_FUZZY_CONF, QUANTOR_FUZZY_SCALE)
+    if QUANTOR_VOL_ANALYTICS:
+        quantor_vol_analyzer = VolatilityAnalyzer()
+        logger.info("[OK] Quantor volatility analyzer initialized (vrp_filter=%s, dynamic_stops=%s)",
+                   QUANTOR_VRP_FILTER, QUANTOR_DYNAMIC_STOPS)
 
 # Helper: robustly lookup future close for realized-move scoring
 def _lookup_close(df, ts, tolerance_minutes: int = 5):
@@ -3495,6 +3552,18 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception:
                                     pass
 
+                            # CALLS_ONLY: Only trade calls (analysis shows 3.8% higher WR)
+                            if filter_ok and os.environ.get('CALLS_ONLY', '0') == '1':
+                                if action != 'BUY_CALLS':
+                                    filter_ok = False
+                                    filter_reason = "calls_only_filter"
+
+                            # PUTS_ONLY: Only trade puts (for testing)
+                            if filter_ok and os.environ.get('PUTS_ONLY', '0') == '1':
+                                if action != 'BUY_PUTS':
+                                    filter_ok = False
+                                    filter_reason = "puts_only_filter"
+
                             # PHASE 44: Advanced signal integration
                             phase44_boost = 0.0
                             phase44_veto = False
@@ -3606,6 +3675,46 @@ for idx, sim_time in enumerate(common_times):
                                 if mins_since_open < 0 or mins_since_open > 90:
                                     filter_ok = False
                                     filter_reason = f"first_90_min_only ({mins_since_open:.0f}m since open)"
+
+                            # SKIP_FIRST_90_MIN: Skip trading in first 90 minutes (analysis shows 28% WR)
+                            if filter_ok and os.environ.get('SKIP_FIRST_90_MIN', '0') == '1':
+                                market_open_time = sim_time.replace(hour=9, minute=30, second=0, microsecond=0)
+                                mins_since_open = (sim_time - market_open_time).total_seconds() / 60
+                                if 0 <= mins_since_open <= 90:
+                                    filter_ok = False
+                                    filter_reason = f"skip_first_90_min ({mins_since_open:.0f}m since open)"
+
+                            # MIDDAY_ONLY: Only trade 13:00-14:59 (analysis shows 57% WR vs 33%)
+                            if filter_ok and os.environ.get('MIDDAY_ONLY', '0') == '1':
+                                hour = sim_time.hour
+                                if not (13 <= hour <= 14):
+                                    filter_ok = False
+                                    filter_reason = f"midday_only (hour={hour})"
+
+                            # SKIP_LAST_HOUR: Skip 15:00-15:59 (analysis shows 10% WR for CALLs)
+                            if filter_ok and os.environ.get('SKIP_LAST_HOUR', '0') == '1':
+                                hour = sim_time.hour
+                                if hour == 15:
+                                    filter_ok = False
+                                    filter_reason = f"skip_last_hour (hour={hour})"
+
+                            # AVOID_NEGMOM_PUT: Avoid negative momentum + PUT combo (0% WR!)
+                            if filter_ok and os.environ.get('AVOID_NEGMOM_PUT', '0') == '1':
+                                mom_5m = momentum_5min if 'momentum_5min' in dir() else 0.0
+                                is_put = action == 'BUY_PUTS'
+                                if is_put and mom_5m < 0:
+                                    filter_ok = False
+                                    filter_reason = f"avoid_negmom_put (mom={mom_5m:.4f})"
+
+                            # REQUIRE_MIN_VOLUME: Require minimum volume spike (0.5x = 50% of avg)
+                            if filter_ok and os.environ.get('REQUIRE_MIN_VOLUME', ''):
+                                min_vol = float(os.environ.get('REQUIRE_MIN_VOLUME', '0.5'))
+                                vol_spike = 1.0  # Default
+                                if hasattr(bot, 'last_features') and bot.last_features:
+                                    vol_spike = bot.last_features.get('volume_spike', 1.0)
+                                if vol_spike < min_vol:
+                                    filter_ok = False
+                                    filter_reason = f"min_volume ({vol_spike:.2f} < {min_vol})"
 
                             # MIN_ABS_MOMENTUM: Require minimum momentum magnitude
                             if filter_ok and os.environ.get('MIN_ABS_MOMENTUM', ''):
@@ -3896,6 +4005,114 @@ for idx, sim_time in enumerate(common_times):
                             print(f"   [PNL_CAL] Learning phase ({pnl_samples}/{PNL_CAL_MIN_SAMPLES} samples)")
                     except Exception as e:
                         logger.debug(f"[PNL_CAL] Error: {e}")
+
+                # ============================================================
+                # ADD TECHNICAL INDICATORS FOR QUANTOR (if not already present)
+                # ============================================================
+                if should_trade and (QUANTOR_FUZZY_SIZING or QUANTOR_REGIME_FILTER):
+                    if add_indicators_to_signal is not None and signal:
+                        try:
+                            price_data_ti = tt_source.get_data(trading_symbol, period='1d', interval=TT_DATA_INTERVAL)
+                            spy_data_ti = tt_source.get_data('SPY', period='1d', interval=TT_DATA_INTERVAL)
+                            qqq_data_ti = tt_source.get_data('QQQ', period='1d', interval=TT_DATA_INTERVAL)
+                            add_indicators_to_signal(signal, price_data_ti, spy_data_ti, qqq_data_ti)
+                        except Exception as e:
+                            logger.debug(f"[QUANTOR] Could not add technical indicators: {e}")
+
+                # ============================================================
+                # QUANTOR REGIME FILTER (Jerry Mahabub & John Draper)
+                # Blocks trades during CRASH mode or wrong direction
+                # ============================================================
+                quantor_blocked = False
+                quantor_fuzzy_conf = 1.0  # Default: full position
+
+                if should_trade and quantor_regime_filter and QUANTOR_REGIME_FILTER:
+                    try:
+                        quantor_stats["trades_evaluated"] += 1
+
+                        # Get ADX from signal or use default
+                        adx_value = signal.get('adx', 25.0) if isinstance(signal, dict) else 25.0
+
+                        # Get SMA200 from signal or estimate from current price
+                        sma_200 = signal.get('sma_200', current_price) if isinstance(signal, dict) else current_price
+
+                        # Classify current market regime
+                        regime = quantor_regime_filter.classify_regime(
+                            vix=vix_for_rl,
+                            adx=adx_value,
+                            close=current_price,
+                            sma_200=sma_200
+                        )
+
+                        # Direction for Quantor: "CALL" or "PUT"
+                        quantor_direction = "CALL" if action == "BUY_CALLS" else "PUT"
+
+                        # Check if trading is allowed
+                        if QUANTOR_CRASH_BLOCK and regime == MarketRegime.CRASH_MODE:
+                            quantor_blocked = True
+                            should_trade = False
+                            quantor_stats["regime_blocked"] += 1
+                            print(f"   [QUANTOR] BLOCKED: CRASH_MODE (VIX={vix_for_rl:.1f})")
+                        elif QUANTOR_DIRECTION_FILTER and not quantor_regime_filter.is_trading_allowed(regime, quantor_direction):
+                            quantor_blocked = True
+                            should_trade = False
+                            quantor_stats["regime_blocked"] += 1
+                            print(f"   [QUANTOR] BLOCKED: Wrong direction ({quantor_direction} in {regime.name})")
+                        else:
+                            # Get direction bias for logging
+                            bias = quantor_regime_filter.get_direction_bias(regime)
+                            print(f"   [QUANTOR] Approved: {regime.name} (bias={bias:+.1f})")
+                    except Exception as e:
+                        logger.debug(f"[QUANTOR] Regime filter error: {e}")
+
+                # ============================================================
+                # QUANTOR FUZZY POSITION SIZING (Jerry Mahabub & John Draper)
+                # Scales position based on 9-factor fuzzy confidence
+                # ============================================================
+                if should_trade and quantor_fuzzy_sizer and QUANTOR_FUZZY_SIZING:
+                    try:
+                        # Get technical indicators from signal
+                        rsi = signal.get('rsi', 50.0) if isinstance(signal, dict) else 50.0
+                        adx = signal.get('adx', 25.0) if isinstance(signal, dict) else 25.0
+                        bb_position = signal.get('bb_position', 0.5) if isinstance(signal, dict) else 0.5
+                        atr_pct = signal.get('atr_pct', 0.01) if isinstance(signal, dict) else 0.01
+                        volume_ratio = signal.get('volume_ratio', 1.0) if isinstance(signal, dict) else 1.0
+                        macd = signal.get('macd', 0.0) if isinstance(signal, dict) else 0.0
+                        stoch_k = signal.get('stoch_k', 50.0) if isinstance(signal, dict) else 50.0
+                        obv_trend = signal.get('obv_trend', 0.0) if isinstance(signal, dict) else 0.0
+                        momentum = signal.get('momentum', 0.0) if isinstance(signal, dict) else 0.0
+
+                        # Compute fuzzy memberships
+                        quantor_direction = "CALL" if action == "BUY_CALLS" else "PUT"
+                        memberships = quantor_fuzzy_sizer.compute_memberships(
+                            direction=quantor_direction,
+                            rsi=rsi,
+                            adx=adx,
+                            bb_position=bb_position,
+                            atr_pct=atr_pct,
+                            volume_ratio=volume_ratio,
+                            macd=macd,
+                            stoch_k=stoch_k,
+                            obv_trend=obv_trend,
+                            momentum=momentum
+                        )
+
+                        # Get aggregate confidence (average of all membership values)
+                        quantor_fuzzy_conf = memberships.aggregate_confidence()
+
+                        # Block trade if fuzzy confidence too low
+                        if quantor_fuzzy_conf < QUANTOR_MIN_FUZZY_CONF:
+                            should_trade = False
+                            print(f"   [QUANTOR] BLOCKED: Fuzzy conf {quantor_fuzzy_conf:.1%} < {QUANTOR_MIN_FUZZY_CONF:.0%}")
+                        else:
+                            quantor_stats["fuzzy_scaled"] += 1
+                            # Store fuzzy confidence for position scaling
+                            if isinstance(signal, dict):
+                                signal['quantor_fuzzy_conf'] = quantor_fuzzy_conf
+                            print(f"   [QUANTOR] Fuzzy confidence: {quantor_fuzzy_conf:.1%}")
+                    except Exception as e:
+                        logger.debug(f"[QUANTOR] Fuzzy sizing error: {e}")
+                        quantor_fuzzy_conf = 1.0  # Don't block on error
 
                 # ============================================================
                 # EXECUTE TRADE FOR UNIFIED RL
@@ -4649,6 +4866,14 @@ try:
         f.write(f"  Negatives:       {gate_dataset.get('stats', {}).get('negative', 0)}\n")
         f.write(f"  Dropped(no fut): {gate_dataset.get('stats', {}).get('dropped_no_future_price', 0)}\n")
         f.write("\n")
+        # Quantor-MTFuzz stats (Jerry Mahabub & John Draper)
+        if quantor_stats and quantor_stats.get("trades_evaluated", 0) > 0:
+            f.write("Quantor-MTFuzz Integration:\n")
+            f.write(f"  Trades evaluated:  {quantor_stats.get('trades_evaluated', 0)}\n")
+            f.write(f"  Regime blocked:    {quantor_stats.get('regime_blocked', 0)}\n")
+            f.write(f"  Fuzzy scaled:      {quantor_stats.get('fuzzy_scaled', 0)}\n")
+            f.write(f"  VRP blocked:       {quantor_stats.get('vrp_blocked', 0)}\n")
+            f.write("\n")
         f.write(f"Models Saved:\n")
         f.write(f"  Neural Network:  state/trained_model.pth\n")
         f.write(f"  Optimizer:       state/optimizer_state.pth\n")
@@ -4743,6 +4968,17 @@ if pnl_calibration_tracker:
 
     except Exception as e_pnl:
         print(f"  [WARN] Could not get PnL calibration stats: {e_pnl}")
+
+# Quantor-MTFuzz stats (Jerry Mahabub & John Draper)
+if quantor_stats and quantor_stats.get("trades_evaluated", 0) > 0:
+    print(f"\n📊 QUANTOR-MTFUZZ INTEGRATION (Jerry Mahabub & John Draper):")
+    print(f"   Trades evaluated: {quantor_stats.get('trades_evaluated', 0)}")
+    print(f"   Regime blocked:   {quantor_stats.get('regime_blocked', 0)}")
+    print(f"   Fuzzy scaled:     {quantor_stats.get('fuzzy_scaled', 0)}")
+    print(f"   VRP blocked:      {quantor_stats.get('vrp_blocked', 0)}")
+    if quantor_stats.get('trades_evaluated', 0) > 0:
+        block_rate = quantor_stats.get('regime_blocked', 0) / quantor_stats.get('trades_evaluated', 1) * 100
+        print(f"   Block rate:       {block_rate:.1f}%")
 
 # Save UNIFIED RL Policy (preferred system)
 if USE_UNIFIED_RL and unified_rl is not None:
