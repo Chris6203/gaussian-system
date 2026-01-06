@@ -21,6 +21,29 @@ from pathlib import Path
 # Import market time utility for consistent Eastern time
 from backend.time_utils import get_market_time
 
+# ============================================================================
+# DATA ALIGNMENT TRACKING (Quantor-MTFuzz by Jerry Mahabub & John Draper)
+# Tracks data freshness and applies confidence decay for stale data
+# ============================================================================
+try:
+    from integrations.quantor import (
+        ChainAlignment, AlignmentMode, AlignmentConfig,
+        DataAligner, AlignmentDiagnosticsTracker
+    )
+    ALIGNMENT_AVAILABLE = True
+except ImportError:
+    ALIGNMENT_AVAILABLE = False
+    ChainAlignment = None
+    AlignmentMode = None
+    AlignmentConfig = None
+    DataAligner = None
+    AlignmentDiagnosticsTracker = None
+
+# Alignment config from environment
+ALIGNMENT_ENABLED = os.environ.get('ALIGNMENT_ENABLED', '1') == '1'
+ALIGNMENT_MAX_LAG_SEC = float(os.environ.get('ALIGNMENT_MAX_LAG_SEC', '120'))  # 2 min max lag for live
+ALIGNMENT_IV_DECAY_HALF_LIFE = float(os.environ.get('ALIGNMENT_IV_DECAY_HALF_LIFE', '60'))  # 1 min half-life
+
 # Load configuration
 from config_loader import load_config
 config = load_config("config.json")
@@ -330,6 +353,23 @@ print(f"[*] Cycle interval: {config.get('system', 'cycle_interval_seconds', defa
 print("[*] Press Ctrl+C to stop")
 print()
 
+# Initialize data alignment tracker (Quantor-MTFuzz)
+alignment_tracker = None
+alignment_aligner = None
+if ALIGNMENT_AVAILABLE and ALIGNMENT_ENABLED:
+    alignment_config = AlignmentConfig(
+        max_lag_sec=ALIGNMENT_MAX_LAG_SEC,
+        iv_decay_half_life_sec=ALIGNMENT_IV_DECAY_HALF_LIFE,
+        fail_fast_enabled=False,  # Don't fail in live trading, just warn
+        fail_fast_stale_threshold=0.5,
+        fail_fast_none_threshold=0.3,
+        fail_fast_min_bars=10
+    )
+    alignment_tracker = AlignmentDiagnosticsTracker(alignment_config)
+    alignment_aligner = DataAligner(alignment_config)
+    logger.info("[OK] Data alignment tracker initialized (live mode)")
+    print("[*] Data alignment tracking ENABLED (Quantor-MTFuzz)")
+
 cycle = 0
 signals_generated = 0  # Track non-HOLD signals
 cycle_interval = config.get('system', 'cycle_interval_seconds', default=60)
@@ -418,7 +458,47 @@ try:
                 # Log in format dashboard expects: [PRICE] SPY: $X
                 logger.info(f"[PRICE] {SYMBOL}: ${current_price:.2f}")
                 print(f"  [DATA] {SYMBOL}: ${current_price:.2f}")
-                
+
+                # ===== DATA ALIGNMENT CHECK (Quantor-MTFuzz) =====
+                # Track data freshness and warn on stale data
+                data_confidence_multiplier = 1.0
+                if alignment_aligner is not None and alignment_tracker is not None:
+                    try:
+                        # Get timestamp of latest data point
+                        data_timestamp = data.index[-1]
+                        if hasattr(data_timestamp, 'to_pydatetime'):
+                            data_timestamp = data_timestamp.to_pydatetime()
+
+                        # Compare to current time
+                        current_time = datetime.now()
+                        if hasattr(data_timestamp, 'tzinfo') and data_timestamp.tzinfo is not None:
+                            # Make current_time timezone-aware if data_timestamp is
+                            import pytz
+                            current_time = datetime.now(pytz.timezone('US/Eastern'))
+
+                        # Compute alignment
+                        alignment = alignment_aligner.align_chain(
+                            requested_ts=current_time,
+                            chain_data={'price': current_price},
+                            chain_ts=data_timestamp
+                        )
+                        alignment_tracker.record(alignment)
+                        data_confidence_multiplier = alignment.iv_conf
+
+                        # Log alignment status
+                        if alignment.mode == AlignmentMode.EXACT:
+                            logger.debug(f"[ALIGN] Data fresh: lag={alignment.lag_sec:.1f}s, conf={alignment.iv_conf:.1%}")
+                        elif alignment.mode == AlignmentMode.PRIOR:
+                            logger.info(f"[ALIGN] Data slightly stale: lag={alignment.lag_sec:.1f}s, conf={alignment.iv_conf:.1%}")
+                        elif alignment.mode == AlignmentMode.STALE:
+                            logger.warning(f"[ALIGN] ⚠️ STALE DATA: lag={alignment.lag_sec:.1f}s, conf={alignment.iv_conf:.1%}")
+                            print(f"  [WARN] Stale data detected! Confidence reduced to {alignment.iv_conf:.0%}")
+                        elif alignment.mode == AlignmentMode.NONE:
+                            logger.error(f"[ALIGN] ❌ NO DATA ALIGNMENT")
+                            data_confidence_multiplier = 0.5  # Significant penalty
+                    except Exception as align_err:
+                        logger.debug(f"[ALIGN] Could not check alignment: {align_err}")
+
                 # Save latest prices to historical database for dashboard chart
                 try:
                     import sqlite3
@@ -900,6 +980,14 @@ try:
                     signals_generated += 1  # Track signal count
                     action = signal.get('action', 'UNKNOWN')
                     confidence = signal.get('confidence', 0)
+
+                    # ===== APPLY DATA ALIGNMENT CONFIDENCE DECAY =====
+                    # Reduce confidence for stale data (Quantor-MTFuzz)
+                    if data_confidence_multiplier < 1.0:
+                        original_confidence = confidence
+                        confidence = confidence * data_confidence_multiplier
+                        logger.info(f"[ALIGN] Confidence adjusted: {original_confidence*100:.1f}% -> {confidence*100:.1f}% (stale data)")
+
                     confidence_pct = confidence * 100
 
                     # ===== INVERTED CONFIDENCE FILTER =====

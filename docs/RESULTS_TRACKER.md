@@ -88,6 +88,55 @@ The bug is likely in **which trades** get credited, not **how** they're credited
 
 ---
 
+## Phase 34: Quantor-MTFuzz Integration Tests (2026-01-06)
+
+### Goal
+Test if adding Jerry Mahabub & John Draper's Quantor-MTFuzz components improves the best SKIP_MONDAY config.
+
+### Components Tested
+1. **Regime Filter** - Block trades during CRASH mode (VIX > 35), wrong direction
+2. **Data Alignment** - Track data freshness, confidence decay for stale data
+3. **Fuzzy Position Sizing** - 9-factor membership functions
+
+### Test Results (20K cycles each)
+
+| Configuration | P&L | Win Rate | Trades | P&L/DD | Max DD |
+|--------------|-----|----------|--------|--------|--------|
+| **Original SKIP_MONDAY** | **+1630.24%** | **43.0%** | 295 | **35.03** | 46.54% |
+| BASELINE_20K_v2 (no Quantor) | +105.50% | 35.0% | 243 | 2.15 | 49.01% |
+| FULL_20K_v2 (with Quantor) | +11.14% | 40.8% | 383 | 0.15 | 75.21% |
+
+### Key Findings
+
+1. **Quantor additions HURT performance** - +11% vs +105% baseline (10x worse!)
+2. **Quantor improves win rate but destroys P&L** - 40.8% vs 35.0% WR, but 10x worse P&L
+3. **Regime filter blocked 0 trades** - VIX stayed below 35, direction aligned with HMM
+4. **Higher drawdown with Quantor** - 75% vs 49% max DD
+5. **Period sensitivity** - Original +1630% not reproducible on new data window
+
+### Why Quantor Didn't Help
+
+- SKIP_MONDAY already has TDA_REGIME_FILTER=1 (similar functionality)
+- Quantor adds overhead without additional filtering benefit
+- Test period had no CRASH mode conditions
+- Win rate improvement came at cost of worse per-trade P&L
+
+### Recommendation
+
+**Keep original SKIP_MONDAY config without Quantor additions.**
+
+The Quantor components may be useful for:
+- High volatility periods (VIX > 35)
+- Different base strategies without existing regime filtering
+- Live trading data freshness tracking (alignment tracker added to go_live_only.py)
+
+### Files Created
+- `experiments/run_skip_monday_quantor.py` - Test runner
+- `experiments/run_winrate_improvements.py` - Win rate improvement tests
+- Data alignment tracking added to `core/go_live_only.py`
+
+---
+
 ## Baseline Results
 
 | Run | Date | Entry Controller | Win Rate | P&L | Trades | Cycles | Notes |
