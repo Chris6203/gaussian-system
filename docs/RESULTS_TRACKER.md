@@ -183,21 +183,44 @@ All these tests claimed different encoders but actually used **LSTM**:
 
 **Note**: The +64.95% "Transformer" result was actually LSTM performance, not Transformer!
 
-### REAL Architecture Tests Running (2026-01-06)
+### REAL Architecture Tests (2026-01-06)
 
-After fixing V2/V3, now running proper tests:
+After fixing V2/V3, proper tests with verified encoders:
 
-| Architecture | Encoder Used | Cycles | Status |
-|-------------|--------------|--------|--------|
-| mamba2_real_test | OptionsMamba2 ✓ | 5K | 🔄 Running |
-| transformer_real_test | OptionsTransformer ✓ | 5K | 🔄 Running |
+| Rank | Architecture | P&L | Win Rate | Trades | P&L/DD | Verified |
+|------|-------------|-----|----------|--------|--------|----------|
+| 🥇 | **LSTM** | **+64.95%** | 35.2% | 158 | **1.12** | ✅ LSTM keys |
+| 🥈 | TCN | +27.13% | 40.8% | 122 | 0.65 | ✅ TCN |
+| 🥉 | Transformer | +28.06% | 43.3% | 124 | 0.63 | ✅ attn/layers keys |
+| 4th | **Mamba2** | +10.40% | 26.2% | 41 | 0.26 | ✅ A_log/conv1d keys |
 
-### 20K Validation Tests Running (2026-01-06)
+**MAJOR FINDING: Simpler architectures win!**
 
-| Test | Actual Encoder | Cycles | Status |
-|------|----------------|--------|--------|
-| baseline_20k_validation | TCN | 20K | 🔄 Running |
-| transformer_20k_validation | **LSTM** ❌ | 20K | 🔄 Running (mislabeled) |
+| Comparison | LSTM | Transformer | Mamba2 |
+|------------|------|-------------|--------|
+| vs LSTM | - | 2.3x worse P&L | 6.2x worse P&L |
+| P&L/DD | 1.12 | 0.63 (44% worse) | 0.26 (77% worse) |
+| Trade count | 158 | 124 | 41 (too selective) |
+
+**Why LSTM wins**:
+1. Bidirectional context captures both past and future patterns in sequence
+2. Simpler gradient flow - easier to train online
+3. 3-layer depth provides good capacity without overfitting
+4. Mamba2's sequential scan may lose information vs LSTM's hidden state
+
+**Mamba2 Problems**:
+- Only 41 trades (3.8x fewer than LSTM) - too conservative
+- 26.2% win rate is near random
+- SSM state approximation may not suit financial time series
+
+### 20K Validation Tests (2026-01-06)
+
+| Test | Encoder | P&L | Win Rate | Trades | P&L/DD | Status |
+|------|---------|-----|----------|--------|--------|--------|
+| **baseline_20k** | TCN | **+33.87%** | 39.5% | 338 | **0.81** | ✅ Complete |
+| transformer_20k | LSTM ❌ | 🔄 | - | - | - | Running (mislabeled) |
+
+**TCN 20K Validation**: P&L/DD improved from 0.65 (5K) to 0.81 (20K) - strategy is robust!
 
 ---
 
