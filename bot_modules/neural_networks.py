@@ -1252,9 +1252,11 @@ class DirectionPredictor(nn.Module):
         self.sequence_length = sequence_length
 
         # Multi-scale temporal encoders (capture different timeframe patterns)
-        self.tcn_1m = OptionsTCN(feature_dim, hidden_dim=64, num_layers=3, dropout=0.1)
-        self.tcn_5m = OptionsTCN(feature_dim, hidden_dim=64, num_layers=3, dropout=0.1)
-        self.tcn_15m = OptionsTCN(feature_dim, hidden_dim=64, num_layers=3, dropout=0.1)
+        # Now uses get_temporal_encoder() to support Mamba2/Transformer (Phase 52 fix)
+        encoder_config = {'hidden_dim': 64, 'num_layers': 3, 'dropout': 0.1}
+        self.tcn_1m = get_temporal_encoder(feature_dim, encoder_config)
+        self.tcn_5m = get_temporal_encoder(feature_dim, encoder_config)
+        self.tcn_15m = get_temporal_encoder(feature_dim, encoder_config)
 
         # RBF kernel for current features
         self.rbf_layer = RBFKernelLayer(feature_dim)
@@ -1294,8 +1296,9 @@ class DirectionPredictor(nn.Module):
         self.confidence_head = nn.Linear(64, 1)   # Confidence 0-1
         self.magnitude_head = nn.Linear(64, 1)    # Expected move magnitude
 
+        encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
         logger.info("🎯 DirectionPredictor initialized")
-        logger.info("   - Multi-scale TCN (1m, 5m, 15m)")
+        logger.info(f"   - Multi-scale {encoder_type.upper()} (1m, 5m, 15m)")
         logger.info("   - 512→256→128→64 direction network")
         logger.info("   - Temporal attention mechanism")
 
