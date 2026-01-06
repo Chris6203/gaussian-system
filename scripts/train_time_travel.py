@@ -1712,6 +1712,11 @@ signals_generated = 0
 trades_made = 0
 rl_updates_count = 0  # Track RL learning updates
 
+# Phase 52: Track max drawdown for risk-adjusted metrics
+max_drawdown_pct = 0.0
+peak_balance_seen = initial_balance
+balance_history = []  # Track balance over time for equity curve analysis
+
 # SIMPLIFIED: No losing streak protection (let the bot learn naturally)
 # REALISTIC: Only train during market hours with complete data
 
@@ -4232,7 +4237,17 @@ for idx, sim_time in enumerate(common_times):
         print(f"   - RL updates: {rl_updates_count}")
         print(f"   - Current balance: ${bot.paper_trader.current_balance:,.2f}")
         print(f"   - Feature buffer: {len(bot.feature_buffer)}/{bot.sequence_length}")
-        
+
+        # Phase 52: Update max drawdown tracking
+        current_bal = bot.paper_trader.current_balance
+        balance_history.append(current_bal)
+        if current_bal > peak_balance_seen:
+            peak_balance_seen = current_bal
+        if peak_balance_seen > 0:
+            current_dd = (peak_balance_seen - current_bal) / peak_balance_seen * 100
+            if current_dd > max_drawdown_pct:
+                max_drawdown_pct = current_dd
+
         # Calculate time per cycle
         cycle_end_time = real_time_module.time()
         cycle_duration = cycle_end_time - cycle_start_time
@@ -4445,7 +4460,10 @@ try:
         f.write(f"Performance:\n")
         f.write(f"  Initial Balance: ${initial_balance:,.2f}\n")
         f.write(f"  Final Balance:   ${final_balance:,.2f}\n")
-        f.write(f"  P&L:             ${final_pnl:+,.2f} ({pnl_pct:+.2f}%)\n\n")
+        f.write(f"  P&L:             ${final_pnl:+,.2f} ({pnl_pct:+.2f}%)\n")
+        f.write(f"  Max Drawdown:    {max_drawdown_pct:.2f}%\n")
+        pnl_dd_ratio = pnl_pct / max_drawdown_pct if max_drawdown_pct > 0 else 0
+        f.write(f"  P&L/DD Ratio:    {pnl_dd_ratio:.2f}\n\n")
         f.write(f"Trading Stats:\n")
         f.write(f"  Total Trades:    {trades_made}\n")
         f.write(f"  Total Signals:   {signals_generated}\n")
