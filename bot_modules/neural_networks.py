@@ -1116,18 +1116,18 @@ class UnifiedOptionsPredictorV2(nn.Module):
         super().__init__()
         self.sequence_length = sequence_length
         self.use_mamba = use_mamba
-        
-        # Temporal encoder (same as V1)
-        encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
-        
-        if encoder_type == 'tcn' or (use_mamba and encoder_type != 'lstm'):
-            self.temporal_encoder = OptionsTCN(feature_dim, hidden_dim=128, num_layers=5, dropout=0.15)
-            self.encoder_type = 'tcn'
-            logger.info("⚡ V2 Predictor: Using TCN encoder (dropout=0.15)")
-        else:
-            self.temporal_encoder = OptionsLSTM(feature_dim, hidden_dim=128, num_layers=3)
-            self.encoder_type = 'lstm'
-            logger.info("📊 V2 Predictor: Using LSTM encoder")
+
+        # Temporal encoder - use swappable get_temporal_encoder() for mamba2/transformer support
+        self.temporal_encoder = get_temporal_encoder(feature_dim, {
+            'hidden_dim': 128,
+            'num_layers': 5 if os.environ.get('TEMPORAL_ENCODER', 'tcn').lower() == 'tcn' else 4,
+            'num_heads': 4,
+            'd_state': 64,
+            'expand': 2,
+            'dropout': 0.15
+        })
+        self.encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
+        logger.info(f"⚡ V2 Predictor: Using {self.encoder_type.upper()} encoder")
         
         self.rbf_layer = RBFKernelLayer(feature_dim) if use_gaussian_kernels else None
         rbf_dim = 25 * 5 if use_gaussian_kernels else 0
@@ -1619,15 +1619,17 @@ class UnifiedOptionsPredictorV3(nn.Module):
         self.use_mamba = use_mamba
         self.feature_dim = feature_dim
 
-        # Temporal encoder
-        encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
-
-        if encoder_type == 'tcn' or (use_mamba and encoder_type != 'lstm'):
-            self.temporal_encoder = OptionsTCN(feature_dim, hidden_dim=128, num_layers=5, dropout=0.15)
-            self.encoder_type = 'tcn'
-        else:
-            self.temporal_encoder = OptionsLSTM(feature_dim, hidden_dim=128, num_layers=3)
-            self.encoder_type = 'lstm'
+        # Temporal encoder - use swappable get_temporal_encoder() for mamba2/transformer support
+        self.temporal_encoder = get_temporal_encoder(feature_dim, {
+            'hidden_dim': 128,
+            'num_layers': 5 if os.environ.get('TEMPORAL_ENCODER', 'tcn').lower() == 'tcn' else 4,
+            'num_heads': 4,
+            'd_state': 64,
+            'expand': 2,
+            'dropout': 0.15
+        })
+        self.encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
+        logger.info(f"⚡ V3 Predictor: Using {self.encoder_type.upper()} encoder")
 
         self.rbf_layer = RBFKernelLayer(feature_dim) if use_gaussian_kernels else None
         rbf_dim = 25 * 5 if use_gaussian_kernels else 0

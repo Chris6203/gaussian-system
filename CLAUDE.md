@@ -60,6 +60,37 @@ LOAD_PRETRAINED=1 PRETRAINED_MODEL_PATH=models/pretrained_bce.pt python scripts/
 
 See `docs/CONFIDENCE_HEAD_ANALYSIS.md` for full technical details and Phase 36 in RESULTS_TRACKER.md.
 
+### CRITICAL: TEMPORAL_ENCODER Bug Fixed (2026-01-06)
+
+**V2/V3 predictors IGNORED the `TEMPORAL_ENCODER` environment variable!**
+
+All tests claiming to use `mamba2` or `transformer` with V2/V3 predictors were actually using **LSTM**.
+
+**Bug**: V2/V3 had hardcoded encoder selection that ignored the env var:
+```python
+# BROKEN CODE (before fix):
+if encoder_type == 'tcn' or (use_mamba and encoder_type != 'lstm'):
+    self.temporal_encoder = OptionsTCN(...)  # ignores mamba2/transformer!
+else:
+    self.temporal_encoder = OptionsLSTM(...)  # always fell here
+```
+
+**Fix**: V2/V3 now use `get_temporal_encoder()` like V1, which correctly dispatches to:
+- `tcn` → OptionsTCN (default)
+- `transformer` → OptionsTransformer
+- `mamba2` → OptionsMamba2
+- `lstm` → OptionsLSTM
+
+**Impact**: Any test results before 2026-01-06 claiming `TEMPORAL_ENCODER=transformer` or `TEMPORAL_ENCODER=mamba2` with V2/V3 predictor (`arch=v2_slim_bayesian`) were actually using LSTM. Results must be re-run.
+
+**Verification**: Check saved model weights for encoder type:
+```python
+import torch
+model = torch.load('models/YOUR_RUN/state/trained_model.pth', map_location='cpu')
+# Look for 'temporal_encoder.layers' (Mamba2/Transformer) vs 'temporal_encoder.lstm' (LSTM)
+print([k for k in model.keys() if 'temporal' in k][:5])
+```
+
 ## Common Commands
 
 ### Training & Simulation
@@ -90,14 +121,16 @@ SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python scripts/train_time_travel.py
 # Transformer + Skew Exits (+88% 5K, 2.5x improvement over transformer alone)
 TEMPORAL_ENCODER=transformer SKEW_EXIT_ENABLED=1 SKEW_EXIT_MODE=partial python scripts/train_time_travel.py
 
-# Transformer only (+32.65% OOS profit, validated post-bug-fix)
+# Transformer encoder (NOW WORKS - bug fixed 2026-01-06)
+# Note: Tests before this date used LSTM, not Transformer!
 TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
 
-# Mamba2 State Space Model encoder (Phase 51 - linear complexity SSM)
+# Mamba2 State Space Model encoder (NOW WORKS - bug fixed 2026-01-06)
+# Note: Tests before this date used LSTM, not Mamba2!
 TEMPORAL_ENCODER=mamba2 python scripts/train_time_travel.py
 
-# V3 Multi-Horizon Predictor (experimental, needs validation)
-PREDICTOR_ARCH=v3_multi_horizon python scripts/train_time_travel.py
+# V3 Multi-Horizon Predictor (now supports all encoders after fix)
+PREDICTOR_ARCH=v3_multi_horizon TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
 
 # Standard time-travel training (default V2 predictor)
 python scripts/train_time_travel.py
