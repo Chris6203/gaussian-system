@@ -974,7 +974,10 @@ class UnifiedOptionsPredictor(nn.Module):
         self.vol_head = BayesianLinear(64, 1)
         self.dir_head = BayesianLinear(64, 3)       # [DOWN, NEUTRAL, UP]
         self.conf_head = BayesianLinear(64, 1)      # 0-1 via sigmoid in forward
-        
+
+        # Confidence head trainability flag (Fix 1: prevent gradient leakage when untrained)
+        self._confidence_trainable = True
+
         # Execution quality prediction heads
         self.fillability_head = BayesianLinear(64, 1)  # p(fill within T seconds at mid-peg)
         self.slippage_head = BayesianLinear(64, 1)     # expected slippage in $/contract
@@ -1040,6 +1043,22 @@ class UnifiedOptionsPredictor(nn.Module):
             "exp_slippage": self.slippage_head(h),                   # dollars (can be negative)
             "exp_ttf": torch.relu(self.ttf_head(h)),                 # non-negative seconds
         }
+
+    def set_confidence_trainable(self, enabled: bool) -> None:
+        """
+        Enable or disable gradient flow through the confidence head.
+
+        Fix 1 for broken confidence head: When TRAIN_CONFIDENCE_BCE=0 (default),
+        the confidence head receives no direct loss but still gets gradient leakage
+        from the shared backbone, causing it to learn inverted correlations.
+
+        Call set_confidence_trainable(False) when not training confidence to freeze
+        the head and prevent gradient leakage entirely.
+        """
+        self._confidence_trainable = bool(enabled)
+        for p in self.conf_head.parameters():
+            p.requires_grad_(self._confidence_trainable)
+        logger.info(f"Confidence head trainable: {self._confidence_trainable}")
 
 
 # ------------------------------------------------------------------------------
@@ -1139,7 +1158,10 @@ class UnifiedOptionsPredictorV2(nn.Module):
         self.vol_head = BayesianLinear(64, 1)
         self.dir_head = BayesianLinear(64, 3)       # [DOWN, NEUTRAL, UP]
         self.conf_head = BayesianLinear(64, 1)      # 0-1 via sigmoid in forward
-        
+
+        # Confidence head trainability flag (Fix 1: prevent gradient leakage when untrained)
+        self._confidence_trainable = True
+
         # Execution quality heads (Bayesian for uncertainty)
         self.fillability_head = BayesianLinear(64, 1)
         self.slippage_head = BayesianLinear(64, 1)
@@ -1182,6 +1204,22 @@ class UnifiedOptionsPredictorV2(nn.Module):
             "exp_slippage": self.slippage_head(h),
             "exp_ttf": torch.relu(self.ttf_head(h)),
         }
+
+    def set_confidence_trainable(self, enabled: bool) -> None:
+        """
+        Enable or disable gradient flow through the confidence head.
+
+        Fix 1 for broken confidence head: When TRAIN_CONFIDENCE_BCE=0 (default),
+        the confidence head receives no direct loss but still gets gradient leakage
+        from the shared backbone, causing it to learn inverted correlations.
+
+        Call set_confidence_trainable(False) when not training confidence to freeze
+        the head and prevent gradient leakage entirely.
+        """
+        self._confidence_trainable = bool(enabled)
+        for p in self.conf_head.parameters():
+            p.requires_grad_(self._confidence_trainable)
+        logger.info(f"Confidence head trainable: {self._confidence_trainable}")
 
 
 def create_predictor(
@@ -1626,6 +1664,9 @@ class UnifiedOptionsPredictorV3(nn.Module):
         self.ttf_head = BayesianLinear(64, 1)
         self.vol_head = BayesianLinear(64, 1)
 
+        # Confidence head trainability flag (Fix 1: prevent gradient leakage when untrained)
+        self._confidence_trainable = True
+
         logger.info('V3 Multi-Horizon Predictor: horizons=' + str(self.HORIZONS))
 
     def forward(self, cur: torch.Tensor, seq: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -1711,6 +1752,23 @@ class UnifiedOptionsPredictorV3(nn.Module):
         result['volatility'] = self.vol_head(h)
 
         return result
+
+    def set_confidence_trainable(self, enabled: bool) -> None:
+        """
+        Enable or disable gradient flow through the confidence heads.
+
+        Fix 1 for broken confidence head: When TRAIN_CONFIDENCE_BCE=0 (default),
+        confidence heads receive no direct loss but still get gradient leakage
+        from the shared backbone, causing inverted correlations.
+
+        V3 Note: This affects ALL per-horizon confidence heads (5m, 15m, 30m, 45m).
+        """
+        self._confidence_trainable = bool(enabled)
+        for h in self.HORIZONS:
+            head = self.horizon_heads[f'confidence_{h}m']
+            for p in head.parameters():
+                p.requires_grad_(self._confidence_trainable)
+        logger.info(f"Confidence heads trainable: {self._confidence_trainable}")
 
 
 # ------------------------------------------------------------------------------

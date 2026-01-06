@@ -67,6 +67,16 @@ warnings.filterwarnings("ignore")
 TRAIN_CONFIDENCE_BCE = os.environ.get('TRAIN_CONFIDENCE_BCE', '0') == '1'
 CONFIDENCE_BCE_WEIGHT = float(os.environ.get('CONFIDENCE_BCE_WEIGHT', '0.5'))
 
+# Fix 3 Improvements: Use BCEWithLogitsLoss with class imbalance handling
+# pos_weight = n_negative / n_positive to upsample minority class
+CONFIDENCE_USE_LOGITS_LOSS = os.environ.get('CONFIDENCE_USE_LOGITS_LOSS', '1') == '1'
+CONFIDENCE_INITIAL_POS_WEIGHT = float(os.environ.get('CONFIDENCE_INITIAL_POS_WEIGHT', '5.0'))  # ~20% win rate typical
+CONFIDENCE_EMA_ALPHA = float(os.environ.get('CONFIDENCE_EMA_ALPHA', '0.01'))  # For running pos ratio
+
+# Focal loss: down-weight easy examples (alpha*(1-p)^gamma * BCE)
+CONFIDENCE_USE_FOCAL = os.environ.get('CONFIDENCE_USE_FOCAL', '0') == '1'
+CONFIDENCE_FOCAL_GAMMA = float(os.environ.get('CONFIDENCE_FOCAL_GAMMA', '2.0'))
+
 # Entropy-based confidence from direction probabilities (replaces learned head)
 USE_ENTROPY_CONFIDENCE_V2 = os.environ.get('USE_ENTROPY_CONFIDENCE_V2', '0') == '1'
 
@@ -79,9 +89,14 @@ DIRECTION_TEMPERATURE = float(os.environ.get('DIRECTION_TEMPERATURE', '1.0'))
 # Log confidence calibration debug info
 CONFIDENCE_DEBUG = os.environ.get('CONFIDENCE_DEBUG', '0') == '1'
 
+# Use new proper confidence from core/confidence.py (Fix 2)
+USE_PROPER_CONFIDENCE = os.environ.get('USE_PROPER_CONFIDENCE', '0') == '1'
+
 logger.info(f"[CONF_CAL] TRAIN_CONFIDENCE_BCE={TRAIN_CONFIDENCE_BCE}, BCE_WEIGHT={CONFIDENCE_BCE_WEIGHT}")
+logger.info(f"[CONF_CAL] USE_LOGITS_LOSS={CONFIDENCE_USE_LOGITS_LOSS}, INITIAL_POS_WEIGHT={CONFIDENCE_INITIAL_POS_WEIGHT}")
+logger.info(f"[CONF_CAL] USE_FOCAL={CONFIDENCE_USE_FOCAL}, FOCAL_GAMMA={CONFIDENCE_FOCAL_GAMMA}")
 logger.info(f"[CONF_CAL] USE_ENTROPY_CONFIDENCE_V2={USE_ENTROPY_CONFIDENCE_V2}, DECOUPLE_UNCERTAINTY={DECOUPLE_UNCERTAINTY}")
-logger.info(f"[CONF_CAL] DIRECTION_TEMPERATURE={DIRECTION_TEMPERATURE}")
+logger.info(f"[CONF_CAL] DIRECTION_TEMPERATURE={DIRECTION_TEMPERATURE}, USE_PROPER_CONFIDENCE={USE_PROPER_CONFIDENCE}")
 
 # ------------------------------------------------------------------------------
 # Import Modular Components
@@ -1834,6 +1849,14 @@ class UnifiedOptionsBot:
             
             self.model.train()  # Set to training mode for continuous learning
             self.model_initialized = True
+
+            # Fix 1: Freeze confidence head when BCE training is disabled
+            # This prevents gradient leakage that causes inverted confidence values
+            if hasattr(self.model, 'set_confidence_trainable'):
+                self.model.set_confidence_trainable(TRAIN_CONFIDENCE_BCE)
+            else:
+                logger.warning("Model does not have set_confidence_trainable method - confidence head may have gradient leakage")
+
             logger.info(
                 "Neural network initialized with training capabilities.")
             logger.info(f"   Predictor arch: {predictor_arch}")
@@ -2732,16 +2755,57 @@ class UnifiedOptionsBot:
 
                     # 4. BCE Confidence Loss (Phase 50 - trains confidence to predict P(win))
                     # Only enabled when TRAIN_CONFIDENCE_BCE=1
+                    # Fix 3: Use BCEWithLogitsLoss with class imbalance handling
                     if TRAIN_CONFIDENCE_BCE:
                         # Target: 1 if trade would be profitable (positive return), 0 otherwise
                         target_win = 1.0 if target_return > 0 else 0.0
                         target_win_tensor = self._safe_to_device(torch.tensor([[target_win]], dtype=torch.float32))
-                        conf_output = output["confidence"]  # Already sigmoid'd in model
-                        conf_loss = nn.BCELoss()(conf_output, target_win_tensor)
+
+                        # Update running positive ratio for adaptive pos_weight
+                        if not hasattr(self, '_conf_pos_ratio_ema'):
+                            self._conf_pos_ratio_ema = 0.2  # Start at ~20% win rate typical
+                        self._conf_pos_ratio_ema = (
+                            (1 - CONFIDENCE_EMA_ALPHA) * self._conf_pos_ratio_ema +
+                            CONFIDENCE_EMA_ALPHA * target_win
+                        )
+
+                        # Fix 3: Use BCEWithLogitsLoss for numerical stability
+                        if CONFIDENCE_USE_LOGITS_LOSS:
+                            # Need raw logits, not sigmoid'd output
+                            # Get logits from conf_head directly (bypass sigmoid in forward)
+                            conf_logits = self.model.conf_head(output.get("embedding", output.get("h")))
+                            if conf_logits is None:
+                                # Fallback: invert sigmoid to get approximate logits
+                                conf_output = output["confidence"].clamp(1e-6, 1-1e-6)
+                                conf_logits = torch.log(conf_output / (1 - conf_output))
+
+                            # Adaptive pos_weight from running ratio
+                            pos_ratio = max(self._conf_pos_ratio_ema, 0.01)  # Avoid division by zero
+                            pos_weight = (1.0 - pos_ratio) / pos_ratio
+                            pos_weight = min(pos_weight, 10.0)  # Cap at 10x
+                            pos_weight_tensor = self._safe_to_device(torch.tensor([pos_weight]))
+
+                            # BCEWithLogitsLoss with pos_weight for class imbalance
+                            if CONFIDENCE_USE_FOCAL:
+                                # Focal loss variant: down-weight easy examples
+                                bce_loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight_tensor, reduction='none')
+                                raw_loss = bce_loss_fn(conf_logits, target_win_tensor)
+                                probs = torch.sigmoid(conf_logits)
+                                pt = target_win * probs + (1 - target_win) * (1 - probs)
+                                focal_weight = (1 - pt) ** CONFIDENCE_FOCAL_GAMMA
+                                conf_loss = (focal_weight * raw_loss).mean()
+                            else:
+                                bce_loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight_tensor)
+                                conf_loss = bce_loss_fn(conf_logits, target_win_tensor)
+                        else:
+                            # Original BCELoss (for backward compat)
+                            conf_output = output["confidence"]  # Already sigmoid'd in model
+                            conf_loss = nn.BCELoss()(conf_output, target_win_tensor)
+
                         total_loss = total_loss + conf_loss * CONFIDENCE_BCE_WEIGHT
                         loss_components['confidence_bce'] = conf_loss.item()
                         if CONFIDENCE_DEBUG:
-                            logger.info(f"[CONF_TRAIN] target_win={target_win}, pred_conf={conf_output.item():.3f}, bce_loss={conf_loss.item():.4f}")
+                            logger.info(f"[CONF_TRAIN] target_win={target_win}, pos_ratio={self._conf_pos_ratio_ema:.3f}, bce_loss={conf_loss.item():.4f}")
 
                 # Backward pass with AMP scaling (outside autocast)
                 if self.use_amp and self.grad_scaler is not None:

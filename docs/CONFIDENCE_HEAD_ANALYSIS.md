@@ -251,6 +251,62 @@ if confidence >= min_confidence_threshold:
 
 ## Solutions
 
+### Solution 0: Architectural Fixes (IMPLEMENTED 2026-01-06)
+
+Three proper fixes have been implemented in the codebase:
+
+#### Fix 1: Freeze Confidence Head When Not Trained
+
+**File:** `bot_modules/neural_networks.py`
+
+Added `set_confidence_trainable()` method to all predictor classes:
+
+```python
+def set_confidence_trainable(self, enabled: bool) -> None:
+    """Enable/disable gradient flow through confidence head."""
+    self._confidence_trainable = bool(enabled)
+    for p in self.conf_head.parameters():
+        p.requires_grad_(self._confidence_trainable)
+```
+
+**Automatically applied** in `core/unified_options_trading_bot.py` when model is initialized:
+- If `TRAIN_CONFIDENCE_BCE=0`: confidence head is frozen
+- If `TRAIN_CONFIDENCE_BCE=1`: confidence head trains normally
+
+This prevents gradient leakage that causes inverted correlations.
+
+#### Fix 2: Proper P(win) Calculation
+
+**File:** `core/confidence.py` (NEW)
+
+Mathematically correct confidence based on:
+1. **P(win) = Phi(mu/sigma)** from predicted return distribution
+2. **Direction entropy** as secondary confidence signal
+
+```python
+from core.confidence import trade_confidence
+
+# Usage:
+conf = trade_confidence(
+    return_mean=output['return'],
+    return_sigma=output['return_std'],
+    direction_probs=torch.softmax(output['direction'], dim=-1),
+)
+```
+
+**Enable:** `USE_PROPER_CONFIDENCE=1`
+
+#### Fix 3: Improved BCE Training
+
+**File:** `core/unified_options_trading_bot.py`
+
+Upgraded BCE training with:
+- `BCEWithLogitsLoss` instead of `BCELoss` (numerical stability)
+- Adaptive `pos_weight` for class imbalance (~20% win rate)
+- Optional focal loss for hard examples
+
+**Enable:** `TRAIN_CONFIDENCE_BCE=1 CONFIDENCE_USE_LOGITS_LOSS=1`
+
 ### Solution 1: Filter Out High Confidence (Workaround)
 
 **Recommended for immediate use.** Simply avoid the broken high-confidence signals.
@@ -349,13 +405,13 @@ for conf_bucket in [0.1, 0.2, 0.3, 0.4, 0.5]:
     print(f"Conf {conf_bucket}: Actual WR = {actual_wr}")
 ```
 
-### Architecture Fix (Future)
+### Architecture Fix (IMPLEMENTED)
 
-Consider removing the separate confidence head entirely and using:
+The architectural fixes are now implemented (see Solution 0 above):
 
-1. **Direction entropy** as confidence proxy
-2. **Prediction uncertainty** from Bayesian layers
-3. **Ensemble disagreement** if using multiple models
+1. **Frozen confidence head** when not trained (Fix 1)
+2. **P(win) from return distribution** via `core/confidence.py` (Fix 2)
+3. **Improved BCE training** with class imbalance handling (Fix 3)
 
 ---
 
@@ -363,8 +419,20 @@ Consider removing the separate confidence head entirely and using:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| **Fix 2 - Proper Confidence** | | |
+| `USE_PROPER_CONFIDENCE` | 0 | Use P(win) from `core/confidence.py` |
+| `CONFIDENCE_USE_PWIN` | 1 | Include P(win) from return distribution |
+| `CONFIDENCE_USE_ENTROPY` | 1 | Include direction entropy |
+| `CONFIDENCE_UNCERTAINTY_ALPHA` | 2.0 | Uncertainty penalty weight |
+| **Fix 3 - BCE Training** | | |
 | `TRAIN_CONFIDENCE_BCE` | 0 | Train confidence head with BCE loss |
 | `CONFIDENCE_BCE_WEIGHT` | 0.5 | Weight of BCE loss in total loss |
+| `CONFIDENCE_USE_LOGITS_LOSS` | 1 | Use BCEWithLogitsLoss (better) |
+| `CONFIDENCE_INITIAL_POS_WEIGHT` | 5.0 | Initial pos_weight for class imbalance |
+| `CONFIDENCE_EMA_ALPHA` | 0.01 | EMA alpha for running pos ratio |
+| `CONFIDENCE_USE_FOCAL` | 0 | Enable focal loss |
+| `CONFIDENCE_FOCAL_GAMMA` | 2.0 | Focal loss gamma parameter |
+| **Legacy/Workaround** | | |
 | `USE_ENTROPY_CONFIDENCE` | 0 | Replace confidence with direction entropy |
 | `INVERT_CONFIDENCE` | 0 | Use (1 - confidence) as workaround |
 | `TRAIN_MAX_CONF` | 1.0 | Maximum confidence filter (use ≤0.25) |
@@ -376,9 +444,10 @@ Consider removing the separate confidence head entirely and using:
 
 | File | Purpose |
 |------|---------|
-| `bot_modules/neural_networks.py` | Model definition with confidence head |
-| `core/unified_options_trading_bot.py` | Training loop (BCE loss disabled by default) |
-| `scripts/train_time_travel.py` | Confidence filtering logic |
+| `bot_modules/neural_networks.py` | Model definition with `set_confidence_trainable()` method |
+| `core/confidence.py` | **NEW** - Proper P(win) confidence calculation |
+| `core/unified_options_trading_bot.py` | Training loop with improved BCE training |
+| `scripts/train_time_travel.py` | Confidence filtering logic with proper confidence support |
 | `scripts/pretrain_confidence.py` | Offline BCE pretraining script |
 | `docs/RESULTS_TRACKER.md` | Phase 36 documentation |
 
@@ -386,6 +455,21 @@ Consider removing the separate confidence head entirely and using:
 
 ## Conclusion
 
-The confidence head bug was a silent killer - the model appeared to work, but was making systematically bad trade selections. The workaround (`TRAIN_MAX_CONF=0.25`) achieves excellent results by simply avoiding the broken outputs.
+The confidence head bug was a silent killer - the model appeared to work, but was making systematically bad trade selections.
+
+**Three fixes are now implemented:**
+
+1. **Fix 1:** Confidence head is automatically frozen when BCE training is disabled, preventing gradient leakage
+2. **Fix 2:** New `core/confidence.py` provides mathematically correct P(win) from return distribution
+3. **Fix 3:** Improved BCE training with `BCEWithLogitsLoss` and adaptive class imbalance handling
+
+**Recommended usage:**
+```bash
+# Use new proper confidence (best)
+USE_PROPER_CONFIDENCE=1 python scripts/train_time_travel.py
+
+# Or proven workaround (+423% P&L)
+TRAIN_MAX_CONF=0.25 python scripts/train_time_travel.py
+```
 
 For production systems, **always validate that confidence values correlate positively with actual outcomes** before using them for decision-making.

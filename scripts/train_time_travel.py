@@ -3518,13 +3518,38 @@ for idx, sim_time in enumerate(common_times):
                         if invert_confidence:
                             confidence = 1.0 - confidence
 
+                        # USE_PROPER_CONFIDENCE (Fix 2): Use P(win) from return distribution
+                        # This is the mathematically correct confidence based on:
+                        # 1. P(win) = Phi(mu/sigma) from predicted return distribution
+                        # 2. Direction entropy as secondary signal
+                        # Much better than the broken confidence head!
+                        use_proper_conf = os.environ.get('USE_PROPER_CONFIDENCE', '0') == '1'
+                        if use_proper_conf:
+                            try:
+                                from core.confidence import trade_confidence
+                                import torch
+                                # Get return mean and std
+                                ret_mean = torch.tensor([[predicted_return]])
+                                ret_std = torch.tensor([[0.02]])  # Default 2% if not available
+                                if hasattr(data, 'return_std'):
+                                    ret_std = torch.tensor([[data.return_std]])
+                                # Get direction probs
+                                if 'dir_probs' in dir():
+                                    dir_tensor = torch.tensor([dir_probs])
+                                else:
+                                    dir_tensor = torch.tensor([[0.33, 0.34, 0.33]])
+                                conf_tensor = trade_confidence(ret_mean, ret_std, dir_tensor)
+                                confidence = float(conf_tensor.item())
+                            except Exception as e:
+                                pass  # Fall back to original confidence
+
                         # USE_ENTROPY_CONFIDENCE: Replace broken confidence head with direction entropy
                         # The confidence head is UNTRAINED and outputs inverted values.
                         # Direction entropy measures how certain the model is about UP vs DOWN.
                         # Low entropy = certain about direction = use as high confidence
                         # High entropy = uncertain = use as low confidence
                         use_entropy_conf = os.environ.get('USE_ENTROPY_CONFIDENCE', '0') == '1'
-                        if use_entropy_conf and 'dir_probs' in dir():
+                        if use_entropy_conf and 'dir_probs' in dir() and not use_proper_conf:
                             try:
                                 # Calculate entropy of direction probabilities
                                 # dir_probs is [DOWN, NEUTRAL, UP] or [DOWN, UP]

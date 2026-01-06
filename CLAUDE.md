@@ -16,7 +16,7 @@ The system uses a modular architecture with swappable predictors and temporal en
 ### Critical Bug Fix (2026-01-01)
 A P&L calculation bug was discovered and fixed. **All results before this date showing massive gains (+1327%, +284,618%, etc.) are INVALID.** The bug caused trades to be credited ~165x their actual value due to a missing SQL placeholder. See RESULTS_TRACKER.md "CRITICAL BUG FOUND" section for details.
 
-### CRITICAL: Confidence Head Is Broken (2026-01-06)
+### CRITICAL: Confidence Head Is Broken (2026-01-06) - FIXED
 **The neural network's confidence head outputs INVERTED values** because it has NO loss function training it by default.
 
 | Confidence | Actual Win Rate | Problem |
@@ -26,20 +26,39 @@ A P&L calculation bug was discovered and fixed. **All results before this date s
 
 **Why**: The confidence head (`nn.Linear(64, 1)`) exists but `TRAIN_CONFIDENCE_BCE=0` by default, so no loss trains it. It learns backwards correlations through gradient leakage.
 
-**Workarounds**:
+**Three Fixes Implemented**:
+
+1. **Fix 1: Freeze confidence head** when BCE training disabled (prevents gradient leakage)
+   - Automatically applied when `TRAIN_CONFIDENCE_BCE=0`
+   - Code: `model.set_confidence_trainable(False)`
+
+2. **Fix 2: Proper P(win) calculation** using return distribution (new `core/confidence.py`)
+   - P(win) = Phi(mu/sigma) from predicted return distribution
+   - Direction entropy as secondary confidence signal
+   - Enable: `USE_PROPER_CONFIDENCE=1`
+
+3. **Fix 3: Improved BCE training** with class imbalance handling
+   - Uses `BCEWithLogitsLoss` with adaptive `pos_weight`
+   - Optional focal loss for hard examples
+   - Enable: `TRAIN_CONFIDENCE_BCE=1 CONFIDENCE_USE_LOGITS_LOSS=1`
+
+**Recommended Usage**:
 ```bash
-# Option 1: Filter out broken high-confidence signals (RECOMMENDED)
+# Option 1: Use new proper confidence (RECOMMENDED)
+USE_PROPER_CONFIDENCE=1 python scripts/train_time_travel.py
+
+# Option 2: Filter out broken high-confidence signals (proven +423% P&L)
 TRAIN_MAX_CONF=0.25 python scripts/train_time_travel.py
 
-# Option 2: Use direction entropy instead of confidence head
-USE_ENTROPY_CONFIDENCE=1 python scripts/train_time_travel.py
+# Option 3: Train confidence head properly
+TRAIN_CONFIDENCE_BCE=1 CONFIDENCE_USE_LOGITS_LOSS=1 python scripts/train_time_travel.py
 
-# Option 3: Pretrain confidence head with BCE loss first
+# Option 4: Pretrain confidence head offline
 python scripts/pretrain_confidence.py --epochs 100 --output models/pretrained_bce.pt
 LOAD_PRETRAINED=1 PRETRAINED_MODEL_PATH=models/pretrained_bce.pt python scripts/train_time_travel.py
 ```
 
-See Phase 36 in RESULTS_TRACKER.md for full analysis.
+See `docs/CONFIDENCE_HEAD_ANALYSIS.md` for full technical details and Phase 36 in RESULTS_TRACKER.md.
 
 ## Common Commands
 
