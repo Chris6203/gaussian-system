@@ -91,6 +91,14 @@ Modular feature pipeline:
 - `options_surface.py` - Options surface features
 - `crypto.py` - Crypto correlation features
 
+### Integrations (`integrations/`)
+External system integrations:
+- **Quantor-MTFuzz** (`integrations/quantor/`) - Jerry's deterministic trading framework
+  - Fuzzy position sizing (9-factor membership functions)
+  - Market regime filter (5-regime classification)
+  - Volatility analytics (realized vol, IV skew, VRP)
+  - Data alignment for backtest quality tracking
+
 ## Quick Start
 
 ### 1. Clone and Setup
@@ -509,6 +517,21 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Author
 
 **Chris Peters**
+
+## Contributors
+
+- **Jerry Mahabub (trextrader)** - Quantor-MTFuzz integration (fuzzy sizing, regime filter, data alignment)
+  - Original repo: [spy-iron-condor-trading](https://github.com/trextrader/spy-iron-condor-trading)
+- **John Draper** - Quantor-MTFuzz co-developer, system architecture
+
+## Acknowledgments
+
+Special thanks to **Jerry Mahabub** and **John Draper** for contributing the Quantor-MTFuzz deterministic trading framework components, including:
+- 9-factor fuzzy position sizing system
+- 5-regime market classification with trading gates
+- Volatility analytics (realized vol, IV skew, VRP)
+- Data alignment system for backtest quality assurance
+- Deterministic modus ponens decision engine architecture
 
 ---
 

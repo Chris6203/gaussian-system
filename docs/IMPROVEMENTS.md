@@ -595,6 +595,147 @@ The existing RLThresholdLearner provides far superior filtering by:
 - `backend/live_trading_engine.py` - Health checks integration
 - `backend/paper_trading_system.py` - Dynamic exit evaluator integration (disabled)
 
+---
+
+## ✅ COMPLETED: Quantor-MTFuzz Integration (2026-01-05)
+
+### Credits
+
+**Contributors:**
+- **Jerry Mahabub** (trextrader) - Primary developer
+- **John Draper** - Co-developer, system architecture
+
+**Original Repo:** [spy-iron-condor-trading](https://github.com/trextrader/spy-iron-condor-trading)
+
+### Overview
+
+Integrated key components from the Quantor-MTFuzz deterministic trading framework (developed by Jerry Mahabub and John Draper) into the Gaussian system. This brings risk-first, capital-bound trading principles with full auditability.
+
+### Components Integrated
+
+#### 1. Fuzzy Position Sizer (`integrations/quantor/fuzzy_sizer.py`)
+
+9-factor membership functions for intelligent position sizing:
+
+| Factor | Purpose |
+|--------|---------|
+| RSI | Oversold/overbought detection |
+| ADX | Trend strength |
+| Bollinger Bands | Price position relative to bands |
+| ATR | Volatility-adjusted sizing |
+| Volume | Liquidity confirmation |
+| MACD | Momentum direction |
+| Stochastic | Short-term overbought/oversold |
+| OBV Trend | Volume flow direction |
+| Momentum | Price momentum |
+
+**Formula:** `q = q₀ × g(F_t, σ*_t)` where F_t is fuzzy confidence [0,1]
+
+#### 2. Regime Filter (`integrations/quantor/regime_filter.py`)
+
+5-regime market classification with automatic trading gates:
+
+| Regime | VIX Range | Trend | Trading |
+|--------|-----------|-------|---------|
+| CRASH | > 35 | Any | **BLOCKED** |
+| BULL_TREND | < 20 | Up | CALLS only |
+| BEAR_TREND | < 25 | Down | PUTS only |
+| HIGH_VOL_RANGE | 25-35 | Sideways | Both (reduced size) |
+| LOW_VOL_RANGE | < 18 | Sideways | Both |
+
+#### 3. Volatility Analyzer (`integrations/quantor/volatility.py`)
+
+Advanced volatility analytics:
+- **Realized Vol**: 20-day annualized historical volatility
+- **IV Skew**: (25d Put IV - 25d Call IV) / ATM IV
+- **VRP**: Volatility Risk Premium (IV - Realized Vol)
+- **Vol Regime**: LOW/NORMAL/HIGH/EXTREME classification
+- **ATR Stop Multiplier**: Dynamic stop loss based on ATR
+
+#### 4. Data Alignment System (`integrations/quantor/data_alignment.py`)
+
+**Critical for backtest reliability.** Tracks data freshness and adjusts confidence:
+
+| Mode | Description | iv_conf |
+|------|-------------|---------|
+| EXACT | Timestamp matches request | 1.0 |
+| PRIOR | Using earlier data (within tolerance) | Decays with lag |
+| STALE | Data too old | < 0.5 |
+| NONE | No data available | 0.0 |
+
+**Key Features:**
+- `iv_conf` decays exponentially: `0.5^(lag_sec / half_life_sec)`
+- Fail-fast mode stops backtests when >30% data is stale
+- Alignment diagnostics: exact%, prior%, stale%, none%, lag stats
+
+### Integration into train_time_travel.py
+
+The data alignment system is fully wired into the main training script:
+
+1. **Imports** alignment classes at startup
+2. **Initializes tracker** before main loop with configurable thresholds
+3. **Tracks alignment each cycle** by comparing requested vs actual timestamps
+4. **Applies `iv_conf` as confidence multiplier** to all entry controllers:
+   - Main signal processing
+   - V3 controller
+   - Consensus controller
+   - Direction controller
+5. **Reports alignment stats** in final summary
+6. **Fail-fast** stops backtest if data quality degrades
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ALIGNMENT_ENABLED` | `1` | Enable alignment tracking |
+| `ALIGNMENT_FAIL_FAST` | `1` | Stop backtests on poor data |
+| `ALIGNMENT_MAX_LAG_SEC` | `600` | Max acceptable lag (10 min) |
+| `ALIGNMENT_IV_DECAY_HALF_LIFE` | `300` | Confidence decay half-life |
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `integrations/__init__.py` | Integrations package |
+| `integrations/quantor/__init__.py` | Quantor module exports |
+| `integrations/quantor/fuzzy_sizer.py` | 9-factor fuzzy position sizing |
+| `integrations/quantor/regime_filter.py` | 5-regime market classification |
+| `integrations/quantor/volatility.py` | Volatility analytics |
+| `integrations/quantor/data_alignment.py` | Data alignment & confidence decay |
+| `integrations/quantor/facade.py` | Unified interface |
+| `integrations/quantor/README.md` | Full documentation |
+| `tests/test_quantor_integration.py` | 41 integration tests |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/train_time_travel.py` | Wired in alignment tracking, iv_conf multiplier |
+| `CLAUDE.md` | Added Quantor integration documentation |
+| `README.md` | Added Jerry as contributor, acknowledgments |
+
+### Testing
+
+```bash
+python -m pytest tests/test_quantor_integration.py -v
+# 41 tests passing:
+# - 9 fuzzy position sizing tests
+# - 8 regime filter tests
+# - 8 volatility analyzer tests
+# - 5 facade integration tests
+# - 11 data alignment tests
+```
+
+### Quantor-MTFuzz Philosophy (Jerry Mahabub & John Draper)
+
+> "Risk-first, capital-bound, liquidity-filtered execution. Every trade is a provable consequence of validated premises."
+
+Key principles integrated:
+1. **Hard constraints veto trades** - Regime gates are non-negotiable
+2. **Soft conditions modulate** - Fuzzy scores adjust position size
+3. **2% max risk per trade** - Capital preservation paramount
+4. **Data quality matters** - Alignment tracking ensures reliable backtests
+
 
 
 

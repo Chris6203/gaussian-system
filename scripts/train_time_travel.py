@@ -143,9 +143,34 @@ JERRY_FILTER_ENABLED = os.environ.get('JERRY_FILTER', '0') == '1'
 JERRY_FILTER_THRESHOLD = float(os.environ.get('JERRY_FILTER_THRESHOLD', '0.5'))
 JERRY_MTF_MIN = float(os.environ.get('JERRY_MTF_MIN', '0.3'))
 
+# Data alignment tracking (from Quantor-MTFuzz)
+# Tracks data freshness, applies iv_conf as confidence multiplier, fail-fast on misaligned data
+try:
+    from integrations.quantor import (
+        ChainAlignment, AlignmentMode, AlignmentConfig,
+        DataAligner, AlignmentDiagnosticsTracker, AlignedStepState
+    )
+    ALIGNMENT_TRACKING_AVAILABLE = True
+except ImportError:
+    ALIGNMENT_TRACKING_AVAILABLE = False
+    ChainAlignment = None
+    AlignmentMode = None
+    AlignmentConfig = None
+    DataAligner = None
+    AlignmentDiagnosticsTracker = None
+    AlignedStepState = None
+
+# Alignment config from environment
+ALIGNMENT_ENABLED = os.environ.get('ALIGNMENT_ENABLED', '1') == '1'
+ALIGNMENT_FAIL_FAST = os.environ.get('ALIGNMENT_FAIL_FAST', '1') == '1'
+ALIGNMENT_MAX_LAG_SEC = float(os.environ.get('ALIGNMENT_MAX_LAG_SEC', '600'))
+ALIGNMENT_IV_DECAY_HALF_LIFE = float(os.environ.get('ALIGNMENT_IV_DECAY_HALF_LIFE', '300'))
+
 # Log loaded configuration
 logger.info(f"[CONFIG] Entry controller: {ENTRY_CONTROLLER_TYPE}")
 logger.info(f"[CONFIG] TT_MAX_CYCLES: {TT_MAX_CYCLES}, TT_PRINT_EVERY: {TT_PRINT_EVERY}")
+if ALIGNMENT_TRACKING_AVAILABLE and ALIGNMENT_ENABLED:
+    logger.info(f"[CONFIG] Data alignment: ENABLED (max_lag={ALIGNMENT_MAX_LAG_SEC}s, half_life={ALIGNMENT_IV_DECAY_HALF_LIFE}s, fail_fast={ALIGNMENT_FAIL_FAST})")
 logger.info(f"[CONFIG] TT_MAX_HOLD_MINUTES: {TT_MAX_HOLD_MINUTES}, TT_MAX_POSITIONS: {TT_MAX_POSITIONS}")
 logger.info(f"[CONFIG] TT_DATA_INTERVAL: {TT_DATA_INTERVAL} ({TT_INTERVAL_MINUTES}-minute bars)")
 if RSI_MACD_FILTER_ENABLED:
@@ -1631,9 +1656,41 @@ class TimeTravelDataSource:
             if not df.empty:
                 price = df['Close'].iloc[0]
                 return float(price)
-        
+
         return None
-    
+
+    def get_data_timestamp(self, symbol):
+        """Get the actual timestamp of the data used for the current_time.
+
+        Returns the timestamp of the data point that was used when
+        get_current_price() was called. This is used for alignment tracking.
+        """
+        # Normalize symbol
+        if symbol.startswith('^'):
+            symbol = symbol[1:]
+
+        df = self.symbols_data.get(symbol, pd.DataFrame())
+
+        if df.empty or self.current_time is None:
+            return None
+
+        # Check for exact match
+        if self.current_time in df.index:
+            return self.current_time
+
+        # Find the most recent timestamp <= current_time
+        mask = df.index <= pd.Timestamp(self.current_time)
+        if mask.any():
+            recent = df[mask]
+            if not recent.empty:
+                return recent.index[-1]
+
+        # If we fell back to first available, return that timestamp
+        if not df.empty:
+            return df.index[0]
+
+        return None
+
     def clear_cache(self):
         """Mock method - does nothing in time-travel mode"""
         pass
@@ -1723,6 +1780,22 @@ balance_history = []  # Track balance over time for equity curve analysis
 # Track skipped timestamps for reporting
 skipped_off_hours = 0
 skipped_missing_data = 0
+
+# Initialize data alignment tracker (Quantor-MTFuzz)
+alignment_tracker = None
+alignment_aligner = None
+if ALIGNMENT_TRACKING_AVAILABLE and ALIGNMENT_ENABLED:
+    alignment_config = AlignmentConfig(
+        max_lag_sec=ALIGNMENT_MAX_LAG_SEC,
+        iv_decay_half_life_sec=ALIGNMENT_IV_DECAY_HALF_LIFE,
+        fail_fast_enabled=ALIGNMENT_FAIL_FAST,
+        fail_fast_stale_threshold=0.3,  # Fail if >30% stale
+        fail_fast_none_threshold=0.1,   # Fail if >10% missing
+        fail_fast_min_bars=50           # Check after 50 bars
+    )
+    alignment_tracker = AlignmentDiagnosticsTracker(alignment_config)
+    alignment_aligner = DataAligner(alignment_config)
+    logger.info("[OK] Data alignment tracker initialized")
 
 # Helper: robustly lookup future close for realized-move scoring
 def _lookup_close(df, ts, tolerance_minutes: int = 5):
@@ -1975,7 +2048,45 @@ for idx, sim_time in enumerate(common_times):
         qqq_price = tt_source.get_current_price('QQQ')
         uup_price = tt_source.get_current_price('UUP')
         btc_price = tt_source.get_current_price('BTC-USD') or tt_source.get_current_price('BTC')
-        
+
+        # ============================================================================
+        # DATA ALIGNMENT TRACKING: Track freshness of data for quality assessment
+        # ============================================================================
+        cycle_iv_conf = 1.0  # Default: assume perfect alignment
+        if alignment_tracker and alignment_aligner:
+            try:
+                # Get the actual timestamp of the data we used
+                data_ts = tt_source.get_data_timestamp(trading_symbol)
+                if data_ts is not None:
+                    # Create alignment based on lag between requested and actual timestamp
+                    alignment = alignment_aligner.align_chain(
+                        requested_ts=sim_time,
+                        chain_data=pd.DataFrame({'price': [current_price]}),  # Placeholder
+                        chain_ts=data_ts
+                    )
+                    alignment_tracker.record(alignment)
+                    cycle_iv_conf = alignment.iv_conf
+
+                    # Check fail-fast condition (only for backtests)
+                    if ALIGNMENT_FAIL_FAST:
+                        alignment_tracker.check_and_raise()
+                else:
+                    # No timestamp info - assume exact alignment
+                    alignment = ChainAlignment(
+                        chain=None,
+                        used_ts=sim_time,
+                        mode=AlignmentMode.EXACT,
+                        lag_sec=0,
+                        iv_conf=1.0
+                    )
+                    alignment_tracker.record(alignment)
+            except RuntimeError as e:
+                # Fail-fast triggered
+                logger.error(f"[FAIL-FAST] {e}")
+                raise
+            except Exception as e:
+                logger.debug(f"[ALIGN] Alignment tracking error: {e}")
+
         print(f"[PRICE] {trading_symbol}: ${current_price:.2f}")
         print(f"[VIX] {vix_str}")
         if spy_price:
@@ -2317,6 +2428,16 @@ for idx, sim_time in enumerate(common_times):
             action = signal.get('action', 'HOLD')
             confidence = signal.get('confidence', 0)
 
+            # ============= DATA ALIGNMENT CONFIDENCE ADJUSTMENT =============
+            # Apply iv_conf as multiplier to reduce confidence when data is stale
+            if cycle_iv_conf < 1.0:
+                original_conf = confidence
+                confidence = confidence * cycle_iv_conf
+                signal['confidence'] = confidence  # Update signal dict too
+                if cycle_iv_conf < 0.9:  # Only log significant adjustments
+                    print(f"   [ALIGN] Confidence adjusted: {original_conf:.1%} × {cycle_iv_conf:.2f} = {confidence:.1%}")
+                    logger.debug(f"[ALIGN] Confidence reduced by iv_conf={cycle_iv_conf:.3f}")
+
             # ============= INVERSE SIGNAL MODE =============
             # If predictor is consistently wrong, try inverting: CALLS->PUTS, PUTS->CALLS
             invert_signals = os.environ.get('TT_INVERT_SIGNALS', '0') == '1'
@@ -2586,6 +2707,9 @@ for idx, sim_time in enumerate(common_times):
                     action = v3_decision.action
                     composite_score = v3_decision.direction_prob
                     confidence = v3_decision.confidence
+                    # Apply iv_conf multiplier for data alignment
+                    if cycle_iv_conf < 1.0:
+                        confidence = confidence * cycle_iv_conf
                     predicted_return = 0.0
                     momentum_5min = signal.get('momentum_5min', 0) if signal else 0
                     volume_spike = signal.get('volume_spike', 1.0) if signal else 1.0
@@ -2783,6 +2907,9 @@ for idx, sim_time in enumerate(common_times):
                     action = cons_action
                     composite_score = cons_conf
                     confidence = cons_conf
+                    # Apply iv_conf multiplier for data alignment
+                    if cycle_iv_conf < 1.0:
+                        confidence = confidence * cycle_iv_conf
                     predicted_return = 0.0
                     momentum_5min = signal.get('momentum_5min', 0) if signal else 0
                     volume_spike = signal.get('volume_spike', 1.0) if signal else 1.0
@@ -2898,6 +3025,9 @@ for idx, sim_time in enumerate(common_times):
                     composite_score = decision.confidence
                     action = decision.action
                     confidence = decision.confidence
+                    # Apply iv_conf multiplier for data alignment
+                    if cycle_iv_conf < 1.0:
+                        confidence = confidence * cycle_iv_conf
                     predicted_return = decision.magnitude * decision.direction
                     momentum_5min = signal.get('momentum_5min', 0)
                     volume_spike = signal.get('volume_spike', 1.0)
@@ -4353,6 +4483,31 @@ print(f"  Trades: {trades_made}")
 print(f"  Start balance: ${initial_balance:,.2f}")
 print(f"  Final balance: ${final_balance:,.2f}")
 print(f"  P&L: ${final_balance - initial_balance:,.2f}")
+
+# Data Alignment Diagnostics Summary
+if alignment_tracker:
+    try:
+        stats = alignment_tracker.get_stats()
+        print(f"\n  Data Alignment Diagnostics ({stats.total_bars} bars):")
+        print(f"    Exact match:    {stats.exact_pct:.1f}%")
+        print(f"    Prior (usable): {stats.prior_pct:.1f}%")
+        print(f"    Stale:          {stats.stale_pct:.1f}%")
+        print(f"    None (missing): {stats.none_pct:.1f}%")
+        print(f"    Lag median:     {stats.lag_median:.1f}s")
+        print(f"    Lag p90:        {stats.lag_p90:.1f}s")
+        print(f"    Lag max:        {stats.lag_max:.1f}s")
+        print(f"    IV conf min:    {stats.iv_conf_min:.3f}")
+        print(f"    IV conf p10:    {stats.iv_conf_p10:.3f}")
+
+        # Log to file for dashboard
+        logger.info(f"[ALIGN] Data Alignment Summary: {stats.to_dict()}")
+
+        # Warn if data quality is poor
+        if stats.stale_pct + stats.none_pct > 20:
+            print(f"    [WARN] High stale/missing rate ({stats.stale_pct + stats.none_pct:.1f}%) - results may be unreliable")
+            logger.warning(f"[ALIGN] High stale/missing rate: {stats.stale_pct + stats.none_pct:.1f}%")
+    except Exception as e:
+        logger.debug(f"[ALIGN] Error printing alignment stats: {e}")
 
 # Finalize missed-play tracking (evaluate whatever can be evaluated at end time)
 try:

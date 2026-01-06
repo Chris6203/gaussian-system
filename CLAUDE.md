@@ -862,3 +862,81 @@ python scripts/train_time_travel.py
 ```
 
 **Status values:** `pending` → `running` → `passed_quick`/`rejected` → `validated`/`failed_validation`
+
+## Quantor-MTFuzz Integration
+
+**Credits:** Adapted from Jerry Mahabub & John Draper's [spy-iron-condor-trading](https://github.com/trextrader/spy-iron-condor-trading)
+
+Integration of key components from the Quantor-MTFuzz deterministic trading framework developed by Jerry Mahabub and John Draper.
+
+### Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Fuzzy Position Sizer | `integrations/quantor/fuzzy_sizer.py` | 9-factor membership functions for position sizing |
+| Regime Filter | `integrations/quantor/regime_filter.py` | 5-regime classification with trading gates |
+| Volatility Analyzer | `integrations/quantor/volatility.py` | Realized vol, IV skew, VRP calculations |
+| Data Alignment | `integrations/quantor/data_alignment.py` | Backtest quality tracking with confidence decay |
+| Facade | `integrations/quantor/facade.py` | Unified interface for all components |
+
+### Data Alignment (Backtest Quality)
+
+Ensures backtest reliability by tracking data freshness:
+
+```python
+from integrations.quantor import DataAligner, AlignmentDiagnosticsTracker
+
+# Alignment modes: EXACT (1.0), PRIOR (decays), STALE (<0.5), NONE (0.0)
+# iv_conf decays: 0.5^(lag_sec / half_life_sec)
+```
+
+**Wired into train_time_travel.py:**
+- Tracks alignment each cycle
+- Applies `iv_conf` as confidence multiplier to all entry controllers
+- Fail-fast stops backtests when data quality degrades (>30% stale)
+- Reports alignment stats in final summary
+
+**Environment Variables:**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ALIGNMENT_ENABLED` | `1` | Enable alignment tracking |
+| `ALIGNMENT_FAIL_FAST` | `1` | Stop on poor data quality |
+| `ALIGNMENT_MAX_LAG_SEC` | `600` | Max acceptable lag (10 min) |
+| `ALIGNMENT_IV_DECAY_HALF_LIFE` | `300` | Confidence decay half-life (5 min) |
+
+### Regime Filter
+
+5-regime classification with automatic trading gates:
+
+| Regime | VIX | Trend | Allowed |
+|--------|-----|-------|---------|
+| CRASH | >35 | Any | NO |
+| BULL_TREND | <20 | Up | CALLS only |
+| BEAR_TREND | <25 | Down | PUTS only |
+| HIGH_VOL_RANGE | 25-35 | Sideways | Both (reduced) |
+| LOW_VOL_RANGE | <18 | Sideways | Both |
+
+### Fuzzy Position Sizing
+
+9 factors weighted into final position size:
+- RSI, ADX, Bollinger Bands position
+- ATR, Volume ratio, MACD
+- Stochastic, OBV trend, Momentum
+
+**Usage:**
+```python
+from integrations.quantor import QuantorFacade
+
+quantor = QuantorFacade()
+result = quantor.analyze(equity=10000, max_loss=500, direction="CALL", ...)
+if result.should_trade:
+    size = result.position_size
+```
+
+### Testing
+
+```bash
+python -m pytest tests/test_quantor_integration.py -v  # 41 tests
+```
+
+See `integrations/quantor/README.md` for full documentation
