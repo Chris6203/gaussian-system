@@ -2187,9 +2187,26 @@ for idx, sim_time in enumerate(common_times):
         
         bot.paper_trader.update_positions(trading_symbol, current_price=current_price)
 
-        # FORCE-CLOSE MECHANISM: Close positions held too long
+        # FORCE-CLOSE MECHANISM: Close positions held too long or meeting exit rules
         # Use config value (TT_MAX_HOLD_MINUTES) which is set at module load from config.json
         max_hold_minutes = float(os.environ.get("TT_MAX_HOLD_MINUTES", str(TT_MAX_HOLD_MINUTES)))
+
+        # Phase 34 Exit Improvement settings
+        flat_exit_enabled = os.environ.get('FLAT_TRADE_EXIT_ENABLED', '1') == '1'
+        flat_timeout = float(os.environ.get('FLAT_TRADE_TIMEOUT_MIN', '15'))
+        flat_threshold = float(os.environ.get('FLAT_TRADE_THRESHOLD_PCT', '1.0'))
+
+        pullback_exit_enabled = os.environ.get('PROFIT_PULLBACK_EXIT_ENABLED', '1') == '1'
+        pullback_threshold = float(os.environ.get('PROFIT_PULLBACK_THRESHOLD_PCT', '50'))
+
+        quick_profit_enabled = os.environ.get('QUICK_PROFIT_EXIT_ENABLED', '1') == '1'
+        quick_profit_pct = float(os.environ.get('QUICK_PROFIT_THRESHOLD_PCT', '5.0'))
+        quick_profit_time = float(os.environ.get('QUICK_PROFIT_MAX_TIME_MIN', '10'))
+
+        time_decay_enabled = os.environ.get('TIME_DECAY_EXIT_ENABLED', '1') == '1'
+        time_decay_hold_pct = float(os.environ.get('TIME_DECAY_HOLD_PCT', '60'))
+        time_decay_min_profit = float(os.environ.get('TIME_DECAY_MIN_PROFIT_PCT', '3.0'))
+
         trades_to_close = []
         for trade in bot.paper_trader.active_trades:
             try:
@@ -2197,12 +2214,55 @@ for idx, sim_time in enumerate(common_times):
                 if sim_time.tzinfo is None and trade_time.tzinfo is not None:
                     trade_time = trade_time.replace(tzinfo=None)
                 minutes_held = (sim_time - trade_time).total_seconds() / 60.0
+
+                # Calculate P&L and high water mark
+                is_call = str(trade.option_type) in ['CALL', 'BUY_CALL', 'OrderType.CALL', 'OrderType.BUY_CALL']
+                if is_call:
+                    pnl_pct = ((current_price / trade.entry_price) - 1.0) * 100.0 if trade.entry_price else 0
+                else:
+                    pnl_pct = ((trade.entry_price / current_price) - 1.0) * 100.0 if trade.entry_price else 0
+
+                # Track high water mark (stored on trade object if available)
+                high_water = getattr(trade, 'high_water_mark_pct', pnl_pct)
+                if pnl_pct > high_water:
+                    try:
+                        trade.high_water_mark_pct = pnl_pct
+                        high_water = pnl_pct
+                    except:
+                        pass
+
+                close_reason = None
+
+                # Rule 1: Max hold time (original rule)
                 if minutes_held >= max_hold_minutes:
-                    trades_to_close.append((trade, minutes_held))
+                    close_reason = f"MAX_HOLD: Held {minutes_held:.0f}min"
+
+                # Rule 2: Flat trade exit (Phase 34)
+                elif flat_exit_enabled and minutes_held >= flat_timeout and abs(pnl_pct) < flat_threshold:
+                    close_reason = f"FLAT_TRADE: P&L {pnl_pct:.1f}% after {minutes_held:.0f}min - freeing liquidity"
+
+                # Rule 3: Profit pullback (Phase 34)
+                elif pullback_exit_enabled and high_water >= 2.0:
+                    profit_retained = (pnl_pct / high_water) * 100 if high_water > 0 else 100
+                    if profit_retained < (100 - pullback_threshold):
+                        close_reason = f"PROFIT_PULLBACK: Peak +{high_water:.1f}%, now {pnl_pct:+.1f}% (kept {profit_retained:.0f}%)"
+
+                # Rule 4: Quick profit (Phase 34)
+                elif quick_profit_enabled and minutes_held <= quick_profit_time and pnl_pct >= quick_profit_pct:
+                    close_reason = f"QUICK_PROFIT: +{pnl_pct:.1f}% in {minutes_held:.0f}min - locking gains"
+
+                # Rule 5: Time decay (Phase 34)
+                elif time_decay_enabled:
+                    hold_pct = (minutes_held / max_hold_minutes) * 100
+                    if hold_pct >= time_decay_hold_pct and pnl_pct < time_decay_min_profit and pnl_pct > -2:
+                        close_reason = f"TIME_DECAY: {hold_pct:.0f}% of hold with only {pnl_pct:+.1f}% profit"
+
+                if close_reason:
+                    trades_to_close.append((trade, minutes_held, close_reason))
             except Exception:
                 pass
 
-        for trade, minutes_held in trades_to_close:
+        for trade, minutes_held, close_reason in trades_to_close:
             try:
                 pnl_pct = ((current_price / trade.entry_price) - 1.0) * 100.0 if trade.entry_price else 0
                 is_call = str(trade.option_type) in ['CALL', 'BUY_CALL', 'OrderType.CALL', 'OrderType.BUY_CALL']
@@ -2212,8 +2272,8 @@ for idx, sim_time in enumerate(common_times):
                     exit_premium = trade.premium_paid * (1 - pnl_pct / 10)
                 exit_premium = max(0.01, exit_premium)
                 if hasattr(bot.paper_trader, '_close_trade'):
-                    bot.paper_trader._close_trade(trade, exit_premium, f"FORCE_CLOSE: Held {minutes_held:.0f}min")
-                    print(f"   [FORCE_CLOSE] {trade.option_type} held {minutes_held:.0f}min - closed")
+                    bot.paper_trader._close_trade(trade, exit_premium, close_reason)
+                    print(f"   [EXIT] {trade.option_type} - {close_reason}")
             except Exception as e:
                 import traceback
                 print(f"[FORCE_CLOSE_ERROR] Exception closing trade: {e}")
@@ -3449,6 +3509,36 @@ for idx, sim_time in enumerate(common_times):
                         max_conf_env = os.environ.get('TRAIN_MAX_CONF', '')
                         if max_conf_env:
                             train_max_conf = float(max_conf_env)
+
+                        # INVERT_CONFIDENCE: Analysis shows confidence is REVERSED
+                        # When model says 40%+ confidence, actual WR is 0%
+                        # When model says 15-20% confidence, actual WR is 7.2% (highest!)
+                        # This inverts the confidence so high becomes low and vice versa
+                        invert_confidence = os.environ.get('INVERT_CONFIDENCE', '0') == '1'
+                        if invert_confidence:
+                            confidence = 1.0 - confidence
+
+                        # USE_ENTROPY_CONFIDENCE: Replace broken confidence head with direction entropy
+                        # The confidence head is UNTRAINED and outputs inverted values.
+                        # Direction entropy measures how certain the model is about UP vs DOWN.
+                        # Low entropy = certain about direction = use as high confidence
+                        # High entropy = uncertain = use as low confidence
+                        use_entropy_conf = os.environ.get('USE_ENTROPY_CONFIDENCE', '0') == '1'
+                        if use_entropy_conf and 'dir_probs' in dir():
+                            try:
+                                # Calculate entropy of direction probabilities
+                                # dir_probs is [DOWN, NEUTRAL, UP] or [DOWN, UP]
+                                probs = np.array(dir_probs) if not isinstance(dir_probs, np.ndarray) else dir_probs
+                                probs = np.clip(probs, 1e-10, 1.0)  # Avoid log(0)
+                                entropy = -np.sum(probs * np.log(probs))
+                                # Normalize: max entropy for 3 classes is ln(3) = 1.099
+                                max_entropy = np.log(len(probs))
+                                normalized_entropy = entropy / max_entropy
+                                # Invert: low entropy = high confidence
+                                confidence = 1.0 - normalized_entropy
+                            except Exception:
+                                pass  # Keep original confidence if entropy calc fails
+
                         if not hmm_decision_made:
                             try:
                                 if bot_config and hasattr(bot_config, "config") and not skip_gates:

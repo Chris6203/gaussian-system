@@ -7654,3 +7654,189 @@ SKIP_FRIDAY=0
 **This is now the recommended configuration for live trading.**
 
 ---
+
+## Phase 35: Exit Improvements - Flat Trade & Profit Pullback (2026-01-06)
+
+### Goal
+Address finding that 86-100% of losses were trades that WERE profitable but reversed.
+Free up liquidity from flat trades to capture better opportunities.
+
+### Exit Rules Implemented
+1. **FLAT_TRADE_EXIT**: Exit trades with ±1% P&L after 15 min (free liquidity)
+2. **PROFIT_PULLBACK_EXIT**: Exit when profit drops 50% from peak
+3. **QUICK_PROFIT_EXIT**: Lock in +5% gains within 10 min
+4. **TIME_DECAY_EXIT**: Exit at 60% of max hold with <3% profit
+5. **CHOPPY_MARKET_FILTER**: ADX-based entry filter (tested separately)
+
+### 5K Comparison Test Results
+
+| Configuration | Trades | Win Rate | P&L | P&L/DD | Notes |
+|---------------|--------|----------|-----|--------|-------|
+| **BASELINE** | 52 | 46.2% | **-$15.48** | -0.00 | No exit rules (30 min max hold) |
+| **EXIT_RULES** | 153 | 40.1% | **+$4,199.40 (+84%)** | 1.08 | ✅ **BEST** - 3x more trades, 15min flat exit |
+| ALL_IMPROVED | 329 | 38.0% | **-$190.50 (-3.8%)** | -0.05 | Exit rules + choppy filter |
+
+### Key Findings
+
+1. **FLAT_TRADE exit at 15 min is the key improvement**
+   - Frees up liquidity for 3x more trades (153 vs 52)
+   - Lower win rate (40.1% vs 46.2%) but much better P&L
+
+2. **Choppy market filter HURT performance**
+   - ALL_IMPROVED with ADX filter: -$190 vs EXIT_RULES: +$4,199
+   - The filter allowed MORE trades (329) but with worse quality
+
+3. **Win rate is NOT the goal - P&L is**
+   - BASELINE had highest win rate (46.2%) but negative P&L
+   - EXIT_RULES had lower win rate but +84% P&L
+
+### Exit Rule Statistics (EXIT_RULES config)
+
+| Exit Type | Count | Notes |
+|-----------|-------|-------|
+| FLAT_TRADE | 153 | 100% of exits - trades not moving within ±1% after 15 min |
+| PROFIT_PULLBACK | 0 | Trades not reaching +2% peak before 15 min |
+| QUICK_PROFIT | 0 | Trades not reaching +5% within 10 min |
+| TIME_DECAY | 0 | FLAT_TRADE triggers first at 15 min |
+
+### Tuned Settings Test (1K cycles)
+
+| Setting | Original | Tuned | Result |
+|---------|----------|-------|--------|
+| FLAT_TRADE timeout | 15 min | 20 min | **+$538.91** vs -$563.70 |
+| FLAT_TRADE threshold | ±1% | ±0.5% | Better P&L with less aggressive exit |
+
+### Config Changes Made
+```json
+"exit_improvements": {
+    "choppy_market_filter": {
+        "enabled": false,  // DISABLED - hurts performance
+        "_note": "Phase 35 test: ALL_IMPROVED -3.8% vs EXIT_RULES +84%"
+    }
+}
+```
+
+### Recommended Configuration
+```bash
+FLAT_TRADE_EXIT_ENABLED=1
+FLAT_TRADE_TIMEOUT_MIN=15
+FLAT_TRADE_THRESHOLD_PCT=1.0
+PROFIT_PULLBACK_EXIT_ENABLED=1
+PROFIT_PULLBACK_THRESHOLD_PCT=50
+QUICK_PROFIT_EXIT_ENABLED=1
+QUICK_PROFIT_THRESHOLD_PCT=5.0
+TIME_DECAY_EXIT_ENABLED=1
+CHOPPY_MARKET_FILTER_ENABLED=0  # DISABLED
+```
+
+### Files Modified
+- `scripts/train_time_travel.py`: Added Phase 34 exit rules in force-close mechanism
+- `backend/unified_exit_manager.py`: Added all exit rule implementations
+- `integrations/quantor/regime_filter.py`: Added ADX and Choppiness Index computations
+- `config.json`: Disabled choppy_market_filter
+
+---
+
+## Phase 36: CRITICAL - Confidence Head Is Broken & Inverted (2026-01-06)
+
+### Discovery
+
+**ROOT CAUSE FOUND**: The neural network's confidence head outputs **INVERTED** values because it has **NO LOSS FUNCTION** training it.
+
+### Evidence: Confidence vs Actual Win Rate
+
+Analysis of 4,638 CALL signals from HIGH_MIN_RET model:
+
+| Confidence Range | Count | Actual Win Rate | Error |
+|------------------|-------|-----------------|-------|
+| 0-15% | 384 | 3.6% | OK |
+| 15-20% | 824 | **7.2%** | +10% overconfident |
+| 20-25% | 927 | 4.1% | +19% overconfident |
+| 25-30% | 1,379 | 2.4% | +25% overconfident |
+| 30-40% | 1,061 | 1.6% | +32% overconfident |
+| **40%+** | 63 | **0%** | **+45% overconfident** |
+
+**Key Finding**: Win rate DECREASES as confidence INCREASES. The relationship is completely inverted.
+
+### Root Cause
+
+From `core/unified_options_trading_bot.py` line 66-67:
+```python
+TRAIN_CONFIDENCE_BCE = os.environ.get('TRAIN_CONFIDENCE_BCE', '0') == '1'  # DISABLED BY DEFAULT!
+```
+
+The confidence head exists in the model:
+```python
+self.confidence_head = nn.Linear(64, 1)  # Outputs via sigmoid
+```
+
+But **no loss function trains it** unless `TRAIN_CONFIDENCE_BCE=1`. Instead, it learns backwards correlations through gradient leakage from other losses (return, direction).
+
+### Why This Matters
+
+When the model "works hard" on difficult patterns (high gradient flow), the untrained confidence head outputs high values. But those difficult cases are actually the ones that lose - hence the inversion.
+
+### Solutions Implemented
+
+#### 1. Offline Pretraining Script (`scripts/pretrain_confidence.py`)
+```bash
+# Pretrain confidence head with BCE loss on historical data
+python scripts/pretrain_confidence.py --epochs 100 --output models/pretrained_bce.pt
+
+# Then use pretrained model
+LOAD_PRETRAINED=1 PRETRAINED_MODEL_PATH=models/pretrained_bce.pt python scripts/train_time_travel.py
+```
+
+#### 2. Direction Entropy Alternative (`USE_ENTROPY_CONFIDENCE=1`)
+Replace broken confidence with entropy of direction probabilities:
+```python
+# Low entropy = certain about direction = high confidence
+# High entropy = uncertain = low confidence
+entropy = -sum(p * log(p) for p in direction_probs)
+confidence = 1.0 - (entropy / max_entropy)
+```
+
+```bash
+USE_ENTROPY_CONFIDENCE=1 python scripts/train_time_travel.py
+```
+
+#### 3. Max Confidence Filter (Workaround)
+Filter OUT high confidence signals (which are actually the worst):
+```bash
+TRAIN_MAX_CONF=0.25 python scripts/train_time_travel.py
+```
+
+This is why HIGH_MIN_RET (+423% P&L) performed well - it inadvertently filtered out the broken high-confidence signals.
+
+### Test Results
+
+| Configuration | P&L | Win Rate | Trades | Notes |
+|---------------|-----|----------|--------|-------|
+| HIGH_MIN_RET (TRAIN_MAX_CONF=0.50) | **+423%** | 38.0% | 281 | Works around broken confidence |
+| CONFIDENCE_BCE_TRAINED | +3.5% | 36.2% | 275 | BCE online training too slow |
+| OPTIMIZED_DAY_TRADING | -31% | 46.7% | 273 | Hour/day filters hurt |
+| MEAN_REVERSION_V2 | +102% | 35.1% | 26 | Low conf filter, few trades |
+
+### Environment Variables Added
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TRAIN_CONFIDENCE_BCE` | 0 | Train confidence head with BCE loss (P(win)) |
+| `CONFIDENCE_BCE_WEIGHT` | 0.5 | Weight of BCE loss in training |
+| `USE_ENTROPY_CONFIDENCE` | 0 | Use direction entropy instead of confidence head |
+| `INVERT_CONFIDENCE` | 0 | Invert confidence (1 - conf) as workaround |
+| `TRAIN_MAX_CONF` | 1.0 | Maximum confidence filter (use ≤0.25 to filter bad signals) |
+
+### Recommendations
+
+1. **For new deployments**: Run pretraining script first to calibrate confidence head
+2. **For existing models**: Use `TRAIN_MAX_CONF=0.25` to filter out broken high-confidence signals
+3. **For research**: Try `USE_ENTROPY_CONFIDENCE=1` to see if entropy is better predictor
+
+### Files Modified
+- `scripts/train_time_travel.py`: Added INVERT_CONFIDENCE and USE_ENTROPY_CONFIDENCE options
+- `scripts/pretrain_confidence.py`: NEW - Offline BCE pretraining script
+- `docs/RESULTS_TRACKER.md`: This documentation
+- `CLAUDE.md`: Updated with confidence calibration findings
+
+---
