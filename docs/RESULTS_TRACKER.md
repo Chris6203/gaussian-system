@@ -8190,9 +8190,67 @@ Comprehensive testing of RL policy architectures with multiple random seeds to f
 
 **Winner: h96_3L_gelu** - Highest consistency (86%) AND highest average win rate (46.6%)
 
-### Trade Pattern Analysis
+### Trade Pattern Analysis (Detailed)
 
-Analysis of h96_3L_gelu_s1 trades revealed:
+Deep analysis of h96_3L_gelu_s1 trades (96 total, +$139.25 P&L, 53% WR) revealed critical correlations:
+
+#### Key Finding: Empty Signal Trades Were Big Winners
+
+| Signal Strategy | Trades | Total P&L | Win Rate | Insight |
+|-----------------|--------|-----------|----------|---------|
+| **Empty signal** | 9 | **+$132.51** | **66.7%** | 🏆 THE JACKPOTS! |
+| NEURAL_BULLISH | 81 | +$11.53 | 53.1% | Small winners |
+| NEURAL_BEARISH | 6 | -$4.79 | 33.3% | Losers |
+
+**Critical Insight**: 9 trades with empty signal_strategy generated 95% of total profit!
+
+#### What Made Empty-Signal Trades Special?
+
+1. **Held much longer** - Exited via "Emergency Max Hold (2h)" not FLAT_TRADE
+2. **Entry time 1-3pm** - All 4 big winners entered 13:55-14:46
+3. **All CALLs** - No successful empty-signal PUTs
+4. **Medium confidence (0.26-0.41)** - Not high confidence
+
+Top 4 Winning Trades (all empty-signal CALLs):
+| Entry Time | P&L | Exit Reason | Hold Time |
+|------------|-----|-------------|-----------|
+| 13:56 | +$44.14 | Emergency Max Hold (2h) | 2+ hours |
+| 14:07 | +$42.32 | Emergency Max Hold (2h) | 2+ hours |
+| 14:46 | +$41.91 | Emergency Max Hold (2h) | 2+ hours |
+| 13:55 | +$36.47 | MAX_HOLD: Held 1175min | 19.6 hours |
+
+#### Exit Timing Analysis
+
+| Exit Reason | Trades | Win Rate | Avg P&L | Insight |
+|-------------|--------|----------|---------|---------|
+| FLAT_TRADE (15min) | 83 | 53.1% | +$0.13 | Tiny winners |
+| Emergency Max Hold (2h) | 3 | 100% | +$42.79 | 🏆 BIG WINNERS |
+| MAX_HOLD (long) | 2 | 50% | +$2.10 | Mixed |
+
+**Root Cause**: FLAT_TRADE_TIMEOUT_MIN=15 exits positions too quickly. Winners need hours to develop.
+
+#### Time-of-Day Analysis
+
+| Hour | Trades | Win Rate | Total P&L | Note |
+|------|--------|----------|-----------|------|
+| 09 (open) | 2 | **0%** | -$1.29 | ⚠️ AVOID |
+| 10 | 16 | 62.5% | +$2.50 | Okay |
+| 11 | 15 | 53.3% | +$2.39 | Okay |
+| 12 | 12 | 41.7% | +$0.13 | Marginal |
+| **13 (1pm)** | 21 | **66.7%** | **+$82.84** | 🏆 BEST |
+| 14 | 17 | 47.1% | +$50.62 | Second best |
+| 15 | 13 | 46.2% | +$2.06 | Okay |
+
+**Key Pattern**: 1-2pm generates 96% of profits despite having only 40% of trades.
+
+#### Signal Strategy + Option Type Combo
+
+| Combo | Trades | Total P&L | Win Rate |
+|-------|--------|-----------|----------|
+| **CALL + Empty** | 6 | **+$163.98** | **83.3%** |
+| CALL + NEURAL_BULLISH | 81 | +$11.53 | 53.1% |
+| PUT + NEURAL_BEARISH | 6 | -$4.79 | 33.3% |
+| PUT + Empty | 3 | -$31.47 | 33.3% |
 
 **By Option Type:**
 - CALL: 55.2% WR, +$2.02/trade ✓
@@ -8231,6 +8289,37 @@ Tested various architecture changes:
 | TEMPORAL_ENCODER=lstm | -1.4% | 39.2% | WORSE |
 
 **Conclusion: h96_3L_gelu with default TCN is already optimal!**
+
+### Exit Timing Experiments (2026-01-07)
+
+Tested modifying exit timing to let winners run longer:
+
+| Config | P&L | Win Rate | Trades | Result |
+|--------|-----|----------|--------|--------|
+| Baseline h96_3L_gelu_s1 | +269.6% | 53.0% | 87 | Reference |
+| FLAT_TRADE_EXIT_ENABLED=0 | -0.75% | 31.8% | 44 | WORSE |
+| FLAT_TRADE_TIMEOUT_MIN=30 | -0.75% | 31.8% | 44 | WORSE |
+
+**Note**: Exit experiments ran on different data period than original. Results not directly comparable.
+
+### Why All Improvement Attempts Failed
+
+1. **Learning Signal Loss**: Filtering removes examples the RL policy needs to learn from
+2. **Data Period Sensitivity**: Same config on different dates produces different results
+3. **Stochastic Nature**: Random seed heavily influences outcomes
+4. **Sample Size**: 87 trades is small for statistical significance
+5. **Overfitting Risk**: Architecture changes may overfit to specific market conditions
+
+### Actionable Conclusions
+
+| Action | Recommendation | Rationale |
+|--------|----------------|-----------|
+| ✅ Use h96_3L_gelu | **DO** | Best consistency (86%) and win rate (46.6%) |
+| ❌ Filter signals | **DON'T** | Hurts learning, restricts adaptation |
+| ❌ Change architecture | **DON'T** | TCN encoder is optimal for this task |
+| ⚠️ Watch 1-2pm | **OBSERVE** | 96% of profits from afternoon trades |
+| ⚠️ Avoid 9am | **CAUTION** | 0% win rate at market open |
+| ⚠️ Hold times | **INVESTIGATE** | Big winners needed 2+ hours |
 
 ### Recommended Production Config
 
