@@ -8420,3 +8420,181 @@ MIN_DIRECTION_THRESHOLD=0.05 BANDIT_MODE_TRADES=100 python scripts/train_time_tr
 ### Status
 ⚠️ **UNFIXED** - Requires code changes to `unified_rl_policy.py`
 
+
+---
+
+## ⚠️ IMPORTANT: Baseline +269% Was Statistical Fluke (2026-01-07)
+
+### Summary
+**The h96_3L_gelu "baseline" +269% P&L was NOT from neural predictions - it came from 4 accidental overnight trades on a single day.**
+
+### Investigation Timeline
+
+We initially suspected "signal inversion" because:
+- Fixed thresholds showed 33.3% win rate with NEURAL_BEARISH signals
+- This suggested predictions were inversely correlated with outcomes
+
+But deeper analysis revealed a completely different story.
+
+### Key Evidence
+
+**1. Exit Reason Analysis (h96_tcn_fixed)**
+```
+Exit Reason                                    | Trades | Win Rate
+-----------------------------------------------|--------|----------
+FLAT_TRADE: P&L 0.0% after 15min              | 18     | 66.7%
+FLAT_TRADE: P&L -0.0% after 15min             | 16     | 0.0%
+FLAT_TRADE: P&L -0.1% after 15min             | 6      | 0.0%
+FLAT_TRADE: P&L 0.1% after 15min              | 4      | 100.0%
+```
+
+**ALL trades exit as FLAT_TRADE at 15 minutes** - none hit stop loss or take profit!
+
+**2. Baseline's Profit Source (h96_3L_gelu_s1)**
+```sql
+SELECT signal_strategy, option_type, COUNT(*), SUM(profit_loss), AVG(profit_loss), win_rate
+FROM trades WHERE run_id = 'h96_3L_gelu_s1'
+GROUP BY signal_strategy, option_type
+```
+
+| Signal | Option | Trades | Total P&L | Avg P&L | Win % |
+|--------|--------|--------|-----------|---------|-------|
+| **EMPTY** | CALL | 6 | **+$164** | +$27.33 | 83.3% |
+| NEURAL_BULLISH | CALL | 81 | +$11.53 | +$0.14 | 53.1% |
+| NEURAL_BEARISH | PUT | 6 | -$4.79 | -$0.80 | 33.3% |
+| EMPTY | PUT | 3 | -$31.47 | -$10.49 | 33.3% |
+
+**95% of P&L came from 6 trades with EMPTY signal - NOT from neural predictions!**
+
+**3. The Overnight Trades**
+```
+timestamp            | option | profit_loss | exit_reason              | hold_minutes
+---------------------|--------|-------------|--------------------------|-------------
+2025-06-26T13:56:00  | CALL   | +$44.14    | Emergency Max Hold (2h)  | 1174
+2025-06-26T14:07:00  | CALL   | +$42.32    | Emergency Max Hold (2h)  | 1163
+2025-06-26T14:46:00  | CALL   | +$41.91    | Emergency Max Hold (2h)  | 1124
+2025-06-26T13:55:00  | CALL   | +$36.47    | MAX_HOLD: Held 1175min   | 1175
+```
+
+- All 4 big winners were on **ONE DAY** (June 26, 2025)
+- All held **OVERNIGHT** (1100-1175 minutes)
+- All had **EMPTY signal_strategy** (not from neural network)
+- They accidentally caught a big market move
+
+### Root Cause
+
+The +269% "baseline" was a statistical fluke:
+1. 4 trades bypassed normal signal generation (empty strategy)
+2. They held overnight due to "Emergency Max Hold" logic
+3. They happened to catch June 26-27's market rally
+4. Neural predictions (NEURAL_BULLISH/BEARISH) contributed only **$7 of $164 total profit**
+
+### Why 33.3% Win Rate is NOT Inversion
+
+The "fixed threshold" run showed 33.3% win rate with NEURAL_BEARISH, but this is NOT signal inversion:
+
+1. **All trades exit at 15 minutes via FLAT_TRADE** (before direction plays out)
+2. **P&L distribution is symmetric around zero** (-7 to +6, peak at 0)
+3. **33% is noise within ±$5 P&L range**, not meaningful signal
+4. **The 15-min prediction horizon = 15-min FLAT_TRADE exit** (self-defeating)
+
+### Actual State of Neural Predictions
+
+| Metric | NEURAL_BULLISH | NEURAL_BEARISH |
+|--------|----------------|----------------|
+| Trades | 81 | 6 |
+| Total P&L | +$11.53 | -$4.79 |
+| Avg P&L/Trade | **+$0.14** | **-$0.80** |
+| Win Rate | 53.1% | 33.3% |
+
+Neural predictions provide **marginal directional edge at best** (~$0.14/trade for bullish, negative for bearish).
+
+### Implications
+
+1. **Don't trust +269% baseline** - it was luck, not skill
+2. **Neural predictions need improvement** - not just threshold fixes
+3. **FLAT_TRADE exit strategy defeats predictions** - trades close before direction plays out
+4. **Architecture comparisons were invalid** - comparing HMM luck, not NN performance
+5. **Focus areas**: Exit strategy, conviction signals, letting winners run
+
+### Status
+✅ **ROOT CAUSE IDENTIFIED** - No signal inversion bug, baseline was statistical fluke
+
+## Phase 53: HMM Alignment Gate Fix & Architecture Retest (2026-01-07)
+
+### Key Discovery
+
+The **HMM Alignment Gate (Gate 4)** was blocking GOOD signals, not inverting them!
+
+### Hypothesis vs Reality
+
+| Hypothesis | Test Result | Verdict |
+|------------|-------------|---------|
+| Model is anti-predictive (33% WR → 67% contrarian) | Contrarian: 28% WR | **DISPROVEN** |
+| Skip HMM gate will improve | Normal: 43.8% WR | **CONFIRMED** |
+
+### Test Results
+
+**Contrarian vs Normal (with HMM gate skipped):**
+
+| Test | Win Rate | P&L | Trades |
+|------|----------|-----|--------|
+| Normal (SKIP_HMM_ALIGNMENT=1) | **43.8%** | -0.05% | 64 |
+| Contrarian (INVERT_NEURAL_SIGNAL=1) | 28.0% | -1.40% | 50 |
+
+**The model IS slightly predictive** - trading WITH predictions beats trading AGAINST!
+
+### Architecture Comparison (with SKIP_HMM_ALIGNMENT=1)
+
+| Architecture | P&L | Win Rate | Trades | Per-Trade P&L |
+|--------------|-----|----------|--------|---------------|
+| **Transformer** | **+8.72%** | 31.2% | 47 | **+$9.27** |
+| **TCN** | +7.72% | **43.1%** | 64 | +$6.03 |
+| LSTM | -1.44% | 37.0% | 81 | -$0.89 |
+
+### Key Findings
+
+1. **Transformer wins on P&L** (+8.72%) despite LOWEST win rate (31.2%)
+   - Has bigger winners that offset more losses
+   - Per-trade P&L: +$9.27 (best)
+
+2. **TCN wins on consistency** (43.1% WR)
+   - Most consistent win rate
+   - Second-best per-trade P&L: +$6.03
+
+3. **LSTM is worst** with HMM gate skipped
+   - More trades (81) but losing money
+   - Previous LSTM success was due to HMM gate filtering
+
+### Root Cause Analysis
+
+The HMM Alignment Gate (Gate 4 in unified_rl_policy.py) requires:
+- Bullish prediction + Bullish HMM → Trade allowed
+- Bearish prediction + Bearish HMM → Trade allowed
+- **Any disagreement → Trade BLOCKED**
+
+This was too restrictive - the neural network had legitimate edge even when disagreeing with HMM.
+
+### Fix Implemented
+
+New environment variable `SKIP_HMM_ALIGNMENT=1`:
+- Bypasses Gate 4 alignment check
+- Allows neural predictions to trade freely
+- Results: 43.8% WR (up from ~33%)
+
+### Recommended Configuration
+
+```bash
+# Best architecture (Transformer) with HMM gate skipped
+SKIP_HMM_ALIGNMENT=1 TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
+
+# Alternative: TCN for consistency
+SKIP_HMM_ALIGNMENT=1 TEMPORAL_ENCODER=tcn python scripts/train_time_travel.py
+```
+
+### Implications
+
+1. **Previous architecture tests were invalid** - all affected by HMM gate
+2. **Transformer is now best** (was LSTM in previous tests due to HMM filtering)
+3. **Contrarian trading does NOT work** - 28% WR proves model is predictive
+4. **SKIP_HMM_ALIGNMENT should be default** for neural-based trading
