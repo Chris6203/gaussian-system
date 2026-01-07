@@ -8338,3 +8338,85 @@ Expected: +190-270% P&L, 46-53% Win Rate, 86% consistency across seeds
 - [Expert Systems with Applications - RL Investment Survey 2025](https://www.sciencedirect.com/science/article/abs/pii/S0957417425011625)
 - [Deep RL Trading Strategies](https://blog.mlq.ai/deep-reinforcement-learning-trading-strategies-automl/)
 
+---
+
+## ⚠️ CRITICAL BUG: Neural Predictions IGNORED (2026-01-07)
+
+### Summary
+**The neural network predictions are completely filtered out and NEVER used for trading decisions!**
+
+### Evidence from h96_3L_gelu_s1 Trade Analysis
+
+| Metric | Value | Problem |
+|--------|-------|---------|
+| MIN_DIRECTION_THRESHOLD | 0.5 (50 bps) | Way too high |
+| Actual predictions | 8-15 bps | All below threshold |
+| bandit_mode_trades | 100,000 | Never exits bandit mode |
+| Predictions filtered | **100%** | None reach RL policy |
+
+### How We Discovered It
+
+Analysis of h96_3L_gelu_s1 trades revealed:
+```
+pred_direction  trades  win_rate
+--------------  ------  --------
+-0.12           6       33.3%    ← Bearish predictions
+0.08            79      53.2%    ← Bullish predictions
+0.15            2       50.0%    ← Bullish predictions
+```
+
+All values are below MIN_DIRECTION_THRESHOLD (0.5), so all predictions trigger:
+```python
+if abs(state.predicted_direction) < MIN_DIRECTION_THRESHOLD:
+    return self.HOLD, 0.85, {'reason': 'weak_direction'}  # ALWAYS!
+```
+
+### Root Cause
+
+In `backend/unified_rl_policy.py`:
+
+1. **Threshold mismatch** (line ~698):
+   - `predicted_direction = predicted_return * 100`
+   - Prediction of 0.001 (10 bps) becomes 0.1
+   - Threshold is 0.5 → **ALL predictions filtered!**
+
+2. **Permanent bandit mode** (line ~300):
+   - `bandit_mode_trades = 100,000`
+   - We never get 100K trades → **RL never activates!**
+
+### Impact
+
+- **All "successful" runs were HMM-based, not prediction-based**
+- The neural network trains but its outputs are discarded
+- Entry decisions come from "Multi-timeframe consensus" not predictions
+- Past architecture comparisons are invalid - they compared HMM performance, not NN performance
+
+### Fixes Required
+
+```python
+# unified_rl_policy.py
+
+# Fix 1: Lower threshold (line ~698)
+MIN_DIRECTION_THRESHOLD = 0.05  # was 0.5
+
+# Fix 2: Lower bandit mode trades (line ~300)
+bandit_mode_trades: int = 100  # was 100000
+```
+
+### Tests to Rerun (With Fixed Thresholds)
+
+All previous tests need re-running with:
+```bash
+MIN_DIRECTION_THRESHOLD=0.05 BANDIT_MODE_TRADES=100 python scripts/train_time_travel.py
+```
+
+| Test | Original Result | Needs Rerun |
+|------|-----------------|-------------|
+| h96_3L_gelu | +269.6% P&L | ✅ Yes |
+| h64_3L_gelu | +339.0% P&L | ✅ Yes |
+| h96_mamba2 | -1.39% P&L | ✅ Yes |
+| All architecture tests | Various | ✅ Yes |
+
+### Status
+⚠️ **UNFIXED** - Requires code changes to `unified_rl_policy.py`
+

@@ -91,6 +91,64 @@ model = torch.load('models/YOUR_RUN/state/trained_model.pth', map_location='cpu'
 print([k for k in model.keys() if 'temporal' in k][:5])
 ```
 
+### CRITICAL: Neural Predictions IGNORED Due to Threshold Bug (2026-01-07)
+
+**The neural network predictions are completely filtered out and NEVER used for trading decisions!**
+
+| Component | Value | Problem |
+|-----------|-------|---------|
+| `MIN_DIRECTION_THRESHOLD` | **0.5** (50 bps) | Way too high |
+| Actual predictions | 0.08-0.15 | All below threshold |
+| `bandit_mode_trades` | **100,000** | Never exits bandit mode |
+
+**Root Cause**: In `backend/unified_rl_policy.py`:
+```python
+MIN_DIRECTION_THRESHOLD = 0.5  # Requires 0.5% predicted move
+predicted_direction = predicted_return * 100  # 0.001 (10bps) → 0.1
+
+# Result: ALL predictions filtered as "weak_direction"!
+if abs(state.predicted_direction) < MIN_DIRECTION_THRESHOLD:
+    return self.HOLD  # ALWAYS triggers!
+```
+
+**Evidence** (from h96_3L_gelu_s1 analysis):
+- All predictions: 8-15 bps (0.08%-0.15%)
+- Direction values: 0.08, 0.15, -0.12
+- Threshold: 0.5
+- **100% of predictions filtered!**
+
+**Impact**:
+- System trades purely on HMM/consensus signals, not neural predictions
+- The neural network is training but its outputs are never used
+- All "successful" runs were actually HMM-based, not prediction-based
+
+**Fixes Required**:
+
+1. **Lower MIN_DIRECTION_THRESHOLD** (in `unified_rl_policy.py` line ~698):
+```python
+# BEFORE (broken):
+MIN_DIRECTION_THRESHOLD = 0.5  # 0.5% - too high!
+
+# AFTER (fixed):
+MIN_DIRECTION_THRESHOLD = 0.05  # 0.05% - matches prediction scale
+```
+
+2. **Lower bandit_mode_trades** to enable RL learning:
+```python
+# BEFORE (broken):
+bandit_mode_trades: int = 100000  # Never exits bandit mode
+
+# AFTER (fixed):
+bandit_mode_trades: int = 100  # Start RL after 100 trades
+```
+
+**Environment Variable Override** (temporary fix):
+```bash
+MIN_DIRECTION_THRESHOLD=0.05 BANDIT_MODE_TRADES=100 python scripts/train_time_travel.py
+```
+
+**Status**: ⚠️ **UNFIXED** - Requires code changes to `unified_rl_policy.py`
+
 ## Common Commands
 
 ### Training & Simulation
