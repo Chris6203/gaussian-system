@@ -103,10 +103,17 @@ CONDOR_FEATURES_ENABLED = os.environ.get('CONDOR_FEATURES_ENABLED', '0') == '1'
 
 class UnifiedPolicyNetwork(nn.Module):
     """
-    Simple but effective policy network.
+    Configurable policy network for RL trading decisions.
 
-    Key insight: Simpler networks often outperform complex ones
-    when data is noisy (which trading data always is).
+    CONFIGURABLE VIA ENV VARS (Phase 53):
+    - RL_HIDDEN_DIM: Hidden layer dimension (default: 64)
+    - RL_NUM_LAYERS: Number of hidden layers (default: 2)
+    - RL_ACTIVATION: Activation function - relu/gelu/tanh/silu/mish (default: relu)
+    - RL_USE_GRU: Use GRU for temporal state (default: 0)
+    - RL_USE_ATTENTION: Add self-attention layer (default: 0)
+    - RL_USE_RESIDUAL: Use residual/skip connections (default: 0)
+    - RL_DROPOUT: Dropout rate (default: 0.1)
+    - RL_ORTHO_INIT: Use orthogonal initialization (default: 0)
 
     State features (18 base, +4 sentiment, +3 condor = up to 25):
     - Position state (4): in_trade, is_call, pnl%, drawdown
@@ -118,7 +125,7 @@ class UnifiedPolicyNetwork(nn.Module):
     - [Optional] Condor Regime (3): condor_suitability, mtf_consensus, trending_count
     """
 
-    def __init__(self, state_dim: int = None, hidden_dim: int = 64):
+    def __init__(self, state_dim: int = None, hidden_dim: int = None):
         # Auto-detect state dim based on feature flags
         if state_dim is None:
             # Base: 18 features + optional sentiment (4) + optional condor (3)
@@ -128,41 +135,104 @@ class UnifiedPolicyNetwork(nn.Module):
             if CONDOR_FEATURES_ENABLED:
                 state_dim += 3
         super().__init__()
-        
-        # Shared feature extractor (simple!)
-        self.features = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
-        )
-        
+
+        # Configurable architecture via env vars
+        hidden_dim = hidden_dim or int(os.environ.get('RL_HIDDEN_DIM', '64'))
+        num_layers = int(os.environ.get('RL_NUM_LAYERS', '2'))
+        activation_type = os.environ.get('RL_ACTIVATION', 'relu').lower()
+        use_gru = os.environ.get('RL_USE_GRU', '0') == '1'
+        self.use_attention = os.environ.get('RL_USE_ATTENTION', '0') == '1'
+        self.use_residual = os.environ.get('RL_USE_RESIDUAL', '0') == '1'
+        dropout = float(os.environ.get('RL_DROPOUT', '0.1'))
+        self.ortho_init = os.environ.get('RL_ORTHO_INIT', '0') == '1'
+
+        # Select activation function
+        if activation_type == 'gelu':
+            activation = nn.GELU
+        elif activation_type == 'tanh':
+            activation = nn.Tanh
+        elif activation_type == 'silu' or activation_type == 'swish':
+            activation = nn.SiLU
+        elif activation_type == 'mish':
+            activation = nn.Mish
+        else:
+            activation = nn.ReLU
+
+        # Build feature extractor layers
+        self.input_proj = nn.Linear(state_dim, hidden_dim)  # Project input to hidden dim
+        self.input_norm = nn.LayerNorm(hidden_dim)
+
+        # Build residual or sequential blocks
+        if self.use_residual:
+            # Residual blocks: each block is Linear + LayerNorm + Act + Dropout
+            self.res_blocks = nn.ModuleList()
+            for i in range(num_layers):
+                self.res_blocks.append(nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.LayerNorm(hidden_dim),
+                    activation(),
+                    nn.Dropout(dropout),
+                ))
+            self.features = None  # Not used in residual mode
+            logger.info(f"🔗 RL Residual connections enabled ({num_layers} blocks)")
+        else:
+            # Standard sequential layers (after input projection)
+            layers = []
+            for i in range(num_layers):
+                layers.extend([
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.LayerNorm(hidden_dim),
+                    activation(),
+                    nn.Dropout(dropout),
+                ])
+            self.features = nn.Sequential(*layers)
+            self.res_blocks = None
+
+        # Optional GRU for temporal state tracking
+        self.use_gru = use_gru
+        if use_gru:
+            self.gru = nn.GRU(hidden_dim, hidden_dim, batch_first=True)
+            self.gru_hidden = None
+            logger.info(f"🔄 RL GRU enabled for temporal state tracking")
+
+        # Optional self-attention layer
+        if self.use_attention:
+            self.attention = nn.MultiheadAttention(hidden_dim, num_heads=4, dropout=dropout, batch_first=True)
+            self.attn_norm = nn.LayerNorm(hidden_dim)
+            logger.info(f"🎯 RL Attention enabled (4 heads)")
+
         # Action head: 4 actions (HOLD, BUY_CALL, BUY_PUT, EXIT)
         self.action_head = nn.Sequential(
-            nn.Linear(hidden_dim, 32),
-            nn.ReLU(),
-            nn.Linear(32, 4)
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            activation(),
+            nn.Linear(hidden_dim // 2, 4)
         )
-        
+
         # Value head (for advantage estimation)
         self.value_head = nn.Sequential(
-            nn.Linear(hidden_dim, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1)
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            activation(),
+            nn.Linear(hidden_dim // 2, 1)
         )
-        
+
         # Exit urgency head (0-1, how urgently should we exit?)
         self.exit_urgency_head = nn.Sequential(
-            nn.Linear(hidden_dim, 16),
-            nn.ReLU(),
-            nn.Linear(16, 1),
+            nn.Linear(hidden_dim, hidden_dim // 4),
+            activation(),
+            nn.Linear(hidden_dim // 4, 1),
             nn.Sigmoid()
         )
-        
+
         self._init_weights()
+        extras = []
+        if use_gru:
+            extras.append("GRU")
+        if self.use_attention:
+            extras.append("Attn")
+        if self.use_residual:
+            extras.append("Res")
+        extra_str = f", +[{','.join(extras)}]" if extras else ""
+        logger.info(f"🧠 RL Network: {num_layers}L, h={hidden_dim}, act={activation_type}, drop={dropout}{extra_str}")
     
     def _init_weights(self):
         for m in self.modules():
@@ -178,7 +248,23 @@ class UnifiedPolicyNetwork(nn.Module):
             value: [batch, 1] state value estimate
             exit_urgency: [batch, 1] how urgently to exit (0-1)
         """
-        features = self.features(state)
+        # Project input to hidden dimension
+        features = self.input_norm(self.input_proj(state))
+
+        # Apply residual or sequential layers
+        if self.use_residual and self.res_blocks is not None:
+            for block in self.res_blocks:
+                features = features + block(features)  # Residual connection
+        elif self.features is not None:
+            features = self.features(features)
+
+        # Optional self-attention (treats features as single token sequence)
+        if self.use_attention:
+            # Add sequence dimension for attention: [B, D] -> [B, 1, D]
+            feat_seq = features.unsqueeze(1)
+            attn_out, _ = self.attention(feat_seq, feat_seq, feat_seq)
+            features = self.attn_norm(features + attn_out.squeeze(1))
+
         action_logits = self.action_head(features)
         value = self.value_head(features)
         exit_urgency = self.exit_urgency_head(features)
@@ -210,7 +296,7 @@ class UnifiedRLPolicy:
         learning_rate: float = 0.0003,
         gamma: float = 0.99,
         device: str = 'cpu',
-        bandit_mode_trades: int = 100000,  # REDUCED: Fewer random trades before learning kicks in
+        bandit_mode_trades: int = 100,  # BUG FIX (2026-01-07): Was 100000, RL never activated
         min_confidence_to_trade: float = 0.55,  # HIGH threshold - only trade high-quality signals
         max_position_loss_pct: float = None,  # Loaded from exit_config
         profit_target_pct: float = None,  # Loaded from exit_config
@@ -236,7 +322,9 @@ class UnifiedRLPolicy:
 
         self.device = device
         self.gamma = gamma
-        self.bandit_mode_trades = bandit_mode_trades
+        # BUG FIX (2026-01-07): Allow env var override for bandit_mode_trades
+        # Was 100000, which meant RL never activated (we never get that many trades)
+        self.bandit_mode_trades = int(os.environ.get('BANDIT_MODE_TRADES', str(bandit_mode_trades)))
         self.min_confidence_to_trade = min_confidence_to_trade
         
         # Track consecutive losses to reduce risk after losing streak
@@ -252,7 +340,8 @@ class UnifiedRLPolicy:
             state_dim += 4
         if CONDOR_FEATURES_ENABLED:
             state_dim += 3
-        self.network = UnifiedPolicyNetwork(state_dim=state_dim, hidden_dim=64).to(device)
+        hidden_dim = int(os.environ.get('RL_HIDDEN_DIM', '64'))
+        self.network = UnifiedPolicyNetwork(state_dim=state_dim, hidden_dim=hidden_dim).to(device)
 
         # Log feature status
         features_desc = [f"Base(18)"]
@@ -607,8 +696,9 @@ class UnifiedRLPolicy:
             # Require a meaningful predicted direction
             # predicted_direction is scaled: 1.0 = 1% predicted move
             # (predicted_return * 100, clipped to [-1, 1])
-            # TIGHTENED: Require at least 0.5% predicted move (50 basis points)
-            MIN_DIRECTION_THRESHOLD = 0.5  # 0.5% predicted move (was 0.2%)
+            # BUG FIX (2026-01-07): Threshold was 0.5 but predictions are only 0.08-0.15
+            # This caused 100% of predictions to be filtered as "weak_direction"!
+            MIN_DIRECTION_THRESHOLD = float(os.environ.get('MIN_DIRECTION_THRESHOLD', '0.05'))  # 0.05% (was 0.5% - too high!)
             if abs(state.predicted_direction) < MIN_DIRECTION_THRESHOLD:
                 return self.HOLD, 0.85, {**details, 'reason': f'weak_direction ({state.predicted_direction:.3f} < {MIN_DIRECTION_THRESHOLD})'}
             
