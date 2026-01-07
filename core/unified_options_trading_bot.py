@@ -86,6 +86,11 @@ DECOUPLE_UNCERTAINTY = os.environ.get('DECOUPLE_UNCERTAINTY', '0') == '1'
 # Temperature scaling for direction logits (calibration)
 DIRECTION_TEMPERATURE = float(os.environ.get('DIRECTION_TEMPERATURE', '1.0'))
 
+# INVERT neural signal direction (trade OPPOSITE to prediction)
+# Evidence: NEURAL_BEARISH has ~33% WR, contrarian would be ~67%
+# This is a CONTRARIAN trading strategy based on model anti-correlation
+INVERT_NEURAL_SIGNAL = os.environ.get('INVERT_NEURAL_SIGNAL', '0') == '1'
+
 # Log confidence calibration debug info
 CONFIDENCE_DEBUG = os.environ.get('CONFIDENCE_DEBUG', '0') == '1'
 
@@ -4006,14 +4011,26 @@ class UnifiedOptionsBot:
                 signal["reasoning"].append(f"Neural confidence {nc:.1%}.")
             if nc > self.neural_confidence_threshold:  # Adaptive neural confidence threshold
                 if pr > self.neural_return_threshold:  # Adaptive return threshold
-                    logger.info(f"✅ NEURAL: Setting BUY_CALLS (pr={pr:.4f} > thresh={self.neural_return_threshold:.4f})")
-                    signal["action"] = "BUY_CALLS"
-                    signal["strategy"] = "NEURAL_BULLISH"
+                    if INVERT_NEURAL_SIGNAL:
+                        # CONTRARIAN: Model predicted UP, trade DOWN (evidence: 33% WR → 67% contrarian)
+                        logger.info(f"🔄 NEURAL INVERTED: pr={pr:.4f} predicted UP → trading PUTS (contrarian)")
+                        signal["action"] = "BUY_PUTS"
+                        signal["strategy"] = "NEURAL_CONTRARIAN_BEARISH"
+                    else:
+                        logger.info(f"✅ NEURAL: Setting BUY_CALLS (pr={pr:.4f} > thresh={self.neural_return_threshold:.4f})")
+                        signal["action"] = "BUY_CALLS"
+                        signal["strategy"] = "NEURAL_BULLISH"
                     components.append(nc)
                 elif pr < -self.neural_return_threshold:  # Adaptive negative return threshold
-                    logger.info(f"✅ NEURAL: Setting BUY_PUTS (pr={pr:.4f} < -thresh={-self.neural_return_threshold:.4f})")
-                    signal["action"] = "BUY_PUTS"
-                    signal["strategy"] = "NEURAL_BEARISH"
+                    if INVERT_NEURAL_SIGNAL:
+                        # CONTRARIAN: Model predicted DOWN, trade UP (evidence: 33% WR → 67% contrarian)
+                        logger.info(f"🔄 NEURAL INVERTED: pr={pr:.4f} predicted DOWN → trading CALLS (contrarian)")
+                        signal["action"] = "BUY_CALLS"
+                        signal["strategy"] = "NEURAL_CONTRARIAN_BULLISH"
+                    else:
+                        logger.info(f"✅ NEURAL: Setting BUY_PUTS (pr={pr:.4f} < -thresh={-self.neural_return_threshold:.4f})")
+                        signal["action"] = "BUY_PUTS"
+                        signal["strategy"] = "NEURAL_BEARISH"
                     components.append(nc)
                 else:
                     logger.info(f"⚠️ NEURAL: Return too small for signal (|{pr:.4f}| < {self.neural_return_threshold:.4f})")

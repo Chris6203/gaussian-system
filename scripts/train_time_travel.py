@@ -3574,8 +3574,18 @@ for idx, sim_time in enumerate(common_times):
                                 pass
 
                             # Require predicted edge consistent with direction
+                            # CONTRARIAN MODE: When INVERT_NEURAL_SIGNAL=1, the edge check is inverted
+                            # Normal: CALL needs +predicted_return, PUT needs -predicted_return
+                            # Contrarian: CALL comes from -predicted_return (bearish prediction),
+                            #             PUT comes from +predicted_return (bullish prediction)
                             is_call = action == 'BUY_CALLS'
-                            edge_ok = (predicted_return >= train_min_abs_ret) if is_call else (predicted_return <= -train_min_abs_ret)
+                            is_contrarian = os.environ.get('INVERT_NEURAL_SIGNAL', '0') == '1'
+                            if is_contrarian:
+                                # Contrarian: check that prediction is OPPOSITE to trade direction
+                                edge_ok = (predicted_return <= -train_min_abs_ret) if is_call else (predicted_return >= train_min_abs_ret)
+                            else:
+                                # Normal: check that prediction ALIGNS with trade direction
+                                edge_ok = (predicted_return >= train_min_abs_ret) if is_call else (predicted_return <= -train_min_abs_ret)
                             conf_ok = confidence >= train_min_conf and confidence <= train_max_conf
 
                             # MARKET OPEN FILTER: Big wins happen at market open (09:31)

@@ -628,6 +628,12 @@ class UnifiedRLPolicy:
             REQUIRE_NEURAL_CONFIRM = os.environ.get('REQUIRE_NEURAL_CONFIRM', '1') == '1'
             NEURAL_MIN_DIRECTION = float(os.environ.get('NEURAL_MIN_DIRECTION', '0.1'))
 
+            # SKIP_HMM_ALIGNMENT: Bypass Gate 4 (HMM regime alignment check)
+            # Use with INVERT_NEURAL_SIGNAL=1 for contrarian trading
+            # When signals are inverted, they will DISAGREE with HMM (by design),
+            # so we need to skip the alignment check to allow contrarian trades
+            SKIP_HMM_ALIGNMENT = os.environ.get('SKIP_HMM_ALIGNMENT', '0') == '1'
+
             # Track gate rejections for analysis
             gate_tracker = getattr(self, '_gate_tracker', None)
             if gate_tracker is None:
@@ -704,6 +710,7 @@ class UnifiedRLPolicy:
             
             # === GATE 4: HMM Regime Alignment (CRITICAL) ===
             # ONLY trade when prediction aligns with HMM trend
+            # EXCEPTION: Skip this gate when SKIP_HMM_ALIGNMENT=1 (for contrarian trading)
             bullish_prediction = state.predicted_direction > MIN_DIRECTION_THRESHOLD
             bearish_prediction = state.predicted_direction < -MIN_DIRECTION_THRESHOLD
 
@@ -712,36 +719,45 @@ class UnifiedRLPolicy:
             hmm_bearish = state.hmm_trend < 0.35  # Strong bearish required
             hmm_choppy = 0.35 <= state.hmm_trend <= 0.65 and state.hmm_volatility > 0.6
 
-            # AVOID: Trading in choppy markets (low win rate)
+            # AVOID: Trading in choppy markets (low win rate) - ALWAYS applies
             if hmm_choppy and state.hmm_confidence > 0.5:
                 return self.HOLD, 0.8, {**details, 'reason': f'choppy_market (trend={state.hmm_trend:.2f}, vol={state.hmm_volatility:.2f})'}
 
-            # CHECK ALIGNMENT
+            # CHECK ALIGNMENT (skip for contrarian mode)
             effective_confidence = state.prediction_confidence
 
-            if bullish_prediction:
-                if hmm_bullish:
-                    # STRONG SETUP: Bullish prediction + Bullish HMM
-                    effective_confidence = min(1.0, state.prediction_confidence * 1.15)
-                    details['setup_quality'] = 'aligned_bullish'
-                elif hmm_bearish:
-                    # CONFLICT: Don't fight the trend
-                    return self.HOLD, 0.85, {**details, 'reason': 'bullish_vs_bearish_trend'}
-                else:
-                    # NEUTRAL trend - DON'T TRADE (predictions unreliable in neutral markets)
-                    return self.HOLD, 0.8, {**details, 'reason': f'neutral_trend_bullish (trend={state.hmm_trend:.2f})'}
+            if SKIP_HMM_ALIGNMENT:
+                # CONTRARIAN MODE: Skip alignment check, just verify we have a directional signal
+                if bullish_prediction:
+                    details['setup_quality'] = 'contrarian_bullish_signal'
+                elif bearish_prediction:
+                    details['setup_quality'] = 'contrarian_bearish_signal'
+                # Don't block - proceed to entry decision
+            else:
+                # STANDARD MODE: Require alignment
+                if bullish_prediction:
+                    if hmm_bullish:
+                        # STRONG SETUP: Bullish prediction + Bullish HMM
+                        effective_confidence = min(1.0, state.prediction_confidence * 1.15)
+                        details['setup_quality'] = 'aligned_bullish'
+                    elif hmm_bearish:
+                        # CONFLICT: Don't fight the trend
+                        return self.HOLD, 0.85, {**details, 'reason': 'bullish_vs_bearish_trend'}
+                    else:
+                        # NEUTRAL trend - DON'T TRADE (predictions unreliable in neutral markets)
+                        return self.HOLD, 0.8, {**details, 'reason': f'neutral_trend_bullish (trend={state.hmm_trend:.2f})'}
 
-            elif bearish_prediction:
-                if hmm_bearish:
-                    # STRONG SETUP: Bearish prediction + Bearish HMM
-                    effective_confidence = min(1.0, state.prediction_confidence * 1.15)
-                    details['setup_quality'] = 'aligned_bearish'
-                elif hmm_bullish:
-                    # CONFLICT: Don't fight the trend
-                    return self.HOLD, 0.85, {**details, 'reason': 'bearish_vs_bullish_trend'}
-                else:
-                    # NEUTRAL trend - DON'T TRADE (predictions unreliable in neutral markets)
-                    return self.HOLD, 0.8, {**details, 'reason': f'neutral_trend_bearish (trend={state.hmm_trend:.2f})'}
+                elif bearish_prediction:
+                    if hmm_bearish:
+                        # STRONG SETUP: Bearish prediction + Bearish HMM
+                        effective_confidence = min(1.0, state.prediction_confidence * 1.15)
+                        details['setup_quality'] = 'aligned_bearish'
+                    elif hmm_bullish:
+                        # CONFLICT: Don't fight the trend
+                        return self.HOLD, 0.85, {**details, 'reason': 'bearish_vs_bullish_trend'}
+                    else:
+                        # NEUTRAL trend - DON'T TRADE (predictions unreliable in neutral markets)
+                        return self.HOLD, 0.8, {**details, 'reason': f'neutral_trend_bearish (trend={state.hmm_trend:.2f})'}
             
             # === GATE 5: Volume/Liquidity Check ===
             if state.volume_spike < 0.5:  # Very low volume
