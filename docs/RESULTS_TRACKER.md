@@ -8786,3 +8786,115 @@ realized_return = rec.get('realized_move', 0.0)  # Actual price change
 3. Run 20K validation with correctly pretrained models
 4. Test V4 Latent Expert Predictor with correct pretraining
 5. Compare Multi-RL with pretrained vs random-init predictor
+
+---
+
+## Phase 55: Game-AI Style RL Architectures (2026-01-08)
+
+### Summary
+
+Implemented two game-AI style RL architectures inspired by professional gaming AI systems:
+
+1. **GameAIRLPolicy** (OpenAI Five / Dota 2 style)
+   - LSTM memory with temporal attention
+   - Separate actor-critic networks
+   - ~1.5M parameters
+
+2. **AlphaStarRLPolicy** (DeepMind AlphaStar / StarCraft II style)
+   - 4-layer Transformer with RoPE position embeddings
+   - Entity encoding (treats VIX, HMM, Greeks as separate entities)
+   - Gated residual blocks
+   - ~3.7M parameters
+
+### AlphaStar Pretraining
+
+Created expert imitation learning pipeline (`scripts/pretrain_alphastar.py`):
+
+```
+Loaded 24159 expert trades from data/paper_trading.db
+Dataset: 24159 samples (21743 train, 2416 val)
+Epoch   1/30 | Loss: 0.0055 | Train Acc: 98.3% | Val Acc: 100.0%
+Epoch  30/30 | Loss: 0.0000 | Train Acc: 100.0% | Val Acc: 100.0%
+✅ AlphaStar pretrained! Best validation accuracy: 100.0%
+```
+
+**Pretraining Insight**: The policy achieved 100% accuracy on expert trades quickly, suggesting the expert trades are very learnable patterns (call on bullish, put on bearish, exit at profit/loss).
+
+### Experiment Results (5K cycles each)
+
+| Architecture | P&L | Win Rate | Trades | Drawdown | Per-Trade P&L |
+|--------------|-----|----------|--------|----------|---------------|
+| **Baseline (MLP)** | **-$2.35 (-0.05%)** | 43.8% | 64 | 58% | **-$0.04** |
+| Game-AI (LSTM+Attn) | -$44.77 (-0.90%) | 40.4% | 94 | 88% | -$0.48 |
+| AlphaStar (Transformer) | -$57.53 (-1.15%) | 44.0% | 91 | 88% | -$0.63 |
+
+### Key Finding: BASELINE WINS
+
+**Why did simpler architecture perform better?**
+
+1. **Entry decisions still controlled by bandit mode**
+   - All three architectures use bandit mode for entry decisions
+   - RL policy mainly influences exit timing
+   - Complex architectures don't help when entries are rule-based
+
+2. **Larger architectures took MORE trades**
+   - Baseline: 64 trades
+   - Game-AI: 94 trades (+47%)
+   - AlphaStar: 91 trades (+42%)
+   - More trades at similar win rate = more losses
+
+3. **Higher drawdown in complex architectures**
+   - Baseline drawdown: 58%
+   - Complex architectures: 88% drawdown
+   - More aggressive position sizing from confidence values
+
+4. **Pretraining didn't help entry selection**
+   - AlphaStar was pretrained on expert trades
+   - But expert labels were just {CALL, PUT, EXIT} based on outcome
+   - Doesn't capture the nuance of WHEN to enter
+
+### Files Created
+
+| File | Description |
+|------|-------------|
+| `backend/game_ai_policy.py` | OpenAI Five style LSTM + Attention |
+| `backend/alphastar_policy.py` | DeepMind AlphaStar Transformer |
+| `backend/rl_factory.py` | Unified factory for RL policies |
+| `scripts/pretrain_alphastar.py` | Expert imitation pretraining |
+
+### Usage
+
+```bash
+# Baseline (default - best)
+python scripts/train_time_travel.py
+
+# Game-AI style (OpenAI Five)
+RL_ARCHITECTURE=game_ai python scripts/train_time_travel.py
+
+# AlphaStar style (with pretraining)
+python scripts/pretrain_alphastar.py  # First pretrain
+RL_ARCHITECTURE=alphastar ALPHASTAR_PRETRAINED=models/pretrained/alphastar_expert.pt python scripts/train_time_travel.py
+```
+
+### Conclusions
+
+1. **Architecture complexity doesn't matter in bandit mode**
+   - Entry decisions come from HMM + confidence thresholds
+   - RL policy is mostly for exit timing
+   - Complex architectures have no advantage
+
+2. **Pretraining on expert trades teaches wrong lesson**
+   - Expert labels: "this trade was profitable"
+   - What we need: "these conditions predict profitability"
+   - Need proper state→action→reward learning, not imitation
+
+3. **The baseline MLP is sufficient**
+   - 3.7M param AlphaStar performed WORSE than simple MLP
+   - Overfitting risk with complex architectures
+   - Keep it simple
+
+### Next Steps
+
+1. Test with bandit mode disabled (`BANDIT_MODE_TRADES=0`) to let RL make entry decisions
+2. Consider pretraining on state→predicted_return instead of state→action
+3. Focus on improving entry signals rather than RL architecture

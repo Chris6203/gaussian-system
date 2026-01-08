@@ -896,28 +896,61 @@ unified_rl = None
 rules_policy = None
 q_entry_controller = None
 
+# ============================================================================
+# RL ARCHITECTURE SELECTION (Phase 55: Game-AI architectures)
+# ============================================================================
+# Options: standard, game_ai, alphastar
+RL_ARCHITECTURE = os.environ.get('RL_ARCHITECTURE', 'standard').lower()
+
 try:
-    from backend.unified_rl_policy import UnifiedRLPolicy, TradeState, AdaptiveRulesPolicy, compute_condor_regime_features, CONDOR_FEATURES_ENABLED
-    
-    # Use unified RL policy (single system for entry + exit)
-    # TRAINING MODE: Lower thresholds to generate more trades for learning
-    unified_rl = UnifiedRLPolicy(
-        learning_rate=0.0003,
-        gamma=0.99,
-        device='cpu',
-        bandit_mode_trades=100000,  # Use bandit mode for first 100 trades
-        min_confidence_to_trade=0.15,  # VERY LOW for training (need trades to learn!)
-        max_position_loss_pct=0.15,   # -15% stop loss
-        profit_target_pct=0.20,       # +20% take profit (lower to lock in gains faster)
-    )
-    
+    # Import base types always needed
+    from backend.unified_rl_policy import TradeState, AdaptiveRulesPolicy, compute_condor_regime_features, CONDOR_FEATURES_ENABLED
+
+    if RL_ARCHITECTURE in ('game_ai', 'gameai', 'openai_five', 'dota'):
+        # OpenAI Five style: LSTM + Attention + Separate Actor-Critic
+        from backend.game_ai_policy import GameAIRLPolicy
+        unified_rl = GameAIRLPolicy(
+            state_dim=22,
+            learning_rate=0.0001,  # Lower LR for larger network
+            gamma=0.99,
+            device='cpu',
+        )
+        logger.info("🎮 [GAME-AI] OpenAI Five style RL Policy initialized!")
+        logger.info("   LSTM memory + Temporal Attention + Separate Actor-Critic")
+        logger.info(f"   Hidden: {unified_rl.network.hidden_dim}, History: {unified_rl.network.history_len}")
+
+    elif RL_ARCHITECTURE in ('alphastar', 'alpha_star', 'starcraft', 'transformer'):
+        # AlphaStar style: Transformer + Entity encoding + RoPE
+        from backend.alphastar_policy import AlphaStarRLPolicy
+        unified_rl = AlphaStarRLPolicy(
+            state_dim=22,
+            learning_rate=0.0001,  # Lower LR for larger network
+            gamma=0.99,
+            device='cpu',
+        )
+        logger.info("⭐ [ALPHASTAR] DeepMind AlphaStar style RL Policy initialized!")
+        logger.info("   Transformer + Entity Encoding + RoPE + Gated Residuals")
+        logger.info(f"   Hidden: {unified_rl.network.hidden_dim}, Layers: {unified_rl.network.n_layers}")
+
+    else:
+        # Standard: Simple MLP (default)
+        from backend.unified_rl_policy import UnifiedRLPolicy
+        unified_rl = UnifiedRLPolicy(
+            learning_rate=0.0003,
+            gamma=0.99,
+            device='cpu',
+            bandit_mode_trades=100000,  # Use bandit mode for first 100 trades
+            min_confidence_to_trade=0.15,  # VERY LOW for training (need trades to learn!)
+            max_position_loss_pct=0.15,   # -15% stop loss
+            profit_target_pct=0.20,       # +20% take profit (lower to lock in gains faster)
+        )
+        logger.info("[NEW] UNIFIED RL Policy initialized (single system for entry+exit)")
+        logger.info(f"   Bandit mode: First 50 trades")
+        logger.info(f"   Min confidence: 25%, Stop: -15%, Target: +25%")
+
     # Also create rule-based policy as comparison
     rules_policy = AdaptiveRulesPolicy()
-    
-    logger.info("[NEW] UNIFIED RL Policy initialized (single system for entry+exit)")
-    logger.info(f"   Bandit mode: First 50 trades")
-    logger.info(f"   Min confidence: 25%, Stop: -15%, Target: +25%")
-    
+
     USE_UNIFIED_RL = True
 except ImportError as e:
     USE_UNIFIED_RL = False
