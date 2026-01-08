@@ -99,14 +99,14 @@ class TradabilityDataset(Dataset):
                                 pad = np.zeros((sequence_length - len(seq), self.feature_dim))
                                 seq = np.vstack([pad, seq])
 
-                            # Get predicted return for regression
-                            pred_return = features.get('predicted_return', 0.0) or 0.0
+                            # Get ACTUAL realized return for regression (not model predictions!)
+                            # CRITICAL: Use realized_move (actual price change), NOT predicted_return
+                            realized_return = rec.get('realized_move', 0.0) or 0.0
 
-                            # Direction based on momentum or prediction
-                            momentum = features.get('momentum_15m', 0.0) or 0.0
-                            if momentum > 0.002:
+                            # Direction based on ACTUAL realized move
+                            if realized_return > 0.0005:  # 0.05% threshold
                                 direction = 2  # UP
-                            elif momentum < -0.002:
+                            elif realized_return < -0.0005:
                                 direction = 0  # DOWN
                             else:
                                 direction = 1  # NEUTRAL
@@ -115,7 +115,7 @@ class TradabilityDataset(Dataset):
                                 'features': feat_vec,
                                 'sequence': seq,
                                 'label': float(label),
-                                'predicted_return': pred_return,
+                                'target_return': realized_return,  # renamed for clarity
                                 'direction': direction,
                                 'action': action,
                             })
@@ -153,7 +153,7 @@ class TradabilityDataset(Dataset):
             'features': torch.tensor(sample['features'], dtype=torch.float32),
             'sequence': torch.tensor(sample['sequence'], dtype=torch.float32),
             'label': torch.tensor([sample['label']], dtype=torch.float32),
-            'target_return': torch.tensor([sample['predicted_return']], dtype=torch.float32),
+            'target_return': torch.tensor([sample['target_return']], dtype=torch.float32),
             'direction': torch.tensor(sample['direction'], dtype=torch.long),
         }
 

@@ -8651,9 +8651,9 @@ Trained on 200K labeled samples from 707 tradability datasets + 646 feature buff
 | Encoder | Final Val Loss | Direction Acc | Confidence Acc | Train Time |
 |---------|---------------|---------------|----------------|------------|
 | **TCN** | 0.3395 | **100.0%** | 98.0% | ~35 min |
-| **LSTM** | TBD | 99.9% | 97.1% | ~20 min |
-| Transformer | Running... | | | |
-| Mamba2 | Pending | | | |
+| **LSTM** | 0.3550 | 99.9% | 97.1% | ~20 min |
+| **Transformer** | 0.3555 | 99.9% | 97.2% | ~35 min |
+| Mamba2 | Running | - | - | 8+ hours (very slow) |
 
 **Multi-Task Training Objective:**
 - Return regression (MSE loss)
@@ -8742,9 +8742,47 @@ Implemented `backend/multi_rl_ensemble.py`:
    - Can specialize for different regimes (trend, mean-reversion, volatility)
    - Gated residual starts at 0, learns to incorporate experts
 
+### ⚠️ CRITICAL BUG FOUND IN PRETRAINING (2026-01-08)
+
+**Problem**: All pretrained models generate 0 trades in testing!
+
+**Test Results (5K cycles each):**
+| Encoder | P&L | Trades | Predicted Returns |
+|---------|-----|--------|-------------------|
+| TCN Pretrained | $0.00 | 0 | +0.00% to -0.01% |
+| LSTM Pretrained | $0.00 | 0 | +0.00% to -0.01% |
+| Transformer Pretrained | $0.00 | 0 | +0.00% to -0.01% |
+
+**Diagnostic Output:**
+```
+[UNIFIED BANDIT] Skipping: |ret|<0.08% (conf=30.8%, edge=+0.00%)
+[DIAG] FINAL decisions: non_hold=4958 | bandit: follow=0, skip_conf=0, skip_edge=1444, skip_both=1598, skip_other=1916
+```
+
+**Root Cause Found:**
+The pretraining script used `features['predicted_return']` (the model's own previous predictions) instead of `rec['realized_move']` (the actual price change that occurred).
+
+```python
+# BROKEN (before fix):
+pred_return = features.get('predicted_return', 0.0)  # Model's prediction
+
+# FIXED (after):
+realized_return = rec.get('realized_move', 0.0)  # Actual price change
+```
+
+**Impact:**
+- Models learned to predict their own predictions (circular)
+- Resulted in near-zero return predictions (~0.00%)
+- Bandit controller requires |ret| > 0.08% → all trades skipped
+
+**Fix Applied:**
+- Changed `pretrain_predictor.py` to use `realized_move` from tradability dataset
+- Also fixed direction labels to use actual realized returns, not momentum
+
 ### Next Steps
 
-1. Complete pretraining for all encoders (Transformer, Mamba2)
-2. Run 20K validation with pretrained models
-3. Test V4 Latent Expert Predictor with pretraining
-4. Compare Multi-RL with pretrained vs random-init predictor
+1. ~~Complete pretraining for all encoders (Transformer, Mamba2)~~ ✅ Done (except Mamba2)
+2. Re-pretrain all encoders with fixed script using `realized_move`
+3. Run 20K validation with correctly pretrained models
+4. Test V4 Latent Expert Predictor with correct pretraining
+5. Compare Multi-RL with pretrained vs random-init predictor
