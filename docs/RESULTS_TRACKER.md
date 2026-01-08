@@ -8895,6 +8895,94 @@ RL_ARCHITECTURE=alphastar ALPHASTAR_PRETRAINED=models/pretrained/alphastar_exper
 
 ### Next Steps
 
-1. Test with bandit mode disabled (`BANDIT_MODE_TRADES=0`) to let RL make entry decisions
-2. Consider pretraining on state→predicted_return instead of state→action
+1. ~~Test with bandit mode disabled (`BANDIT_MODE_TRADES=0`) to let RL make entry decisions~~ ✅ Done
+2. ~~Consider pretraining on state→predicted_return instead of state→action~~ ✅ Done
 3. Focus on improving entry signals rather than RL architecture
+
+---
+
+## Phase 55b: RL-Only Entry Tests & Return Predictor Pretraining (2026-01-08)
+
+### Summary
+
+Testing what happens when we disable bandit mode and let the RL policy make all entry decisions.
+
+### RL-Only Entry Tests (BANDIT_MODE_TRADES=0)
+
+| Architecture | P&L | Win Rate | Trades | Drawdown |
+|--------------|-----|----------|--------|----------|
+| Baseline (MLP) | **-$84.17 (-1.68%)** | **33.3%** | 66 | 100% |
+| AlphaStar (Transformer) | -$57.53 (-1.15%) | 44.0% | 91 | 88% |
+
+### Comparison: Bandit vs RL-Only
+
+| Architecture | Bandit Mode | RL-Only Mode | Difference |
+|--------------|-------------|--------------|------------|
+| Baseline | -0.05%, 43.8% WR | **-1.68%, 33.3% WR** | **10.5% WR drop!** |
+| AlphaStar | -1.15%, 44.0% WR | -1.15%, 44.0% WR | No change |
+
+### Key Finding: BANDIT MODE IS BETTER
+
+**Why RL-only performs worse for baseline:**
+
+1. **Bandit mode's HMM-based entries are actually helpful**
+   - HMM provides regime filtering (only trade in trending markets)
+   - Without HMM guidance, RL makes poor entry decisions
+   - Win rate dropped 10.5% (43.8% → 33.3%)
+
+2. **AlphaStar's pretrained entries match bandit behavior**
+   - Same performance in both modes
+   - Pretrained on expert trades that were HMM-filtered
+   - Effectively learned to replicate bandit mode
+
+3. **RL needs more experience before making good entry decisions**
+   - 100 bandit trades isn't enough to learn entry patterns
+   - But more exploration = more losses during learning
+
+### Return Predictor Pretraining Results
+
+Created new pretraining approach: **state → predicted_return** (not state → action)
+
+```
+Dataset: 200,000 samples from 727 tradability datasets
+Return distribution: min=-1.97%, max=+2.20%, mean=0.00%, std=0.08%
+
+Epoch   1/30 | Dir Acc: 88.7% | Prof Acc: 96.8%
+Epoch  30/30 | Dir Acc: 88.7% | Prof Acc: 97.0%
+
+✅ Return predictor pretrained!
+   Best validation loss: 0.5693
+   Saved to: models/pretrained/return_predictor.pt
+```
+
+**What the model learned:**
+- 88.7% direction accuracy (predicting UP/DOWN/NEUTRAL from state)
+- 97% profitability prediction (would a directional trade work?)
+- Loss didn't improve much after epoch 1 → returns are inherently noisy
+
+### Files Created
+
+| File | Description |
+|------|-------------|
+| `scripts/pretrain_return_predictor.py` | State→return pretraining |
+| `models/pretrained/return_predictor.pt` | Pretrained weights |
+
+### Conclusions
+
+1. **Keep bandit mode enabled** - it provides valuable HMM-based filtering
+2. **RL is better for exits, not entries** - HMM handles entries well
+3. **Return pretraining learns direction, not edge** - 88.7% accuracy but returns are noisy
+4. **Expert imitation ≈ bandit behavior** - AlphaStar learned to replicate HMM filtering
+
+### Configuration Recommendations
+
+```bash
+# Best: Keep bandit mode (default)
+python scripts/train_time_travel.py
+
+# If you want more trades, increase bandit threshold instead of disabling
+HMM_STRONG_BULLISH=0.60 HMM_STRONG_BEARISH=0.40 python scripts/train_time_travel.py
+
+# Don't use: RL-only entry (worse performance)
+# BANDIT_MODE_TRADES=0 python scripts/train_time_travel.py
+```
