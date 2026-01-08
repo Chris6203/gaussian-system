@@ -229,11 +229,21 @@ TEMPORAL_ENCODER=mamba2 python scripts/train_time_travel.py
 # V3 Multi-Horizon Predictor (now supports all encoders after fix)
 PREDICTOR_ARCH=v3_multi_horizon TEMPORAL_ENCODER=transformer python scripts/train_time_travel.py
 
+# V4 Latent Expert Predictor (Phase 54 - learnable expert vectors)
+PREDICTOR_ARCH=v4_latent_expert LATENT_NUM_EXPERTS=8 python scripts/train_time_travel.py
+
 # Standard time-travel training (default V2 predictor)
 python scripts/train_time_travel.py
 
 # With environment overrides
 MODEL_RUN_DIR=models/my_test TT_MAX_CYCLES=5000 PAPER_TRADING=True python scripts/train_time_travel.py
+
+# PRETRAINING (Phase 54 - supervised learning before trading)
+# Pretrain on 200K+ labeled samples from past experiments
+TEMPORAL_ENCODER=tcn python scripts/pretrain_predictor.py --epochs 20 --output models/pretrained/predictor_tcn.pt
+
+# Use pretrained model for trading
+LOAD_PRETRAINED=1 PRETRAINED_MODEL_PATH=models/pretrained/predictor_tcn.pt python scripts/train_time_travel.py
 
 # Train predictor (Phase 1: supervised)
 python scripts/train_predictor.py --output models/predictor_v2.pt --arch v2_slim_bayesian

@@ -954,6 +954,34 @@ if USE_RL_POLICY_V2:
         logger.warning("[V2] Falling back to V1 policy")
 
 # ============================================================================
+# MULTI-RL ENSEMBLE (Phase 53 - Multiple RL agents with meta-selection)
+# ============================================================================
+USE_MULTI_RL = os.environ.get('MULTI_RL_ENABLED', '0') == '1'
+multi_rl_ensemble = None
+
+if USE_MULTI_RL:
+    try:
+        from backend.multi_rl_ensemble import MultiRLEnsemble, get_multi_rl_ensemble
+
+        # State dim matches unified_rl
+        state_dim = 18
+        if os.environ.get('SENTIMENT_FEATURES_ENABLED', '1') == '1':
+            state_dim += 4
+        if os.environ.get('CONDOR_FEATURES_ENABLED', '0') == '1':
+            state_dim += 3
+
+        multi_rl_ensemble = get_multi_rl_ensemble(state_dim=state_dim, device='cpu')
+
+        logger.info("[MULTI-RL] Multi-RL Ensemble initialized!")
+        logger.info(f"   Agents: 4 (aggressive, conservative, trend_follower, mean_reverter)")
+        logger.info(f"   State dim: {state_dim}")
+        logger.info(f"   Meta-selector learns which agent to trust")
+    except Exception as e:
+        USE_MULTI_RL = False
+        multi_rl_ensemble = None
+        logger.warning(f"[MULTI-RL] Not available: {e}")
+
+# ============================================================================
 # OPTIONAL: Q-SCORER ENTRY CONTROLLER (offline-supervised)
 # ============================================================================
 HAS_Q_ENTRY_CONTROLLER = False
@@ -2351,6 +2379,22 @@ for idx, sim_time in enumerate(common_times):
                         except Exception as dir_err:
                             logger.debug(f"Direction outcome recording error: {dir_err}")
 
+                    # MULTI-RL ENSEMBLE: Record outcome for agent performance tracking
+                    if USE_MULTI_RL and multi_rl_ensemble is not None:
+                        try:
+                            pnl_dollars = trade.get('pnl', 0)
+                            multi_rl_ensemble.record_outcome(pnl=pnl_dollars, info={'trade_id': trade['id']})
+                            # Log agent stats periodically
+                            if multi_rl_ensemble.total_trades % 10 == 0:
+                                stats = multi_rl_ensemble.get_stats()
+                                print(f"   [MULTI-RL] Agent performance after {stats['total_trades']} trades:")
+                                for agent_name, agent_stats in stats['agents'].items():
+                                    if agent_stats['selection_count'] > 0:
+                                        wr = agent_stats['win_rate']
+                                        print(f"      {agent_name}: {wr:.1%} WR, ${agent_stats['total_pnl']:+.2f}")
+                        except Exception as mrl_err:
+                            logger.debug(f"Multi-RL outcome recording error: {mrl_err}")
+
                     if cycles < 50:
                         logger.info(f"[EXP] Added experience: Trade #{trade['id']} | P&L: {pnl_pct:+.1%}")
         
@@ -3450,10 +3494,70 @@ for idx, sim_time in enumerate(common_times):
                     except Exception as e:
                         print(f"   [REGIME FILTER V3] Error: {e}")
 
+                # ============================================================================
+                # MULTI-RL ENSEMBLE MODE: Use ensemble of agents with meta-selection
+                # ============================================================================
+                multi_rl_decided = False  # Flag to skip bandit logic if Multi-RL made decision
+                if USE_MULTI_RL and multi_rl_ensemble is not None and action in ['BUY_CALLS', 'BUY_PUTS']:
+                    try:
+                        # Build state dict for Multi-RL
+                        multi_rl_state = {
+                            'is_in_trade': False,
+                            'predicted_direction': predicted_return * 100 if predicted_return else 0.0,
+                            'prediction_confidence': confidence if confidence else 0.5,
+                            'hmm_trend': hmm_trend_float,
+                            'hmm_volatility': hmm_vol_float,
+                            'hmm_liquidity': hmm_liq_float,
+                            'hmm_confidence': hmm_conf_float,
+                            'vix_level': vix_price if vix_price else 18.0,
+                            'momentum_5m': momentum_5min if 'momentum_5min' in dir() else 0.0,
+                            'volume_spike': volume_spike if 'volume_spike' in dir() else 1.0,
+                        }
+
+                        # Get action from Multi-RL ensemble
+                        mrl_action, mrl_confidence, mrl_info = multi_rl_ensemble.select_action(multi_rl_state)
+
+                        # Map Multi-RL action to our action format
+                        MRL_HOLD, MRL_CALL, MRL_PUT, MRL_EXIT = 0, 1, 2, 3
+
+                        if mrl_action == MRL_HOLD:
+                            should_trade = False
+                            composite_score = mrl_confidence
+                            rl_details = {'reason': f"multi_rl_hold (agent={mrl_info['selected_agent']})", 'mode': 'multi_rl'}
+                            print(f"   [MULTI-RL] HOLD: agent={mrl_info['selected_agent']} (conf={mrl_confidence:.1%})")
+                            print(f"      Agent weights: {[f'{w:.1%}' for w in mrl_info['agent_weights']]}")
+                            multi_rl_decided = True  # Skip bandit
+                        elif mrl_action == MRL_CALL:
+                            action = 'BUY_CALLS'
+                            should_trade = True
+                            composite_score = mrl_confidence
+                            rl_details = {'reason': f"multi_rl_call (agent={mrl_info['selected_agent']})", 'mode': 'multi_rl', 'multi_rl_info': mrl_info}
+                            print(f"   [MULTI-RL] BUY_CALLS: agent={mrl_info['selected_agent']} (conf={mrl_confidence:.1%})")
+                            multi_rl_decided = True  # Skip bandit
+                        elif mrl_action == MRL_PUT:
+                            action = 'BUY_PUTS'
+                            should_trade = True
+                            composite_score = mrl_confidence
+                            rl_details = {'reason': f"multi_rl_put (agent={mrl_info['selected_agent']})", 'mode': 'multi_rl', 'multi_rl_info': mrl_info}
+                            print(f"   [MULTI-RL] BUY_PUTS: agent={mrl_info['selected_agent']} (conf={mrl_confidence:.1%})")
+                            multi_rl_decided = True  # Skip bandit
+                        else:
+                            should_trade = False
+                            composite_score = mrl_confidence
+                            rl_details = {'reason': f"multi_rl_exit (agent={mrl_info['selected_agent']})", 'mode': 'multi_rl'}
+                            print(f"   [MULTI-RL] EXIT/SKIP: agent={mrl_info['selected_agent']}")
+                            multi_rl_decided = True  # Skip bandit
+                    except Exception as e:
+                        print(f"   [MULTI-RL] Error: {e}, falling back to bandit mode")
+                        USE_MULTI_RL = False  # Disable for rest of run
+
                 # TRAINING MODE: In bandit mode, just follow the signal to gather data!
                 # The learning happens from outcomes, not from being picky about entries
                 if regime_blocked:
                     # Regime filter already blocked this trade - skip to exit logic
+                    pass
+                elif multi_rl_decided:
+                    # Multi-RL ensemble already made the decision - skip bandit logic
                     pass
                 elif unified_rl.is_bandit_mode:
                     # Just follow the signal's action in training mode

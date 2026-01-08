@@ -8592,9 +8592,159 @@ SKIP_HMM_ALIGNMENT=1 TEMPORAL_ENCODER=transformer python scripts/train_time_trav
 SKIP_HMM_ALIGNMENT=1 TEMPORAL_ENCODER=tcn python scripts/train_time_travel.py
 ```
 
+### Mamba2 Test (added)
+
+| Architecture | P&L | Win Rate | Trades | Per-Trade P&L |
+|--------------|-----|----------|--------|---------------|
+| Mamba2 | +0.06% | **45.2%** | 42 | +$0.07 |
+
+Mamba2 has highest win rate (45.2%) but smallest gains. Very selective trading.
+
+### Ensemble Temporal Encoder Test
+
+Implemented `EnsembleTemporalEncoder` combining TCN + LSTM + Transformer + Mamba2:
+- Each encoder outputs 64 dims → concatenated → 256 dims total
+- Feeds into same prediction heads
+
+| Architecture | P&L | Win Rate | Trades | Max DD |
+|--------------|-----|----------|--------|--------|
+| **Transformer** | **+8.72%** | 31.2% | 47 | 70.10% |
+| TCN | +7.72% | 43.1% | 64 | 58.09% |
+| Mamba2 | +0.06% | 45.2% | 42 | 85.52% |
+| **Ensemble** | **-0.53%** | 40.0% | 70 | 80.55% |
+| LSTM | -1.44% | 37.0% | 81 | - |
+
+**Result**: Ensemble does NOT outperform individual encoders.
+
+**Analysis**:
+1. Single RL doesn't know how to weight different encoder outputs
+2. 256-dim input may need more training data or larger prediction heads
+3. Encoders may have conflicting signals that cancel out
+
+**Proposed Solution**: Multi-RL Ensemble Architecture
+- Each encoder → its own RL agent
+- Meta-selector learns which RL to trust per market regime
+- Each RL specializes: PPO for trends, Bandit for choppy, etc.
+
 ### Implications
 
 1. **Previous architecture tests were invalid** - all affected by HMM gate
 2. **Transformer is now best** (was LSTM in previous tests due to HMM filtering)
 3. **Contrarian trading does NOT work** - 28% WR proves model is predictive
 4. **SKIP_HMM_ALIGNMENT should be default** for neural-based trading
+5. **Simple ensemble doesn't help** - need per-encoder RL for specialization
+
+
+## Phase 54: Pretraining & V4 Latent Expert Predictor (2026-01-08)
+
+### Summary
+
+Two major improvements to address the "random init" problem where networks perform poorly without supervised pretraining:
+
+1. **Comprehensive Pretraining Script** (`scripts/pretrain_predictor.py`)
+2. **V4 Latent Expert Predictor** with learnable expert vectors
+
+### Pretraining Results
+
+Trained on 200K labeled samples from 707 tradability datasets + 646 feature buffers (data from 600+ experiment runs).
+
+| Encoder | Final Val Loss | Direction Acc | Confidence Acc | Train Time |
+|---------|---------------|---------------|----------------|------------|
+| **TCN** | 0.3395 | **100.0%** | 98.0% | ~35 min |
+| **LSTM** | TBD | 99.9% | 97.1% | ~20 min |
+| Transformer | Running... | | | |
+| Mamba2 | Pending | | | |
+
+**Multi-Task Training Objective:**
+- Return regression (MSE loss)
+- Direction classification (CrossEntropy with label smoothing)
+- Confidence/Profitability prediction (BCE loss)
+
+**Usage:**
+```bash
+# Pretrain specific encoder
+TEMPORAL_ENCODER=tcn python scripts/pretrain_predictor.py --epochs 20 --output models/pretrained/predictor_tcn.pt
+
+# Use pretrained model
+LOAD_PRETRAINED=1 PRETRAINED_MODEL_PATH=models/pretrained/predictor_tcn.pt python scripts/train_time_travel.py
+```
+
+### V4 Latent Expert Predictor
+
+New architecture with learnable expert vectors in the middle layers:
+
+```
+Input → RBF Kernel → TCN/LSTM/Transformer/Mamba2
+                          ↓
+                    ResBlock1 (256 dim)
+                          ↓
+                LatentVectorAttention1 (8 experts)  ← NEW
+                          ↓
+                    ResBlock2 (128 dim)
+                          ↓
+                LatentVectorAttention2 (4 experts)  ← NEW
+                          ↓
+                    ResBlock3 (64 dim)
+                          ↓
+                  Bayesian Heads
+```
+
+**Key Innovation: LatentVectorAttention**
+- Learnable "expert" vectors that specialize in different market patterns
+- Input cross-attends to experts, extracting optimal representations
+- Gated residual connection (starts at 0, learns importance)
+- Similar to Perceiver architecture's latent array
+
+**Configuration:**
+```bash
+PREDICTOR_ARCH=v4_latent_expert LATENT_NUM_EXPERTS=8 LATENT_NUM_HEADS=4 python scripts/train_time_travel.py
+```
+
+### Multi-RL Ensemble Architecture
+
+Implemented `backend/multi_rl_ensemble.py`:
+
+4 specialized RL agents:
+| Agent | Learning Rate | Min Conf | Temperature | Bias |
+|-------|---------------|----------|-------------|------|
+| Aggressive | 0.001 | 0.40 | 0.8 | None |
+| Conservative | 0.0001 | 0.70 | 1.2 | None |
+| Trend Follower | 0.0003 | 0.55 | 1.0 | Calls +0.1 |
+| Mean Reverter | 0.0003 | 0.55 | 1.0 | Puts +0.1 |
+
+**Meta-Selector** learns which agent to trust based on:
+- Current market features
+- Agent confidences
+- Recent performance
+
+**Test Results (5K cycles):**
+| Test | P&L | Win Rate | Trades | Notes |
+|------|-----|----------|--------|-------|
+| Multi-RL v2 (with HMM gate) | -0.40% | 27.8% | 18 | Very conservative |
+| Multi-RL v3 (no HMM gate) | -0.40% | 27.8% | 18 | Same - needs pretraining |
+
+**Finding**: Multi-RL needs pretrained predictor to generate useful signals. Without pretraining, predictions are near-zero which blocks all trades.
+
+### Key Insights
+
+1. **Pretraining is Critical**
+   - Random-init networks output near-zero predictions
+   - Pretrained predictor achieves 100% direction accuracy on validation
+   - RL policies still need to learn from experience (can't be pretrained same way)
+
+2. **Direction Prediction Works, Confidence Needs Work**
+   - 100% direction accuracy suggests strong signal
+   - But this may be overfitting to training labels
+   - Real-world test needed to validate
+
+3. **V4 Expert Vectors Enable Pattern Specialization**
+   - 8+4 = 12 learnable expert vectors
+   - Can specialize for different regimes (trend, mean-reversion, volatility)
+   - Gated residual starts at 0, learns to incorporate experts
+
+### Next Steps
+
+1. Complete pretraining for all encoders (Transformer, Mamba2)
+2. Run 20K validation with pretrained models
+3. Test V4 Latent Expert Predictor with pretraining
+4. Compare Multi-RL with pretrained vs random-init predictor

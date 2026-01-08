@@ -319,29 +319,32 @@ class TCNBlock(nn.Module):
 class OptionsTCN(nn.Module):
     """
     Temporal Convolutional Network for options trading.
-    
+
+    UNIFIED CONTRACT: Returns [B, out_dim] regardless of internal dimensions.
+
     Advantages over LSTM:
     - Fully parallelizable (3-5x faster training)
     - Flexible receptive field via dilations
     - No vanishing gradient issues
     - Proven in quantitative finance
-    
+
     Architecture:
     - Stack of TCN blocks with increasing dilation
     - Dilations: 1, 2, 4, 8, 16 -> receptive field covers 60+ timesteps
     - Attention pooling for sequence aggregation
     """
-    
-    def __init__(self, input_dim: int, hidden_dim: int = 128, num_layers: int = 5, 
-                 kernel_size: int = 3, dropout: float = 0.2):
+
+    def __init__(self, input_dim: int, hidden_dim: int = 128, num_layers: int = 5,
+                 kernel_size: int = 3, dropout: float = 0.2, out_dim: int = 64):
         super().__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-        
+        self.out_dim = out_dim
+
         # Input projection
         self.input_proj = nn.Linear(input_dim, hidden_dim)
         self.input_norm = nn.LayerNorm(hidden_dim)
-        
+
         # TCN blocks with exponentially increasing dilation
         # Dilation pattern: 1, 2, 4, 8, 16 gives receptive field of 2^5 * kernel_size = ~90 timesteps
         self.tcn_blocks = nn.ModuleList()
@@ -350,62 +353,62 @@ class OptionsTCN(nn.Module):
             self.tcn_blocks.append(
                 TCNBlock(hidden_dim, hidden_dim, kernel_size, dilation, dropout)
             )
-        
+
         # Final layer norm
         self.final_norm = nn.LayerNorm(hidden_dim)
-        
+
         # Attention pooling
         self.attn_pool = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.Tanh(),
             nn.Linear(hidden_dim // 2, 1)
         )
-        
-        # Context projection to output dimension
+
+        # Context projection to unified output dimension
         self.ctx = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, 64),
+            nn.Linear(hidden_dim, out_dim),  # Configurable output dimension
         )
-        
-        logger.info(f"📊 TCN initialized: {num_layers} layers, receptive field ~{2**num_layers * kernel_size} timesteps")
+
+        logger.info(f"TCN initialized: {num_layers} layers, receptive field ~{2**num_layers * kernel_size} timesteps, out_dim={out_dim}")
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x: [B, T, D] input sequence
         Returns:
-            [B, 64] context vector
+            [B, out_dim] context vector (unified contract)
         """
         # Handle input shape
         if x.dim() == 2:
             x = x.unsqueeze(0)
-        
+
         B, T, D = x.shape
-        
+
         # Input projection: [B, T, D] -> [B, T, H]
         x = self.input_proj(x)
         x = self.input_norm(x)
-        
+
         # Transpose for conv: [B, T, H] -> [B, H, T]
         x = x.transpose(1, 2)
-        
+
         # Pass through TCN blocks
         for tcn in self.tcn_blocks:
             x = tcn(x)
-        
+
         # Transpose back: [B, H, T] -> [B, T, H]
         x = x.transpose(1, 2)
         x = self.final_norm(x)
-        
+
         # Attention pooling
         attn_weights = torch.softmax(self.attn_pool(x), dim=1)  # [B, T, 1]
         pooled = torch.sum(x * attn_weights, dim=1)  # [B, H]
-        
+
         # Project to context
-        return self.ctx(pooled)  # [B, 64]
+        return self.ctx(pooled)  # [B, out_dim]
 
 
 # ------------------------------------------------------------------------------
@@ -457,6 +460,8 @@ class OptionsTransformer(nn.Module):
     """
     Small causal Transformer encoder for options trading.
 
+    UNIFIED CONTRACT: Returns [B, out_dim] regardless of internal dimensions.
+
     Alternative to OptionsTCN with attention mechanism.
     Configurable via TEMPORAL_ENCODER=transformer.
 
@@ -464,23 +469,26 @@ class OptionsTransformer(nn.Module):
     - Pre-norm residual connections (stable training)
     - Configurable position encoding (RoPE, sinusoidal, or none)
     - Causal masking (no future leakage)
-    - Same output shape as TCN: [B, 64]
     """
 
     def __init__(self, input_dim: int, hidden_dim: int = 128,
-                 num_layers: int = 2, num_heads: int = 4, dropout: float = 0.15):
+                 num_layers: int = 2, num_heads: int = 4, dropout: float = 0.15, out_dim: int = 64):
         super().__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
+        self.out_dim = out_dim
 
         # Input projection
         self.input_proj = nn.Linear(input_dim, hidden_dim)
         self.input_norm = get_norm_layer(hidden_dim)
 
         # Position encoding (configurable)
+        # Note: Since we use nn.MultiheadAttention (not custom attention), RoPE must
+        # be applied to full hidden_dim rather than per-head. This is slightly non-standard
+        # but still provides relative position information.
         pos_type = os.environ.get('POS_ENCODING', 'rope').lower()
         if pos_type == 'rope':
-            self.pos_emb = RotaryPositionEmbedding(hidden_dim // num_heads)
+            self.pos_emb = RotaryPositionEmbedding(hidden_dim)
             self.pos_type = 'rope'
         elif pos_type == 'sinusoidal':
             self.pos_emb = SinusoidalPositionEmbedding(hidden_dim)
@@ -504,23 +512,23 @@ class OptionsTransformer(nn.Module):
             nn.Linear(hidden_dim // 2, 1)
         )
 
-        # Context projection
+        # Context projection to unified output dimension
         self.ctx = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             get_norm_layer(hidden_dim),
             nn.GELU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, 64),
+            nn.Linear(hidden_dim, out_dim),  # Configurable output dimension
         )
 
-        logger.info(f"Transformer initialized: {num_layers} layers, {num_heads} heads, pos={self.pos_type}")
+        logger.info(f"Transformer initialized: {num_layers} layers, {num_heads} heads, pos={self.pos_type}, out_dim={out_dim}")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x: [B, T, D] input sequence
         Returns:
-            [B, 64] context vector
+            [B, out_dim] context vector (unified contract)
         """
         if x.dim() == 2:
             x = x.unsqueeze(0)
@@ -551,7 +559,7 @@ class OptionsTransformer(nn.Module):
         attn_weights = torch.softmax(self.attn_pool(x), dim=1)
         pooled = torch.sum(x * attn_weights, dim=1)
 
-        return self.ctx(pooled)  # [B, 64]
+        return self.ctx(pooled)  # [B, out_dim]
 
 
 # ------------------------------------------------------------------------------
@@ -710,6 +718,8 @@ class OptionsMamba2(nn.Module):
     """
     Mamba2 State Space Model encoder for temporal sequence processing.
 
+    UNIFIED CONTRACT: Returns [B, out_dim] regardless of internal dimensions.
+
     Pure PyTorch implementation of Mamba2 - no custom CUDA kernels needed.
 
     Configurable via TEMPORAL_ENCODER=mamba2.
@@ -727,9 +737,11 @@ class OptionsMamba2(nn.Module):
         n_layers: int = 4,
         d_state: int = 64,
         expand: int = 2,
-        dropout: float = 0.15
+        dropout: float = 0.15,
+        out_dim: int = 64
     ):
         super().__init__()
+        self.out_dim = out_dim
 
         # Read config from env vars
         d_state = int(os.environ.get('MAMBA2_D_STATE', str(d_state)))
@@ -753,15 +765,15 @@ class OptionsMamba2(nn.Module):
         # Attention pooling
         self.attn_pool = nn.Linear(d_model, 1)
 
-        # Context projection to standard 64-dim output
+        # Context projection to unified output dimension
         self.ctx = nn.Sequential(
-            nn.Linear(d_model, 64),
-            nn.LayerNorm(64),
+            nn.Linear(d_model, out_dim),
+            nn.LayerNorm(out_dim),
             nn.GELU(),
             nn.Dropout(dropout)
         )
 
-        logger.info(f"⚡ Mamba2 encoder: {n_layers} layers, d_model={d_model}, d_state={d_state}, expand={expand}")
+        logger.info(f"Mamba2 encoder: {n_layers} layers, d_model={d_model}, d_state={d_state}, expand={expand}, out_dim={out_dim}")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -771,7 +783,7 @@ class OptionsMamba2(nn.Module):
             x: Input tensor [B, T, D] where T=60 timesteps, D=feature_dim
 
         Returns:
-            Context tensor [B, 64]
+            Context tensor [B, out_dim] (unified contract)
         """
         # Project input to d_model
         x = self.input_proj(x)  # [B, T, d_model]
@@ -788,29 +800,366 @@ class OptionsMamba2(nn.Module):
         attn_weights = torch.softmax(self.attn_pool(x), dim=1)  # [B, T, 1]
         pooled = torch.sum(x * attn_weights, dim=1)  # [B, d_model]
 
-        return self.ctx(pooled)  # [B, 64]
+        return self.ctx(pooled)  # [B, out_dim]
+
+
+# ==============================================================================
+# UNIFIED ENCODER ARCHITECTURE (Phase 53)
+# ==============================================================================
+#
+# All encoders follow the SAME contract:
+#
+# 1. INPUT:  seq_in [B, T, D] - sequence of features (with HMM already concatenated)
+# 2. OUTPUT: context [B, out_dim] - pooled temporal context
+#
+# The out_dim is configurable via ENCODER_OUT_DIM env var (default: 64).
+# This ensures all downstream heads receive identical input dimensions
+# regardless of which encoder is selected.
+#
+# HMM INJECTION: Done ONCE before calling the encoder:
+#   cur_in = torch.cat([cur_features, hmm_now], dim=-1)   # [B, D+K]
+#   seq_in = torch.cat([seq_features, hmm_seq], dim=-1)   # [B, T, D+K]
+#   context = encoder(seq_in)                              # [B, out_dim]
+#
+# CONFIDENCE: Shared across all configs via USE_ENTROPY_CONFIDENCE=1
+#
+# ==============================================================================
+
+
+def build_temporal_encoder(
+    name: str,
+    input_dim: int,
+    hidden_dim: int = 128,
+    out_dim: int = 64,
+    dropout: float = 0.15,
+    **kwargs
+) -> nn.Module:
+    """
+    Unified factory for temporal encoders.
+
+    All encoders return the SAME output shape: [B, out_dim]
+
+    Args:
+        name: Encoder type - 'lstm', 'transformer', 'tcn', 'mamba2'
+        input_dim: Input feature dimension (after HMM concat)
+        hidden_dim: Internal hidden dimension (encoder-specific)
+        out_dim: Output dimension (SAME for all encoders)
+        dropout: Dropout rate
+        **kwargs: Encoder-specific params (lstm_layers, tx_heads, etc.)
+
+    Returns:
+        nn.Module with forward(x: [B, T, D]) -> [B, out_dim]
+    """
+    name = name.lower()
+
+    if name == 'lstm':
+        return OptionsLSTM(
+            input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=kwargs.get('lstm_layers', 4),
+            out_dim=out_dim
+        )
+    elif name == 'transformer':
+        return OptionsTransformer(
+            input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=kwargs.get('tx_layers', 2),
+            num_heads=kwargs.get('tx_heads', 4),
+            dropout=dropout,
+            out_dim=out_dim
+        )
+    elif name == 'mamba2':
+        return OptionsMamba2(
+            input_dim,
+            d_model=hidden_dim,
+            n_layers=kwargs.get('mamba_layers', 4),
+            d_state=kwargs.get('mamba_d_state', 64),
+            expand=kwargs.get('mamba_expand', 2),
+            dropout=dropout,
+            out_dim=out_dim
+        )
+    elif name == 'tcn':
+        return OptionsTCN(
+            input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=kwargs.get('tcn_layers', 5),
+            dropout=dropout,
+            out_dim=out_dim
+        )
+    else:
+        raise ValueError(f"Unknown TEMPORAL_ENCODER={name}. Options: lstm, transformer, tcn, mamba2")
+
+
+# ------------------------------------------------------------------------------
+# Ensemble Temporal Encoder (Phase 53)
+# ------------------------------------------------------------------------------
+class EnsembleTemporalEncoder(nn.Module):
+    """
+    Ensemble of multiple temporal encoders for robust feature extraction.
+
+    Combines TCN, LSTM, Transformer, and optionally Mamba2 to capture
+    different types of temporal patterns:
+    - TCN: Local causal patterns via dilated convolutions
+    - LSTM: Sequential dependencies via recurrent memory
+    - Transformer: Global patterns via self-attention
+    - Mamba2: State-space dynamics (optional, requires mamba-ssm)
+
+    Two output modes (controlled by concat_only):
+    1. concat_only=True (RECOMMENDED): Output ALL encoder features [B, 4*encoder_dim]
+       - Lets RL/downstream learn optimal combination
+       - More information preserved
+    2. concat_only=False: Project back to [B, out_dim]
+       - Compatible with existing architectures
+       - Information compressed
+
+    The ensemble also provides:
+    - Disagreement detection (uncertainty estimation)
+    - Agreement boosting (confidence signal)
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int = 128,
+        out_dim: int = 64,
+        dropout: float = 0.15,
+        include_mamba: bool = True,
+        concat_only: bool = True  # NEW: Output all features without projection
+    ):
+        super().__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.include_mamba = include_mamba
+        self.concat_only = concat_only
+
+        # Each encoder gets full out_dim when concat_only=True (more expressive)
+        # Otherwise divide for projection compatibility
+        if concat_only:
+            encoder_out_dim = out_dim  # Each encoder outputs full dim
+        else:
+            encoder_out_dim = out_dim // 4 if include_mamba else out_dim // 3
+
+        # TCN encoder
+        self.tcn = OptionsTCN(
+            input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=5,
+            dropout=dropout,
+            out_dim=encoder_out_dim
+        )
+
+        # LSTM encoder
+        self.lstm = OptionsLSTM(
+            input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=3,
+            out_dim=encoder_out_dim
+        )
+
+        # Transformer encoder
+        self.transformer = OptionsTransformer(
+            input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=2,
+            num_heads=4,
+            dropout=dropout,
+            out_dim=encoder_out_dim
+        )
+
+        # Mamba2 encoder (optional - may not be available)
+        self.mamba = None
+        if include_mamba:
+            try:
+                self.mamba = OptionsMamba2(
+                    input_dim,
+                    d_model=hidden_dim,
+                    n_layers=4,
+                    d_state=64,
+                    expand=2,
+                    dropout=dropout,
+                    out_dim=encoder_out_dim
+                )
+            except Exception as e:
+                logger.warning(f"Mamba2 not available for ensemble: {e}")
+                self.include_mamba = False
+
+        # Calculate actual combined dimension
+        num_encoders = 4 if self.mamba is not None else 3
+        combined_dim = encoder_out_dim * num_encoders
+        self.num_encoders = num_encoders
+        self.encoder_out_dim = encoder_out_dim
+        self.combined_dim = combined_dim
+
+        # Output dimension depends on mode
+        if concat_only:
+            self.out_dim = combined_dim  # Full concatenated output
+            self.projection = None
+        else:
+            self.out_dim = out_dim  # Projected output
+            # Projection to unified output dimension
+            self.projection = nn.Sequential(
+                nn.Linear(combined_dim, hidden_dim),
+                nn.LayerNorm(hidden_dim),
+                nn.GELU(),
+                nn.Dropout(dropout),
+                nn.Linear(hidden_dim, out_dim),
+                nn.LayerNorm(out_dim)
+            )
+
+        # Attention weights for adaptive ensemble (learnable) - for analysis
+        self.encoder_attention = nn.Sequential(
+            nn.Linear(combined_dim, num_encoders),
+            nn.Softmax(dim=-1)
+        )
+
+        # Store encoder outputs for disagreement analysis
+        self.last_encoder_outputs = None
+        self.last_attention_weights = None
+
+        mode_str = "FULL OUTPUT (concat_only)" if concat_only else "PROJECTED"
+        logger.info(f"[ENSEMBLE] Created with {num_encoders} encoders: TCN, LSTM, Transformer" +
+                   (", Mamba2" if self.mamba else ""))
+        logger.info(f"[ENSEMBLE] Mode: {mode_str}")
+        logger.info(f"[ENSEMBLE] Per-encoder dim: {encoder_out_dim}, Combined: {combined_dim}, Output: {self.out_dim}")
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass through all encoders.
+
+        Args:
+            x: Input tensor [B, T, D] (batch, timesteps, features)
+
+        Returns:
+            Combined encoding [B, out_dim]
+        """
+        # Run all encoders in parallel
+        tcn_out = self.tcn(x)      # [B, encoder_out_dim]
+        lstm_out = self.lstm(x)    # [B, encoder_out_dim]
+        trans_out = self.transformer(x)  # [B, encoder_out_dim]
+
+        if self.mamba is not None:
+            mamba_out = self.mamba(x)  # [B, encoder_out_dim]
+            encoder_outputs = [tcn_out, lstm_out, trans_out, mamba_out]
+        else:
+            encoder_outputs = [tcn_out, lstm_out, trans_out]
+
+        # Store for analysis
+        self.last_encoder_outputs = encoder_outputs
+
+        # Concatenate all encoder outputs
+        combined = torch.cat(encoder_outputs, dim=-1)  # [B, combined_dim]
+
+        # Compute attention weights (adaptive weighting) - for analysis
+        attn_weights = self.encoder_attention(combined)  # [B, num_encoders]
+        self.last_attention_weights = attn_weights
+
+        # Output depends on mode
+        if self.concat_only:
+            # FULL OUTPUT: Return all encoder features for RL to learn
+            output = combined  # [B, combined_dim = 4*encoder_out_dim]
+        else:
+            # PROJECTED: Compress to fixed output dimension
+            output = self.projection(combined)  # [B, out_dim]
+
+        return output
+
+    def get_disagreement_score(self) -> torch.Tensor:
+        """
+        Compute disagreement between encoders (uncertainty signal).
+
+        High disagreement = encoders see different patterns = stay out.
+        Low disagreement = encoders agree = higher confidence.
+
+        Returns:
+            Disagreement score [B] in range [0, 1]
+        """
+        if self.last_encoder_outputs is None:
+            return None
+
+        # Normalize each encoder output
+        normalized = [F.normalize(out, dim=-1) for out in self.last_encoder_outputs]
+
+        # Compute pairwise cosine similarities
+        n = len(normalized)
+        similarities = []
+        for i in range(n):
+            for j in range(i + 1, n):
+                sim = (normalized[i] * normalized[j]).sum(dim=-1)  # [B]
+                similarities.append(sim)
+
+        # Average similarity (1 = perfect agreement, 0 = orthogonal)
+        avg_similarity = torch.stack(similarities, dim=-1).mean(dim=-1)  # [B]
+
+        # Disagreement = 1 - similarity
+        return 1 - avg_similarity
+
+    def get_ensemble_confidence(self) -> torch.Tensor:
+        """
+        Get ensemble confidence based on agreement + attention entropy.
+
+        Returns:
+            Confidence score [B] in range [0, 1]
+        """
+        if self.last_attention_weights is None:
+            return None
+
+        # Attention entropy (low = confident in one encoder, high = uncertain)
+        entropy = -(self.last_attention_weights * torch.log(self.last_attention_weights + 1e-8)).sum(dim=-1)
+        max_entropy = torch.log(torch.tensor(self.last_attention_weights.shape[-1], dtype=torch.float32))
+        normalized_entropy = entropy / max_entropy
+
+        # Agreement score (1 - disagreement)
+        disagreement = self.get_disagreement_score()
+        agreement = 1 - disagreement if disagreement is not None else torch.ones_like(normalized_entropy)
+
+        # Combined confidence: high agreement + low entropy = high confidence
+        confidence = agreement * (1 - normalized_entropy)
+
+        return confidence
 
 
 def get_temporal_encoder(input_dim: int, config: dict = None) -> nn.Module:
     """
     Get temporal encoder based on TEMPORAL_ENCODER env var.
 
+    UNIFIED OUTPUT CONTRACT: All encoders return [B, out_dim]
+    where out_dim is set by ENCODER_OUT_DIM env var (default: 64).
+
     Options:
     - tcn (default): OptionsTCN - Temporal Convolutional Network
     - transformer: OptionsTransformer - Self-attention based
     - lstm: OptionsLSTM - Bidirectional LSTM
     - mamba2: OptionsMamba2 - State Space Model (Phase 51)
+    - ensemble: EnsembleTemporalEncoder - All encoders combined (Phase 53)
     """
     config = config or {}
     encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
 
-    if encoder_type == 'transformer':
+    # Unified output dimension - SAME for all encoders
+    out_dim = int(os.environ.get('ENCODER_OUT_DIM', config.get('out_dim', 64)))
+
+    if encoder_type == 'ensemble':
+        # Ensemble combines TCN + LSTM + Transformer + Mamba2
+        include_mamba = os.environ.get('ENSEMBLE_INCLUDE_MAMBA', '1') == '1'
+        # ENSEMBLE_CONCAT_ONLY=1 (default): Output all features for RL to learn
+        # ENSEMBLE_CONCAT_ONLY=0: Project to fixed dimension (consensus)
+        concat_only = os.environ.get('ENSEMBLE_CONCAT_ONLY', '1') == '1'
+        return EnsembleTemporalEncoder(
+            input_dim,
+            hidden_dim=config.get('hidden_dim', 128),
+            out_dim=out_dim,
+            dropout=config.get('dropout', 0.15),
+            include_mamba=include_mamba,
+            concat_only=concat_only
+        )
+    elif encoder_type == 'transformer':
         return OptionsTransformer(
             input_dim,
             hidden_dim=config.get('hidden_dim', 128),
             num_layers=config.get('num_layers', 2),
             num_heads=config.get('num_heads', 4),
-            dropout=config.get('dropout', 0.15)
+            dropout=config.get('dropout', 0.15),
+            out_dim=out_dim
         )
     elif encoder_type == 'mamba2':
         return OptionsMamba2(
@@ -819,16 +1168,23 @@ def get_temporal_encoder(input_dim: int, config: dict = None) -> nn.Module:
             n_layers=config.get('num_layers', 4),
             d_state=config.get('d_state', 64),
             expand=config.get('expand', 2),
-            dropout=config.get('dropout', 0.15)
+            dropout=config.get('dropout', 0.15),
+            out_dim=out_dim
         )
     elif encoder_type == 'lstm':
-        return OptionsLSTM(input_dim)
+        return OptionsLSTM(
+            input_dim,
+            hidden_dim=config.get('hidden_dim', 128),
+            num_layers=config.get('num_layers', 3),
+            out_dim=out_dim
+        )
     else:  # tcn (default)
         return OptionsTCN(
             input_dim,
             hidden_dim=config.get('hidden_dim', 128),
             num_layers=config.get('num_layers', 5),
-            dropout=config.get('dropout', 0.2)
+            dropout=config.get('dropout', 0.2),
+            out_dim=out_dim
         )
 
 
@@ -837,46 +1193,58 @@ def get_temporal_encoder(input_dim: int, config: dict = None) -> nn.Module:
 # ------------------------------------------------------------------------------
 class OptionsLSTM(nn.Module):
     """
-    Legacy LSTM encoder - kept for backward compatibility.
-    
+    Bidirectional LSTM encoder with attention pooling.
+
+    UNIFIED CONTRACT: Returns [B, out_dim] regardless of internal dimensions.
+
     Enhanced LSTM with:
-    - Larger hidden dimension (128 vs 64) for more capacity
-    - 3 layers (vs 2) for deeper pattern learning
-    - Higher dropout (0.35 vs 0.2) for better generalization
+    - Configurable hidden dimension and layers
+    - Bidirectional for forward+backward context
+    - Attention pooling for sequence aggregation
     - Layer normalization for stable training
     """
-    
-    def __init__(self, input_dim: int, hidden_dim: int = 128, num_layers: int = 3):
+
+    def __init__(self, input_dim: int, hidden_dim: int = 128, num_layers: int = 3, out_dim: int = 64):
         super().__init__()
         self.hidden_dim = hidden_dim
+        self.out_dim = out_dim
+
         self.lstm = nn.LSTM(
             input_dim, hidden_dim, num_layers, batch_first=True, dropout=0.35, bidirectional=True
         )
         # Layer normalization for stable gradients
         self.layer_norm = nn.LayerNorm(hidden_dim * 2)
-        
-        # Multi-head attention for better temporal focus
+
+        # Attention pooling for temporal focus
         self.attn = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim), 
+            nn.Linear(hidden_dim * 2, hidden_dim),
             nn.LayerNorm(hidden_dim),
-            nn.Tanh(), 
+            nn.Tanh(),
             nn.Dropout(0.2),
             nn.Linear(hidden_dim, 1)
         )
+
+        # Context projection to unified output dimension
         self.ctx = nn.Sequential(
             nn.Linear(hidden_dim * 2, hidden_dim),
             nn.LayerNorm(hidden_dim),
-            nn.GELU(),  # GELU often works better than ReLU for transformers/LSTMs
+            nn.GELU(),
             nn.Dropout(0.3),
-            nn.Linear(hidden_dim, 64),  # Increased from 32 to 64
+            nn.Linear(hidden_dim, out_dim),  # Configurable output dimension
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: [B, T, D] input sequence
+        Returns:
+            [B, out_dim] context vector (unified contract)
+        """
         out, _ = self.lstm(x)  # [B, T, 2H]
         out = self.layer_norm(out)  # Normalize LSTM output
         w = torch.softmax(self.attn(out), dim=1)  # [B, T, 1]
         pooled = torch.sum(out * w, dim=1)  # [B, 2H]
-        return self.ctx(pooled)  # [B, 64]
+        return self.ctx(pooled)  # [B, out_dim]
 
 
 # ------------------------------------------------------------------------------
@@ -947,7 +1315,9 @@ class UnifiedOptionsPredictor(nn.Module):
         
         self.rbf_layer = RBFKernelLayer(feature_dim) if use_gaussian_kernels else None
         rbf_dim = 25 * 5 if use_gaussian_kernels else 0
-        temporal_ctx_dim = 64  # Output from TCN/LSTM
+        # Get actual output dimension from encoder (supports ensemble with larger output)
+        temporal_ctx_dim = getattr(self.temporal_encoder, 'out_dim', 64)
+        self.temporal_ctx_dim = temporal_ctx_dim  # Store for reference
         combined = feature_dim + temporal_ctx_dim + rbf_dim
         
         # Input projection with layer norm
@@ -1003,16 +1373,17 @@ class UnifiedOptionsPredictor(nn.Module):
         """
         # Temporal encoding with TCN or LSTM (with error handling)
         try:
-            temporal_ctx = self.temporal_encoder(seq)     # [B, 64]
+            temporal_ctx = self.temporal_encoder(seq)     # [B, out_dim]
         except RuntimeError as e:
             # Fallback: use mean pooling if encoder fails
             logger.warning(f"Temporal encoder error: {e}, using fallback")
             # Simple mean pooling as fallback
             seq_mean = seq.mean(dim=1)  # [B, D]
-            # Project to 64 dims
-            temporal_ctx = torch.zeros(seq.size(0), 64, device=seq.device, dtype=seq.dtype)
-            temporal_ctx[:, :min(64, seq_mean.size(-1))] = seq_mean[:, :min(64, seq_mean.size(-1))]
-        
+            # Use dynamic dimension stored from encoder
+            out_dim = getattr(self, 'temporal_ctx_dim', 64)
+            temporal_ctx = torch.zeros(seq.size(0), out_dim, device=seq.device, dtype=seq.dtype)
+            temporal_ctx[:, :min(out_dim, seq_mean.size(-1))] = seq_mean[:, :min(out_dim, seq_mean.size(-1))]
+
         if self.rbf_layer is not None:
             rbf = self.rbf_layer(cur)                     # [B, 25*5]
             x = torch.cat([cur, temporal_ctx, rbf], dim=-1)  # [B, D+64+RBFD]
@@ -1095,6 +1466,107 @@ class SlimResidualBlock(nn.Module):
         return self.block(x) + residual * 0.1  # Scaled residual for stability
 
 
+# ------------------------------------------------------------------------------
+# Latent Vector Attention (Phase 54: Learnable Expert Vectors)
+# ------------------------------------------------------------------------------
+class LatentVectorAttention(nn.Module):
+    """
+    Learnable latent vectors for optimal pattern extraction.
+
+    Inspired by Perceiver architecture: a small set of learned "expert" vectors
+    that cross-attend to the input features. Each expert specializes in different
+    market patterns (trend, mean-reversion, volatility, etc.)
+
+    The input attends to these expert vectors, extracting optimized representations
+    that have been learned during training to capture profitable patterns.
+
+    Args:
+        dim: Hidden dimension
+        num_latents: Number of learnable expert vectors (default: 8)
+        num_heads: Number of attention heads (default: 4)
+        dropout: Dropout rate
+    """
+
+    def __init__(self, dim: int, num_latents: int = 8, num_heads: int = 4, dropout: float = 0.1):
+        super().__init__()
+        self.dim = dim
+        self.num_latents = num_latents
+        self.num_heads = num_heads
+        self.head_dim = dim // num_heads
+
+        # Learnable latent/expert vectors - initialized from standard normal
+        # These are the "optimal basis vectors" learned during training
+        self.latent_vectors = nn.Parameter(torch.randn(1, num_latents, dim) * 0.02)
+
+        # Cross-attention: input queries attend to latent keys/values
+        self.q_proj = nn.Linear(dim, dim)
+        self.k_proj = nn.Linear(dim, dim)
+        self.v_proj = nn.Linear(dim, dim)
+        self.out_proj = nn.Linear(dim, dim)
+
+        # Layer norm and dropout
+        self.norm1 = nn.LayerNorm(dim)
+        self.norm2 = nn.LayerNorm(dim)
+        self.dropout = nn.Dropout(dropout)
+
+        # FFN after attention
+        self.ffn = nn.Sequential(
+            nn.Linear(dim, dim * 2),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(dim * 2, dim),
+        )
+
+        # Gate to control how much latent information to incorporate
+        self.gate = nn.Parameter(torch.zeros(1))  # Starts at 0, learns importance
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: Input tensor [B, dim]
+        Returns:
+            Enhanced tensor [B, dim] with latent expert information
+        """
+        B = x.size(0)
+        residual = x
+
+        # Expand latent vectors for batch
+        latents = self.latent_vectors.expand(B, -1, -1)  # [B, num_latents, dim]
+
+        # Cross-attention: x queries, latents are keys/values
+        # This lets the input "consult" the learned expert vectors
+        x_normed = self.norm1(x.unsqueeze(1))  # [B, 1, dim]
+
+        Q = self.q_proj(x_normed)  # [B, 1, dim]
+        K = self.k_proj(latents)   # [B, num_latents, dim]
+        V = self.v_proj(latents)   # [B, num_latents, dim]
+
+        # Multi-head attention
+        Q = Q.view(B, 1, self.num_heads, self.head_dim).transpose(1, 2)           # [B, heads, 1, head_dim]
+        K = K.view(B, self.num_latents, self.num_heads, self.head_dim).transpose(1, 2)  # [B, heads, num_latents, head_dim]
+        V = V.view(B, self.num_latents, self.num_heads, self.head_dim).transpose(1, 2)  # [B, heads, num_latents, head_dim]
+
+        # Scaled dot-product attention
+        scale = self.head_dim ** -0.5
+        attn = torch.matmul(Q, K.transpose(-2, -1)) * scale  # [B, heads, 1, num_latents]
+        attn = F.softmax(attn, dim=-1)
+        attn = self.dropout(attn)
+
+        # Apply attention to values
+        out = torch.matmul(attn, V)  # [B, heads, 1, head_dim]
+        out = out.transpose(1, 2).contiguous().view(B, 1, self.dim)  # [B, 1, dim]
+        out = self.out_proj(out).squeeze(1)  # [B, dim]
+
+        # Gated residual connection (starts small, learns importance)
+        gate = torch.sigmoid(self.gate)
+        x = residual + gate * self.dropout(out)
+
+        # FFN with residual
+        x = x + self.dropout(self.ffn(self.norm2(x)))
+
+        return x
+
+
 class UnifiedOptionsPredictorV2(nn.Module):
     """
     V2 "Slim Bayesian" Predictor - Reduced regularization variant.
@@ -1118,20 +1590,38 @@ class UnifiedOptionsPredictorV2(nn.Module):
         self.use_mamba = use_mamba
 
         # Temporal encoder - use swappable get_temporal_encoder() for mamba2/transformer support
-        self.temporal_encoder = get_temporal_encoder(feature_dim, {
-            'hidden_dim': 128,
-            'num_layers': 5 if os.environ.get('TEMPORAL_ENCODER', 'tcn').lower() == 'tcn' else 4,
-            'num_heads': 4,
-            'd_state': 64,
-            'expand': 2,
-            'dropout': 0.15
-        })
-        self.encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
-        logger.info(f"⚡ V2 Predictor: Using {self.encoder_type.upper()} encoder")
-        
+        # All configs can be overridden via env vars for tuning
+        encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
+
+        # Build config with env var overrides
+        encoder_config = {
+            'hidden_dim': int(os.environ.get('ENCODER_HIDDEN_DIM', '128')),
+            'dropout': float(os.environ.get('ENCODER_DROPOUT', '0.15')),
+        }
+
+        # Architecture-specific configs
+        if encoder_type == 'transformer':
+            encoder_config['num_layers'] = int(os.environ.get('TRANSFORMER_LAYERS', '4'))
+            encoder_config['num_heads'] = int(os.environ.get('TRANSFORMER_HEADS', '4'))
+        elif encoder_type == 'mamba2':
+            encoder_config['num_layers'] = int(os.environ.get('MAMBA2_N_LAYERS', '4'))
+            encoder_config['d_state'] = int(os.environ.get('MAMBA2_D_STATE', '64'))
+            encoder_config['expand'] = int(os.environ.get('MAMBA2_EXPAND', '2'))
+        elif encoder_type == 'lstm':
+            encoder_config['num_layers'] = int(os.environ.get('LSTM_LAYERS', '3'))
+            encoder_config['hidden_dim'] = int(os.environ.get('LSTM_HIDDEN', '128'))
+        else:  # tcn
+            encoder_config['num_layers'] = int(os.environ.get('TCN_LAYERS', '5'))
+
+        self.temporal_encoder = get_temporal_encoder(feature_dim, encoder_config)
+        self.encoder_type = encoder_type
+        logger.info(f"⚡ V2 Predictor: Using {self.encoder_type.upper()} encoder with config: {encoder_config}")
+
         self.rbf_layer = RBFKernelLayer(feature_dim) if use_gaussian_kernels else None
         rbf_dim = 25 * 5 if use_gaussian_kernels else 0
-        temporal_ctx_dim = 64
+        # Get actual output dimension from encoder (supports ensemble with 256 dims)
+        temporal_ctx_dim = getattr(self.temporal_encoder, 'out_dim', 64)
+        self.temporal_ctx_dim = temporal_ctx_dim  # Store for fallback
         combined = feature_dim + temporal_ctx_dim + rbf_dim
         
         # Input projection (same as V1)
@@ -1179,9 +1669,11 @@ class UnifiedOptionsPredictorV2(nn.Module):
         except RuntimeError as e:
             logger.warning(f"Temporal encoder error: {e}, using fallback")
             seq_mean = seq.mean(dim=1)
-            temporal_ctx = torch.zeros(seq.size(0), 64, device=seq.device, dtype=seq.dtype)
-            temporal_ctx[:, :min(64, seq_mean.size(-1))] = seq_mean[:, :min(64, seq_mean.size(-1))]
-        
+            # Use dynamic dimension stored from encoder
+            out_dim = getattr(self, 'temporal_ctx_dim', 64)
+            temporal_ctx = torch.zeros(seq.size(0), out_dim, device=seq.device, dtype=seq.dtype)
+            temporal_ctx[:, :min(out_dim, seq_mean.size(-1))] = seq_mean[:, :min(out_dim, seq_mean.size(-1))]
+
         if self.rbf_layer is not None:
             rbf = self.rbf_layer(cur)
             x = torch.cat([cur, temporal_ctx, rbf], dim=-1)
@@ -1233,7 +1725,7 @@ def create_predictor(
     Factory function to create predictor based on architecture config.
 
     Args:
-        arch: "v1_original", "v2_slim_bayesian", or "v3_multi_horizon"
+        arch: "v1_original", "v2_slim_bayesian", "v3_multi_horizon", or "v4_latent_expert"
         feature_dim: Input feature dimension
         sequence_length: Temporal sequence length
         use_gaussian_kernels: Enable RBF kernel features
@@ -1245,7 +1737,15 @@ def create_predictor(
     # Allow env var override for easy testing
     arch = os.environ.get('PREDICTOR_ARCH', arch)
 
-    if arch == "v3_multi_horizon":
+    if arch == "v4_latent_expert":
+        logger.info(f"Creating V4 Latent Expert Predictor (learnable expert vectors)")
+        return UnifiedOptionsPredictorV4(
+            feature_dim=feature_dim,
+            sequence_length=sequence_length,
+            use_gaussian_kernels=use_gaussian_kernels,
+            use_mamba=use_mamba,
+        )
+    elif arch == "v3_multi_horizon":
         logger.info(f"Creating V3 Multi-Horizon Predictor (horizons: 5m, 15m, 30m, 45m)")
         return UnifiedOptionsPredictorV3(
             feature_dim=feature_dim,
@@ -1620,16 +2120,31 @@ class UnifiedOptionsPredictorV3(nn.Module):
         self.feature_dim = feature_dim
 
         # Temporal encoder - use swappable get_temporal_encoder() for mamba2/transformer support
-        self.temporal_encoder = get_temporal_encoder(feature_dim, {
-            'hidden_dim': 128,
-            'num_layers': 5 if os.environ.get('TEMPORAL_ENCODER', 'tcn').lower() == 'tcn' else 4,
-            'num_heads': 4,
-            'd_state': 64,
-            'expand': 2,
-            'dropout': 0.15
-        })
-        self.encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
-        logger.info(f"⚡ V3 Predictor: Using {self.encoder_type.upper()} encoder")
+        # All configs can be overridden via env vars for tuning
+        encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
+
+        # Build config with env var overrides (same as V2)
+        encoder_config = {
+            'hidden_dim': int(os.environ.get('ENCODER_HIDDEN_DIM', '128')),
+            'dropout': float(os.environ.get('ENCODER_DROPOUT', '0.15')),
+        }
+
+        if encoder_type == 'transformer':
+            encoder_config['num_layers'] = int(os.environ.get('TRANSFORMER_LAYERS', '4'))
+            encoder_config['num_heads'] = int(os.environ.get('TRANSFORMER_HEADS', '4'))
+        elif encoder_type == 'mamba2':
+            encoder_config['num_layers'] = int(os.environ.get('MAMBA2_N_LAYERS', '4'))
+            encoder_config['d_state'] = int(os.environ.get('MAMBA2_D_STATE', '64'))
+            encoder_config['expand'] = int(os.environ.get('MAMBA2_EXPAND', '2'))
+        elif encoder_type == 'lstm':
+            encoder_config['num_layers'] = int(os.environ.get('LSTM_LAYERS', '3'))
+            encoder_config['hidden_dim'] = int(os.environ.get('LSTM_HIDDEN', '128'))
+        else:  # tcn
+            encoder_config['num_layers'] = int(os.environ.get('TCN_LAYERS', '5'))
+
+        self.temporal_encoder = get_temporal_encoder(feature_dim, encoder_config)
+        self.encoder_type = encoder_type
+        logger.info(f"⚡ V3 Predictor: Using {self.encoder_type.upper()} encoder with config: {encoder_config}")
 
         self.rbf_layer = RBFKernelLayer(feature_dim) if use_gaussian_kernels else None
         rbf_dim = 25 * 5 if use_gaussian_kernels else 0
@@ -1774,6 +2289,149 @@ class UnifiedOptionsPredictorV3(nn.Module):
 
 
 # ------------------------------------------------------------------------------
+# V4 Latent Expert Predictor (Phase 54: Learnable Expert Vectors)
+# ------------------------------------------------------------------------------
+class UnifiedOptionsPredictorV4(nn.Module):
+    """
+    V4 "Latent Expert" Predictor - Uses learnable expert vectors in middle layers.
+
+    Key innovation: LatentVectorAttention modules insert learned "expert" vectors
+    between residual blocks. The model learns optimal pattern extractors that
+    specialize in different market regimes.
+
+    Architecture:
+    - Temporal Encoder (TCN/LSTM/Transformer/Mamba2)
+    - RBF Kernel Features (optional)
+    - Input Projection
+    - ResBlock1 → LatentVectorAttention1 (8 experts)
+    - ResBlock2 → LatentVectorAttention2 (4 experts)
+    - ResBlock3
+    - Prediction Heads (Bayesian)
+
+    Enable: PREDICTOR_ARCH=v4_latent_expert
+    Configure: LATENT_NUM_EXPERTS=8, LATENT_NUM_HEADS=4
+    """
+
+    def __init__(self, feature_dim: int, sequence_length: int = 60, use_gaussian_kernels: bool = True,
+                 use_mamba: bool = False):
+        super().__init__()
+        self.sequence_length = sequence_length
+        self.use_mamba = use_mamba
+
+        # Temporal encoder - same as V2
+        encoder_type = os.environ.get('TEMPORAL_ENCODER', 'tcn').lower()
+        encoder_config = {
+            'hidden_dim': int(os.environ.get('ENCODER_HIDDEN_DIM', '128')),
+            'dropout': float(os.environ.get('ENCODER_DROPOUT', '0.15')),
+        }
+
+        if encoder_type == 'transformer':
+            encoder_config['num_layers'] = int(os.environ.get('TRANSFORMER_LAYERS', '4'))
+            encoder_config['num_heads'] = int(os.environ.get('TRANSFORMER_HEADS', '4'))
+        elif encoder_type == 'mamba2':
+            encoder_config['num_layers'] = int(os.environ.get('MAMBA2_N_LAYERS', '4'))
+            encoder_config['d_state'] = int(os.environ.get('MAMBA2_D_STATE', '64'))
+            encoder_config['expand'] = int(os.environ.get('MAMBA2_EXPAND', '2'))
+        elif encoder_type == 'lstm':
+            encoder_config['num_layers'] = int(os.environ.get('LSTM_LAYERS', '3'))
+            encoder_config['hidden_dim'] = int(os.environ.get('LSTM_HIDDEN', '128'))
+        else:
+            encoder_config['num_layers'] = int(os.environ.get('TCN_LAYERS', '5'))
+
+        self.temporal_encoder = get_temporal_encoder(feature_dim, encoder_config)
+        self.encoder_type = encoder_type
+        logger.info(f"V4 Predictor: Using {self.encoder_type.upper()} encoder")
+
+        self.rbf_layer = RBFKernelLayer(feature_dim) if use_gaussian_kernels else None
+        rbf_dim = 25 * 5 if use_gaussian_kernels else 0
+        temporal_ctx_dim = getattr(self.temporal_encoder, 'out_dim', 64)
+        self.temporal_ctx_dim = temporal_ctx_dim
+        combined = feature_dim + temporal_ctx_dim + rbf_dim
+
+        # Input projection
+        self.input_proj = nn.Sequential(
+            nn.Linear(combined, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+        )
+
+        # Latent expert configuration
+        num_experts = int(os.environ.get('LATENT_NUM_EXPERTS', '8'))
+        num_heads = int(os.environ.get('LATENT_NUM_HEADS', '4'))
+
+        # ResBlocks with LatentVectorAttention between them
+        self.res_block1 = SlimResidualBlock(256, 256, dropout=0.20)
+        self.latent_attn1 = LatentVectorAttention(256, num_latents=num_experts, num_heads=num_heads, dropout=0.1)
+
+        self.res_block2 = SlimResidualBlock(256, 128, dropout=0.15)
+        self.latent_attn2 = LatentVectorAttention(128, num_latents=num_experts // 2, num_heads=num_heads // 2, dropout=0.1)
+
+        self.res_block3 = SlimResidualBlock(128, 64, dropout=0.10)
+
+        # Head common
+        self.head_common = nn.Sequential(
+            nn.Linear(64, 64),
+            nn.LayerNorm(64),
+            nn.GELU(),
+        )
+
+        # Prediction heads (Bayesian)
+        self.return_head = BayesianLinear(64, 1)
+        self.vol_head = BayesianLinear(64, 1)
+        self.dir_head = BayesianLinear(64, 3)
+        self.conf_head = BayesianLinear(64, 1)
+        self._confidence_trainable = True
+
+        # Execution quality heads
+        self.fillability_head = BayesianLinear(64, 1)
+        self.slippage_head = BayesianLinear(64, 1)
+        self.ttf_head = BayesianLinear(64, 1)
+
+        logger.info(f"V4 Latent Expert Predictor: {num_experts} experts, {num_heads} heads")
+
+    def forward(self, cur: torch.Tensor, seq: torch.Tensor) -> Dict[str, torch.Tensor]:
+        # Temporal context
+        try:
+            temporal_ctx = self.temporal_encoder(seq)
+        except RuntimeError:
+            out_dim = getattr(self, 'temporal_ctx_dim', 64)
+            temporal_ctx = torch.zeros(seq.size(0), out_dim, device=seq.device, dtype=seq.dtype)
+
+        # RBF features
+        if self.rbf_layer is not None:
+            rbf = self.rbf_layer(cur)
+            x = torch.cat([cur, temporal_ctx, rbf], dim=-1)
+        else:
+            x = torch.cat([cur, temporal_ctx], dim=-1)
+
+        # Forward with latent expert attention
+        h = self.input_proj(x)
+        h = self.res_block1(h)
+        h = self.latent_attn1(h)  # Consult 8 experts
+        h = self.res_block2(h)
+        h = self.latent_attn2(h)  # Consult 4 experts
+        h = self.res_block3(h)
+        h = self.head_common(h)
+
+        return {
+            "embedding": h,
+            "return": self.return_head(h),
+            "volatility": self.vol_head(h),
+            "direction": self.dir_head(h),
+            "confidence": torch.sigmoid(self.conf_head(h)),
+            "fillability": torch.sigmoid(self.fillability_head(h)),
+            "exp_slippage": self.slippage_head(h),
+            "exp_ttf": torch.relu(self.ttf_head(h)),
+        }
+
+    def set_confidence_trainable(self, enabled: bool) -> None:
+        self._confidence_trainable = bool(enabled)
+        for p in self.conf_head.parameters():
+            p.requires_grad_(self._confidence_trainable)
+        logger.info(f"Confidence head trainable: {self._confidence_trainable}")
+
+
+# ------------------------------------------------------------------------------
 # Exports
 # ------------------------------------------------------------------------------
 __all__ = [
@@ -1784,9 +2442,11 @@ __all__ = [
     'OptionsLSTM',
     'ResidualBlock',
     'SlimResidualBlock',
+    'LatentVectorAttention',
     'UnifiedOptionsPredictor',
     'UnifiedOptionsPredictorV2',
     'UnifiedOptionsPredictorV3',
+    'UnifiedOptionsPredictorV4',
     'DirectionPredictor',
     'DirectionPredictorV3',
     'create_predictor',
