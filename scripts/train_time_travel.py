@@ -1580,6 +1580,24 @@ except Exception as e:
     logger.warning(f"[WARN] Could not initialize PnL CalibrationTracker: {e}")
     PNL_CAL_GATE_ENABLED = False
 
+# ============================================================================
+# Best Plays Gate - Limit to 3-4 high-quality trades per day
+# ============================================================================
+BEST_PLAYS_GATE_ENABLED = os.environ.get('BEST_PLAYS_MODEL') is not None
+best_plays_gate = None
+
+if BEST_PLAYS_GATE_ENABLED:
+    try:
+        from backend.best_plays_gate import get_best_plays_gate
+        best_plays_gate = get_best_plays_gate()
+        logger.info(f"[OK] Best Plays Gate ENABLED")
+        logger.info(f"     Max daily trades: {best_plays_gate.max_daily_trades}")
+        logger.info(f"     Min between trades: {best_plays_gate.min_minutes_between} min")
+        logger.info(f"     Min best-play prob: {best_plays_gate.min_prob:.0%}")
+    except Exception as e:
+        logger.warning(f"[WARN] Could not initialize Best Plays Gate: {e}")
+        BEST_PLAYS_GATE_ENABLED = False
+
 # PARTIAL RESET - Only delete trades from THIS run, preserve history from other runs
 logger.info(f"[RESET] Clearing old data for run: {run_name}...")
 conn = sqlite3.connect(bot.paper_trader.db_path)
@@ -4265,6 +4283,31 @@ for idx, sim_time in enumerate(common_times):
                                     print(f"   [PNL_CAL] PASSED: P(profit)={calibrated_pnl_prob:.1%} >= {PNL_CAL_MIN_PROB:.0%}")
                         else:
                             print(f"   [PNL_CAL] Learning phase ({pnl_samples}/{PNL_CAL_MIN_SAMPLES} samples)")
+
+                        # Best Plays Gate - Limit to 3-4 trades per day
+                        if should_trade and BEST_PLAYS_GATE_ENABLED and best_plays_gate is not None:
+                            features_dict = {}
+                            if hasattr(signal, 'get'):
+                                features_dict = {
+                                    'vix': signal.get('vix', 0),
+                                    'hmm_trend': signal.get('hmm_trend', 0.5),
+                                    'hmm_volatility': signal.get('hmm_volatility', 0.5),
+                                    'confidence': signal.get('confidence', 0.5),
+                                    'predicted_return': signal.get('predicted_return', 0),
+                                }
+                            signal_dir = 'CALL' if signal.get('type') == 'BUY_CALLS' else 'PUT'
+                            should_bp, bp_reason, bp_prob = best_plays_gate.should_trade(
+                                features_dict, current_time=current_time, signal_direction=signal_dir
+                            )
+                            if not should_bp:
+                                should_trade = False
+                                print(f"   [BEST_PLAYS] BLOCKED: {bp_reason}")
+                                try:
+                                    decision_stats["best_plays_blocked"] = decision_stats.get("best_plays_blocked", 0) + 1
+                                except Exception:
+                                    pass
+                            else:
+                                print(f"   [BEST_PLAYS] PASSED: {bp_reason}")
                     except Exception as e:
                         logger.debug(f"[PNL_CAL] Error: {e}")
 

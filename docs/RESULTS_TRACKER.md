@@ -8986,3 +8986,98 @@ HMM_STRONG_BULLISH=0.60 HMM_STRONG_BEARISH=0.40 python scripts/train_time_travel
 # Don't use: RL-only entry (worse performance)
 # BANDIT_MODE_TRADES=0 python scripts/train_time_travel.py
 ```
+
+---
+
+## Phase 56: Best Plays Pretraining & Walk-Forward Validation (2026-01-08)
+
+### Summary
+
+Attempted to pretrain a model to identify "best plays" (high-profit opportunities) and limit to 3-4 trades per day. The approach was walk-forward validation: train on data up to 30 days ago, test on recent month.
+
+### Approach
+
+1. **Identify best plays** from historical data (trades with >2% profit)
+2. **Train model** to recognize entry conditions for best plays
+3. **Walk-forward validation** - train on data before cutoff, test on holdout period
+4. **Selective trading** - limit to 3-4 high-quality trades per day
+
+### Training Results
+
+```
+Training cutoff: 2025-12-09 (30 days holdout)
+Training samples: 50,000
+Best plays (>2% profit): 11,843 (23.7%)
+Class weight: 3.22x for minority class
+
+Epoch  50/50 | Loss: 1.7486 | Best-Play Acc: 76.4% | Dir Acc: 53.2%
+```
+
+### Walk-Forward Validation Results
+
+| Metric | Training | Validation (Holdout) |
+|--------|----------|---------------------|
+| Best-Play Detection | 76.4% | **26.1%** |
+| Direction Accuracy | 53.2% | **52.9%** |
+
+**Key Finding: MODEL DIDN'T GENERALIZE**
+
+The model achieved 76% training accuracy but only 26% on validation - it overfit to training data and learned nothing generalizable about "best plays."
+
+### Why This Failed
+
+1. **Returns are inherently noisy**
+   - Market returns have low signal-to-noise ratio
+   - Features explain <1% of return variance
+   - Direction accuracy (52.9%) barely beats random (50%)
+
+2. **Best plays are NOT predictable from entry features**
+   - Whether a trade is profitable depends on FUTURE price movement
+   - Entry conditions don't determine outcomes
+   - Same setup can win or lose depending on news, sentiment, etc.
+
+3. **Historical patterns don't repeat reliably**
+   - Market regime changes
+   - What worked in training period doesn't work in holdout
+
+### Files Created
+
+| File | Description |
+|------|-------------|
+| `scripts/pretrain_best_plays.py` | Best plays pretraining with walk-forward |
+| `backend/best_plays_gate.py` | Daily trade limiter (3-4 trades/day) |
+| `models/pretrained/best_plays.pt` | Pretrained model (not useful) |
+
+### Selective Trading Gate (Still Useful)
+
+Even though the MODEL isn't predictive, the GATE concept is still useful:
+
+```python
+# Limits to 3-4 trades per day regardless of model predictions
+BEST_PLAYS_MAX_DAILY=4    # Max trades per day
+BEST_PLAYS_MIN_BETWEEN=60 # Min minutes between trades
+```
+
+This provides selectivity without relying on an imperfect prediction model.
+
+### Conclusions
+
+1. **Can't predict best plays from features** - returns are too noisy
+2. **Walk-forward validation is essential** - exposes overfitting
+3. **Daily trade limits work** - selectivity without prediction
+4. **Focus on risk management instead** - exits matter more than entries
+
+### Recommendations
+
+Instead of trying to predict best plays, focus on:
+- **Exit optimization** - trailing stops, profit protection
+- **Risk management** - position sizing, daily limits
+- **Regime filtering** - avoid trading in bad conditions (SKIP_MONDAY)
+
+```bash
+# Better approach: Use proven SKIP_MONDAY strategy
+./run_live_skip_monday.sh
+
+# Or use daily trade limit without prediction model
+BEST_PLAYS_MAX_DAILY=4 python scripts/train_time_travel.py
+```
