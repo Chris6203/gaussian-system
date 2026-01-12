@@ -749,6 +749,18 @@ if ADAPTIVE_EXIT_ENABLED:
         logger.warning(f"[INIT] Could not load adaptive exit optimizer: {e}")
         ADAPTIVE_EXIT_ENABLED = False
 
+# Kelly Position Sizing (Phase 58f - optimal position sizing)
+KELLY_SIZING_ENABLED = os.environ.get('KELLY_POSITION_SIZING', '0') == '1'
+kelly_sizer = None
+if KELLY_SIZING_ENABLED:
+    try:
+        from backend.kelly_position_sizer import get_kelly_sizer, record_trade_result
+        kelly_sizer = get_kelly_sizer()
+        logger.info(f"[INIT] 📊 Kelly Position Sizer ENABLED")
+    except Exception as e:
+        logger.warning(f"[INIT] Could not load Kelly position sizer: {e}")
+        KELLY_SIZING_ENABLED = False
+
 # Try to import trading mode config (optional)
 try:
     from trading_mode_config import TradingModeConfig
@@ -2513,6 +2525,22 @@ for idx, sim_time in enumerate(common_times):
                         record_trade(pnl_pct, is_win)
                     except ImportError:
                         pass  # Kill switches not available
+
+                    # KELLY POSITION SIZING: Record trade result for optimal sizing
+                    if KELLY_SIZING_ENABLED and kelly_sizer:
+                        try:
+                            direction = 'CALL' if 'CALL' in str(trade.get('option_type', '')).upper() else 'PUT'
+                            kelly_sizer.record_trade(pnl_pct / 100.0, direction)  # Convert to decimal
+
+                            # Log Kelly stats occasionally
+                            stats = kelly_sizer.get_stats()
+                            if stats['total_trades'] % 10 == 0 and stats['total_trades'] > 0:
+                                logger.info(f"[KELLY] {stats['total_trades']} trades | "
+                                           f"WR={stats['estimated_win_rate']:.1%}, "
+                                           f"Ratio={stats['estimated_win_loss_ratio']:.2f}, "
+                                           f"Kelly={stats['adjusted_kelly']:.1%}")
+                        except Exception as e:
+                            logger.debug(f"[KELLY] Could not record trade: {e}")
 
                     # Direction controller learning - record outcome
                     if HAS_DIRECTION_CONTROLLER and direction_controller is not None:
@@ -4334,6 +4362,44 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception as e:
                                     print(f"   [SIMONS ERROR] {e}")
                             # ============= END SIMONS PREDICTOR =============
+
+                            # ============= SPY-VIX CORRELATION GATE (Phase 58e) =============
+                            # Our strongest signal: r=-0.34 with forward returns
+                            # When SPY-VIX correlation becomes positive = regime stress
+                            spy_vix_gate_enabled = os.environ.get('SPY_VIX_GATE', '0') == '1'
+                            spy_vix_conf_multiplier = 1.0
+                            if spy_vix_gate_enabled and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
+                                try:
+                                    from backend.spy_vix_correlation_gate import check_spy_vix_correlation
+
+                                    # Get VIX price if not already available
+                                    if vix_price is None:
+                                        try:
+                                            vix_price = tt_source.get_price('VIX')
+                                            if vix_price is None:
+                                                vix_price = tt_source.get_price('^VIX')
+                                        except:
+                                            pass
+
+                                    if vix_price is not None:
+                                        should_trade_svix, spy_vix_conf_multiplier, svix_reason = check_spy_vix_correlation(
+                                            proposed_action=action,
+                                            spy_price=spy_price,
+                                            vix_price=vix_price
+                                        )
+
+                                        if not should_trade_svix:
+                                            filter_ok = False
+                                            filter_reason = f"spy_vix_correlation ({svix_reason})"
+                                            print(f"   [SPY-VIX] BLOCKED: {svix_reason}")
+                                        elif spy_vix_conf_multiplier < 1.0:
+                                            # Apply confidence adjustment
+                                            print(f"   [SPY-VIX] Caution: {svix_reason} (conf x{spy_vix_conf_multiplier:.1f})")
+                                        elif spy_vix_conf_multiplier > 1.0:
+                                            print(f"   [SPY-VIX] Favorable: {svix_reason} (conf x{spy_vix_conf_multiplier:.1f})")
+                                except Exception as e:
+                                    print(f"   [SPY-VIX ERROR] {e}")
+                            # ============= END SPY-VIX CORRELATION GATE =============
 
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
