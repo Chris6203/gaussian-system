@@ -198,6 +198,14 @@ QUANTOR_VRP_FILTER = os.environ.get('QUANTOR_VRP_FILTER', '0') == '1'
 QUANTOR_DYNAMIC_STOPS = os.environ.get('QUANTOR_DYNAMIC_STOPS', '0') == '1'
 QUANTOR_ATR_STOP_MULT = float(os.environ.get('QUANTOR_ATR_STOP_MULT', '2.0'))
 
+# CARMACK FIX: Train neural network on OPTION P&L instead of SPY returns
+# Before this fix, the model trained on SPY price returns which don't account for
+# theta decay, bid-ask spread, and other option-specific costs. This caused the
+# model to correctly predict SPY direction but still lose money on options trades.
+# When enabled (default): trains NN on actual option P&L from closed trades
+# When disabled: uses old behavior (SPY returns from continuous_learning_cycle)
+TRAIN_ON_OPTION_PNL = os.environ.get('TRAIN_ON_OPTION_PNL', '1') == '1'
+
 # Log loaded configuration
 logger.info(f"[CONFIG] Entry controller: {ENTRY_CONTROLLER_TYPE}")
 logger.info(f"[CONFIG] TT_MAX_CYCLES: {TT_MAX_CYCLES}, TT_PRINT_EVERY: {TT_PRINT_EVERY}")
@@ -211,6 +219,10 @@ if JERRY_FEATURES_ENABLED or JERRY_FILTER_ENABLED:
     logger.info(f"[CONFIG] Jerry integration: features={JERRY_FEATURES_ENABLED}, filter={JERRY_FILTER_ENABLED} (threshold={JERRY_FILTER_THRESHOLD})")
 if QUANTOR_AVAILABLE and (QUANTOR_REGIME_FILTER or QUANTOR_FUZZY_SIZING or QUANTOR_VOL_ANALYTICS):
     logger.info(f"[CONFIG] Quantor-MTFuzz: regime={QUANTOR_REGIME_FILTER}, fuzzy={QUANTOR_FUZZY_SIZING} (min={QUANTOR_MIN_FUZZY_CONF}), vol={QUANTOR_VOL_ANALYTICS}")
+if TRAIN_ON_OPTION_PNL:
+    logger.info("[CONFIG] CARMACK FIX: Training NN on OPTION P&L (not SPY returns)")
+else:
+    logger.info("[CONFIG] Training NN on SPY returns (old behavior)")
 
 if TT_QUIET:
     _orig_print = builtins.print
@@ -1472,6 +1484,7 @@ bot.feature_buffer_save_path = os.path.join(run_dir, "state", "feature_buffer.pk
 bot.gaussian_processor_save_path = os.path.join(run_dir, "state", "gaussian_processor.pkl")
 bot.learning_state_save_path = os.path.join(run_dir, "state", "learning_state.pkl")
 bot.prediction_history_save_path = os.path.join(run_dir, "state", "prediction_history.pkl")
+bot.norm_stats_save_path = os.path.join(run_dir, "state", "norm_stats.pkl")  # Simons fix: fixed normalization stats
 bot.rl_policy_path = os.path.join(run_dir, "rl_trading_policy.pth")
 
 logger.info(f"[SAVE] Models will be saved to: {run_dir}")
@@ -1597,6 +1610,21 @@ if BEST_PLAYS_GATE_ENABLED:
     except Exception as e:
         logger.warning(f"[WARN] Could not initialize Best Plays Gate: {e}")
         BEST_PLAYS_GATE_ENABLED = False
+
+# ============================================================================
+# Smart Entry Gate - Uses INVERTED confidence (key insight from analysis)
+# ============================================================================
+SMART_ENTRY_GATE_ENABLED = os.environ.get('SMART_ENTRY_GATE', '0') == '1'
+smart_entry_gate = None
+
+if SMART_ENTRY_GATE_ENABLED:
+    try:
+        from backend.smart_entry_gate import get_smart_entry_gate
+        smart_entry_gate = get_smart_entry_gate()
+        logger.info(f"[OK] Smart Entry Gate ENABLED (uses INVERTED confidence)")
+    except Exception as e:
+        logger.warning(f"[WARN] Could not initialize Smart Entry Gate: {e}")
+        SMART_ENTRY_GATE_ENABLED = False
 
 # PARTIAL RESET - Only delete trades from THIS run, preserve history from other runs
 logger.info(f"[RESET] Clearing old data for run: {run_name}...")
@@ -2552,7 +2580,46 @@ for idx, sim_time in enumerate(common_times):
                         
                         # Train the model
                         rl_threshold_learner.train_from_experiences(batch_size=32)
-                    
+
+                    # CARMACK FIX: Train neural network on OPTION P&L (not SPY returns)
+                    # This is the critical fix - the model was predicting SPY direction correctly
+                    # but still losing money because options have theta decay, bid-ask spread, etc.
+                    if TRAIN_ON_OPTION_PNL and hasattr(bot, 'train_neural_network'):
+                        nn_train_count = 0
+                        nn_total_loss = 0.0
+
+                        # Use bot's feature buffer for training (most reliable source)
+                        has_features = len(bot.feature_buffer) >= bot.sequence_length
+
+                        if has_features:
+                            # Get current features and sequence from bot's buffer
+                            current_features = bot.feature_buffer[-1]
+                            sequence_data = np.vstack(bot.feature_buffer[-bot.sequence_length:])
+
+                            for exp in experiences:
+                                try:
+                                    # Use OPTION P&L as training target (the actual outcome)
+                                    option_pnl = exp['pnl_pct']
+
+                                    # Train neural network with option P&L as target
+                                    # The key insight: we're teaching the model that when it made
+                                    # this prediction, the ACTUAL OPTION result was option_pnl
+                                    loss = bot.train_neural_network(
+                                        features=current_features,
+                                        target_return=option_pnl,  # KEY FIX: option P&L, not SPY return
+                                        target_volatility=abs(option_pnl),
+                                        sequence_override=sequence_data
+                                    )
+                                    if loss is not None:
+                                        nn_total_loss += loss
+                                        nn_train_count += 1
+                                except Exception as nn_err:
+                                    logger.debug(f"NN training error: {nn_err}")
+
+                        if nn_train_count > 0 and cycles % 15 == 0:
+                            avg_loss = nn_total_loss / nn_train_count
+                            print(f"   [NN-PNL] Trained NN on {nn_train_count} option P&L samples, avg_loss={avg_loss:.6f}")
+
                     # Increment RL updates counter
                     rl_updates_count += 1
                     
@@ -2574,11 +2641,18 @@ for idx, sim_time in enumerate(common_times):
         # Full retraining more frequently (every 10 cycles) for better prediction accuracy
         print("[NN] STEP 3: Full neural network retraining...")
         if cycles % 10 == 0 and cycles > 0:
-            print(f"   [NN] RETRAINING NEURAL NETWORK (cycle {cycles})")
-            logger.info("[NN] Running full neural network retraining cycle...")
-            bot.continuous_learning_cycle()
-            rl_updates_count += 1  # Count full retraining as an RL update
-            print(f"   [OK] Retraining complete")
+            if TRAIN_ON_OPTION_PNL:
+                # CARMACK FIX: Skip continuous_learning_cycle when training on option P&L
+                # continuous_learning_cycle trains on SPY returns which is the WRONG target
+                # We already train on option P&L in STEP 2 mini-batch learning
+                print(f"   [SKIP] Skipped (TRAIN_ON_OPTION_PNL=1, using option P&L from STEP 2)")
+                logger.info("[NN] Skipped continuous_learning_cycle (using option P&L training instead)")
+            else:
+                print(f"   [NN] RETRAINING NEURAL NETWORK (cycle {cycles})")
+                logger.info("[NN] Running full neural network retraining cycle...")
+                bot.continuous_learning_cycle()
+                rl_updates_count += 1  # Count full retraining as an RL update
+                print(f"   [OK] Retraining complete")
         else:
             next_retrain = ((cycles // 10) + 1) * 10
             print(f"   [SKIP] Skipped (runs every 10 cycles, next at cycle {next_retrain})")
@@ -3719,7 +3793,44 @@ for idx, sim_time in enumerate(common_times):
                             except Exception:
                                 pass  # Keep original confidence if entropy calc fails
 
-                        if not hmm_decision_made:
+                        # ==============================================================
+                        # SMART ENTRY GATE: Use INVERTED confidence as primary filter
+                        # When enabled, bypasses standard bandit mode logic
+                        # ==============================================================
+                        smart_gate_decided = False
+                        if not hmm_decision_made and SMART_ENTRY_GATE_ENABLED and smart_entry_gate is not None:
+                            try:
+                                ml_conf = confidence
+                                pred_ret = predicted_return
+                                volume = signal.get('volume_spike', 1.0) if isinstance(signal, dict) else 1.0
+                                sig_dir = 'CALL' if action == 'BUY_CALLS' else 'PUT'
+
+                                should_smart, smart_reason, smart_score = smart_entry_gate.should_trade(
+                                    ml_confidence=ml_conf,
+                                    predicted_return=pred_ret,
+                                    volume_spike=volume,
+                                    signal_direction=sig_dir,
+                                    current_time=sim_time,
+                                    vix_level=vix_for_rl if 'vix_for_rl' in dir() else None
+                                )
+
+                                if should_smart:
+                                    should_trade = True
+                                    composite_score = smart_score
+                                    rl_details = {'reason': f'smart_gate_pass (inv_conf={1-ml_conf:.1%})', 'mode': 'smart_gate'}
+                                    print(f"   [SMART_GATE] TRADE: {smart_reason}")
+                                    smart_gate_decided = True
+                                else:
+                                    should_trade = False
+                                    composite_score = smart_score
+                                    rl_details = {'reason': f'smart_gate_block', 'mode': 'smart_gate'}
+                                    print(f"   [SMART_GATE] BLOCKED: {smart_reason}")
+                                    smart_gate_decided = True
+                            except Exception as e:
+                                logger.warning(f"[SMART_GATE] Error: {e}")
+                                smart_gate_decided = False  # Fall back to standard logic
+
+                        if not hmm_decision_made and not smart_gate_decided:
                             try:
                                 if bot_config and hasattr(bot_config, "config") and not skip_gates:
                                     ep = bot_config.config.get("architecture", {}).get("entry_policy", {})
@@ -4026,6 +4137,83 @@ for idx, sim_time in enumerate(common_times):
 
                             # ============= END PHASE 52 FILTERS =============
 
+                            # ============= INSIDER HMM INTEGRATION =============
+                            # Apply insider sentiment gate/adjustment if INSIDER_HMM_MODE is set
+                            insider_mode = os.environ.get('INSIDER_HMM_MODE', 'off')
+                            insider_ok = True  # Default: allow trade
+                            insider_reason = ""
+                            if insider_mode != 'off' and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
+                                try:
+                                    from backend.insider_hmm_integration import apply_insider_adjustment_with_fetch
+                                    # Determine proposed action
+                                    proposed_action = 'call' if action == 'BUY_CALLS' else 'put'
+                                    # Get HMM state from bot
+                                    insider_hmm_trend = 0.5  # Default neutral
+                                    insider_hmm_conf = 0.5
+                                    if hasattr(bot, 'current_hmm_regime') and bot.current_hmm_regime:
+                                        trend_map = {
+                                            'Down': 0.0, 'Downtrend': 0.0, 'Bearish': 0.0,
+                                            'No Trend': 0.5, 'Neutral': 0.5, 'Sideways': 0.5,
+                                            'Up': 1.0, 'Uptrend': 1.0, 'Bullish': 1.0
+                                        }
+                                        trend_name = bot.current_hmm_regime.get('trend', 'Neutral')
+                                        insider_hmm_trend = trend_map.get(trend_name, 0.5)
+                                        insider_hmm_conf = bot.current_hmm_regime.get('confidence', 0.5)
+                                    hmm_result = {'trend': insider_hmm_trend, 'confidence': insider_hmm_conf}
+                                    insider_result = apply_insider_adjustment_with_fetch(hmm_result, proposed_action)
+
+                                    if not insider_result.action_allowed:
+                                        insider_ok = False
+                                        insider_reason = f"insider_gate ({insider_result.adjustment_reason})"
+                                        filter_ok = False
+                                        filter_reason = insider_reason
+                                        print(f"   [INSIDER GATE] BLOCKED: {insider_result.adjustment_reason} (sentiment={insider_result.insider_sentiment:.2f})")
+                                    elif insider_result.adjusted_trend != insider_result.original_trend:
+                                        print(f"   [INSIDER ADJUST] trend {insider_result.original_trend:.2f} → {insider_result.adjusted_trend:.2f}")
+                                except Exception as e:
+                                    # Log the error for debugging
+                                    print(f"   [INSIDER ERROR] {e}")
+                            # ============= END INSIDER HMM INTEGRATION =============
+
+                            # ============= MEAN REVERSION GATE (Phase 58) =============
+                            # Based on Carmack-Simons analysis: market mean-reverts at 15min
+                            mr_gate_enabled = os.environ.get('MEAN_REVERSION_GATE', '0') == '1'
+                            mr_result = None
+                            if mr_gate_enabled and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
+                                try:
+                                    from backend.mean_reversion_gate import check_mean_reversion
+                                    from datetime import datetime
+
+                                    # Parse timestamp (sim_time is the current simulation time)
+                                    ts = None
+                                    if sim_time:
+                                        if isinstance(sim_time, str):
+                                            try:
+                                                ts = datetime.fromisoformat(sim_time.replace('Z', '+00:00'))
+                                            except:
+                                                pass
+                                        elif hasattr(sim_time, 'hour'):
+                                            ts = sim_time
+
+                                    mr_result = check_mean_reversion(
+                                        proposed_action=action,
+                                        price=spy_price,
+                                        timestamp=ts,
+                                        features=bot.last_features if hasattr(bot, 'last_features') else None
+                                    )
+
+                                    if not mr_result.should_trade:
+                                        filter_ok = False
+                                        filter_reason = f"mean_reversion ({mr_result.reason})"
+                                        print(f"   [MR GATE] BLOCKED: {mr_result.reason} (RSI={mr_result.rsi:.0f}, BB={mr_result.bb_position:.2f})")
+                                    else:
+                                        # Add confidence boost for strong mean reversion signals
+                                        if mr_result.confidence_boost > 0:
+                                            print(f"   [MR GATE] CONFIRMED: {mr_result.reason} (+{mr_result.confidence_boost:.1%} conf)")
+                                except Exception as e:
+                                    print(f"   [MR ERROR] {e}")
+                            # ============= END MEAN REVERSION GATE =============
+
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
                                 print(f"   [PHASE44] Signal boost: +{phase44_boost:.1%}")
@@ -4297,7 +4485,7 @@ for idx, sim_time in enumerate(common_times):
                                 }
                             signal_dir = 'CALL' if signal.get('type') == 'BUY_CALLS' else 'PUT'
                             should_bp, bp_reason, bp_prob = best_plays_gate.should_trade(
-                                features_dict, current_time=current_time, signal_direction=signal_dir
+                                features_dict, current_time=sim_time, signal_direction=signal_dir
                             )
                             if not should_bp:
                                 should_trade = False
@@ -4308,6 +4496,9 @@ for idx, sim_time in enumerate(common_times):
                                     pass
                             else:
                                 print(f"   [BEST_PLAYS] PASSED: {bp_reason}")
+
+                        # Smart Entry Gate now runs BEFORE bandit mode (see line ~3737)
+                        # This redundant check is removed - smart gate is the primary decision maker
                     except Exception as e:
                         logger.debug(f"[PNL_CAL] Error: {e}")
 
