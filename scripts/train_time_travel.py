@@ -773,6 +773,18 @@ if WIN_PROB_ENABLED:
         logger.warning(f"[INIT] Could not load win probability estimator: {e}")
         WIN_PROB_ENABLED = False
 
+# Momentum Exhaustion Detector (Phase 58h - wait for trend exhaustion before entry)
+MOMENTUM_EXHAUSTION_ENABLED = os.environ.get('MOMENTUM_EXHAUSTION', '0') == '1'
+exhaustion_detector = None
+if MOMENTUM_EXHAUSTION_ENABLED:
+    try:
+        from backend.momentum_exhaustion_detector import get_exhaustion_detector, check_momentum_exhaustion
+        exhaustion_detector = get_exhaustion_detector()
+        logger.info(f"[INIT] 🔍 Momentum Exhaustion Detector ENABLED")
+    except Exception as e:
+        logger.warning(f"[INIT] Could not load momentum exhaustion detector: {e}")
+        MOMENTUM_EXHAUSTION_ENABLED = False
+
 # Try to import trading mode config (optional)
 try:
     from trading_mode_config import TradingModeConfig
@@ -4474,6 +4486,32 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception as e:
                                     print(f"   [WIN_PROB ERROR] {e}")
                             # ============= END WIN PROBABILITY ESTIMATOR =============
+
+                            # ============= MOMENTUM EXHAUSTION DETECTOR (Phase 58h) =============
+                            # Wait for trend exhaustion before entry (don't catch falling knives)
+                            exhaustion_ok = True
+                            if MOMENTUM_EXHAUSTION_ENABLED and exhaustion_detector and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
+                                try:
+                                    exhaustion_result = check_momentum_exhaustion(
+                                        proposed_action=action,
+                                        price=spy_price,
+                                        high=None,  # Not available in time-travel
+                                        low=None,
+                                        volume=None
+                                    )
+
+                                    if exhaustion_result.should_wait:
+                                        exhaustion_ok = False
+                                        filter_ok = False
+                                        filter_reason = f"momentum_not_exhausted ({exhaustion_result.reason})"
+                                        print(f"   [MOM_EX] WAIT: {exhaustion_result.reason}")
+                                    elif exhaustion_result.is_exhausted:
+                                        print(f"   [MOM_EX] OK: {exhaustion_result.direction} (score={exhaustion_result.exhaustion_score:.2f})")
+                                    else:
+                                        print(f"   [MOM_EX] PASS: No strong momentum detected")
+                                except Exception as e:
+                                    print(f"   [MOM_EX ERROR] {e}")
+                            # ============= END MOMENTUM EXHAUSTION DETECTOR =============
 
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
