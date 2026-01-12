@@ -761,6 +761,18 @@ if KELLY_SIZING_ENABLED:
         logger.warning(f"[INIT] Could not load Kelly position sizer: {e}")
         KELLY_SIZING_ENABLED = False
 
+# Win Probability Estimator (Phase 58g - calibrated P(win) and EV calculation)
+WIN_PROB_ENABLED = os.environ.get('WIN_PROB_ESTIMATOR', '0') == '1'
+win_prob_estimator = None
+if WIN_PROB_ENABLED:
+    try:
+        from backend.win_probability_estimator import get_win_prob_estimator, estimate_win_probability, record_trade_outcome
+        win_prob_estimator = get_win_prob_estimator()
+        logger.info(f"[INIT] 📈 Win Probability Estimator ENABLED")
+    except Exception as e:
+        logger.warning(f"[INIT] Could not load win probability estimator: {e}")
+        WIN_PROB_ENABLED = False
+
 # Try to import trading mode config (optional)
 try:
     from trading_mode_config import TradingModeConfig
@@ -2541,6 +2553,32 @@ for idx, sim_time in enumerate(common_times):
                                            f"Kelly={stats['adjusted_kelly']:.1%}")
                         except Exception as e:
                             logger.debug(f"[KELLY] Could not record trade: {e}")
+
+                    # WIN PROBABILITY ESTIMATOR: Record trade for probability calibration
+                    if WIN_PROB_ENABLED and win_prob_estimator:
+                        try:
+                            direction = 'CALL' if 'CALL' in str(trade.get('option_type', '')).upper() else 'PUT'
+                            conf = float(trade.get('ml_confidence', 0.5))
+                            pred_ret = float(trade.get('predicted_return', 0))
+                            actual_pnl = float(trade.get('pnl', 0))
+                            rsi = float(trade.get('entry_rsi', 50)) if 'entry_rsi' in trade else 50.0
+
+                            record_trade_outcome(
+                                confidence=conf,
+                                direction=direction,
+                                predicted_return=pred_ret,
+                                actual_pnl=actual_pnl,
+                                spy_vix_regime='UNKNOWN',  # TODO: Store regime with trade
+                                rsi=rsi
+                            )
+
+                            # Log calibration stats occasionally
+                            stats = win_prob_estimator.get_all_bucket_stats()
+                            if stats['total_trades'] % 10 == 0 and stats['total_trades'] > 0:
+                                logger.info(f"[WIN_PROB] {stats['total_trades']} trades | "
+                                           f"Overall WR={stats['overall_win_rate']:.1%}")
+                        except Exception as e:
+                            logger.debug(f"[WIN_PROB] Could not record outcome: {e}")
 
                     # Direction controller learning - record outcome
                     if HAS_DIRECTION_CONTROLLER and direction_controller is not None:
@@ -4400,6 +4438,42 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception as e:
                                     print(f"   [SPY-VIX ERROR] {e}")
                             # ============= END SPY-VIX CORRELATION GATE =============
+
+                            # ============= WIN PROBABILITY ESTIMATOR (Phase 58g) =============
+                            # Calculate calibrated P(win) and expected value
+                            win_prob_ok = True
+                            win_prob_estimate = None
+                            if WIN_PROB_ENABLED and win_prob_estimator and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
+                                try:
+                                    direction = 'CALL' if action == 'BUY_CALLS' else 'PUT'
+
+                                    # Get SPY-VIX regime for conditional probability
+                                    regime = 'UNKNOWN'
+                                    if spy_vix_gate_enabled and 'svix_reason' in dir():
+                                        if 'NORMAL' in svix_reason:
+                                            regime = 'NORMAL'
+                                        elif 'STRESS' in svix_reason:
+                                            regime = 'STRESS'
+                                        elif 'CAUTION' in svix_reason:
+                                            regime = 'CAUTION'
+
+                                    win_prob_estimate = estimate_win_probability(
+                                        confidence=confidence,
+                                        direction=direction,
+                                        predicted_return=predicted_return,
+                                        spy_vix_regime=regime
+                                    )
+
+                                    if not win_prob_estimate.should_trade:
+                                        win_prob_ok = False
+                                        filter_ok = False
+                                        filter_reason = f"negative_ev ({win_prob_estimate.reason})"
+                                        print(f"   [WIN_PROB] BLOCKED: EV=${win_prob_estimate.expected_value:.2f} (P(win)={win_prob_estimate.p_win:.1%})")
+                                    else:
+                                        print(f"   [WIN_PROB] OK: P(win)={win_prob_estimate.p_win:.1%}, EV=${win_prob_estimate.expected_value:.2f}")
+                                except Exception as e:
+                                    print(f"   [WIN_PROB ERROR] {e}")
+                            # ============= END WIN PROBABILITY ESTIMATOR =============
 
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
