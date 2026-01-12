@@ -4179,6 +4179,7 @@ for idx, sim_time in enumerate(common_times):
                             # Based on Carmack-Simons analysis: market mean-reverts at 15min
                             mr_gate_enabled = os.environ.get('MEAN_REVERSION_GATE', '0') == '1'
                             mr_result = None
+                            mr_override_edge = False  # Will be True at extreme RSI
                             if mr_gate_enabled and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
                                 try:
                                     from backend.mean_reversion_gate import check_mean_reversion
@@ -4207,22 +4208,78 @@ for idx, sim_time in enumerate(common_times):
                                         filter_reason = f"mean_reversion ({mr_result.reason})"
                                         print(f"   [MR GATE] BLOCKED: {mr_result.reason} (RSI={mr_result.rsi:.0f}, BB={mr_result.bb_position:.2f})")
                                     else:
-                                        # Add confidence boost for strong mean reversion signals
-                                        if mr_result.confidence_boost > 0:
+                                        # Check if we should override edge requirement
+                                        mr_override_edge = getattr(mr_result, 'override_edge', False)
+                                        if mr_override_edge:
+                                            print(f"   [MR GATE] EXTREME: {mr_result.reason} - OVERRIDING EDGE (RSI={mr_result.rsi:.0f})")
+                                        elif mr_result.confidence_boost > 0:
                                             print(f"   [MR GATE] CONFIRMED: {mr_result.reason} (+{mr_result.confidence_boost:.1%} conf)")
                                 except Exception as e:
                                     print(f"   [MR ERROR] {e}")
                             # ============= END MEAN REVERSION GATE =============
 
+                            # ============= SIMONS PREDICTOR (Phase 58b) =============
+                            # Multi-signal predictor combining weak signals (SPY-VIX corr, BB, RSI, etc.)
+                            simons_enabled = os.environ.get('SIMONS_PREDICTOR', '0') == '1'
+                            simons_override = False  # Will be True if Simons has strong signal
+                            if simons_enabled and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
+                                try:
+                                    from backend.simons_predictor import simons_predict
+
+                                    # Get VIX price if available
+                                    vix_price = None
+                                    try:
+                                        vix_price = tt_source.get_price('VIX')
+                                        if vix_price is None:
+                                            vix_price = tt_source.get_price('^VIX')
+                                    except:
+                                        pass
+
+                                    simons_pred = simons_predict(
+                                        spy_price=spy_price,
+                                        vix_price=vix_price,
+                                        volume=signal.get('volume', 0) if signal else 0,
+                                        timestamp=sim_time
+                                    )
+
+                                    # Check if Simons agrees with neural network
+                                    simons_agrees = (
+                                        (simons_pred.action == 'BUY_CALLS' and action == 'BUY_CALLS') or
+                                        (simons_pred.action == 'BUY_PUTS' and action == 'BUY_PUTS')
+                                    )
+
+                                    if simons_pred.action != 'HOLD':
+                                        if simons_agrees:
+                                            # Strong confirmation - override edge if signal strong
+                                            if abs(simons_pred.signal_strength) > 0.35:
+                                                simons_override = True
+                                                print(f"   [SIMONS] STRONG CONFIRM: {simons_pred.action} (signal={simons_pred.signal_strength:.2f}) - OVERRIDE EDGE")
+                                            else:
+                                                print(f"   [SIMONS] Confirms: {simons_pred.action} (signal={simons_pred.signal_strength:.2f})")
+                                        else:
+                                            # Simons disagrees - could be a filter
+                                            print(f"   [SIMONS] DISAGREES: wants {simons_pred.action}, NN wants {action}")
+                                except Exception as e:
+                                    print(f"   [SIMONS ERROR] {e}")
+                            # ============= END SIMONS PREDICTOR =============
+
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
                                 print(f"   [PHASE44] Signal boost: +{phase44_boost:.1%}")
 
-                            if conf_ok and edge_ok and time_ok and filter_ok:
+                            # Check if MR gate or Simons overrides edge requirement
+                            effective_edge_ok = edge_ok or mr_override_edge or simons_override
+
+                            if conf_ok and effective_edge_ok and time_ok and filter_ok:
                                 should_trade = True
                                 composite_score = confidence
                                 rl_details = {'reason': f'bandit_follow_signal ({action})', 'mode': 'bandit'}
-                                print(f"   [UNIFIED BANDIT] Following signal: {action} (conf={confidence:.1%}, edge={predicted_return:+.2%})")
+                                override_tag = ""
+                                if mr_override_edge:
+                                    override_tag = " [MR OVERRIDE]"
+                                elif simons_override:
+                                    override_tag = " [SIMONS OVERRIDE]"
+                                print(f"   [UNIFIED BANDIT] Following signal: {action} (conf={confidence:.1%}, edge={predicted_return:+.2%}){override_tag}")
                                 try:
                                     decision_stats["bandit_follow"] += 1
                                 except Exception:

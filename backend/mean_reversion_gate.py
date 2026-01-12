@@ -20,6 +20,9 @@ Environment Variables:
 - MR_MAX_RSI_OVERBOUGHT=70: RSI threshold for overbought
 - MR_AVOID_LUNCH=1: Skip trades 11:00-14:00
 - MR_CALLS_ONLY=0: Only allow CALL trades (best performers)
+- MR_OVERRIDE_EDGE=1: Override edge requirement at RSI extremes
+- MR_EXTREME_RSI_OVERSOLD=20: Very oversold threshold for edge override
+- MR_EXTREME_RSI_OVERBOUGHT=80: Very overbought threshold for edge override
 """
 
 import os
@@ -38,6 +41,9 @@ MR_MIN_RSI_OVERSOLD = float(os.environ.get('MR_MIN_RSI_OVERSOLD', '30'))
 MR_MAX_RSI_OVERBOUGHT = float(os.environ.get('MR_MAX_RSI_OVERBOUGHT', '70'))
 MR_AVOID_LUNCH = os.environ.get('MR_AVOID_LUNCH', '1') == '1'
 MR_CALLS_ONLY = os.environ.get('MR_CALLS_ONLY', '0') == '1'
+MR_OVERRIDE_EDGE = os.environ.get('MR_OVERRIDE_EDGE', '1') == '1'  # Default ON
+MR_EXTREME_RSI_OVERSOLD = float(os.environ.get('MR_EXTREME_RSI_OVERSOLD', '20'))
+MR_EXTREME_RSI_OVERBOUGHT = float(os.environ.get('MR_EXTREME_RSI_OVERBOUGHT', '80'))
 
 
 @dataclass
@@ -51,6 +57,7 @@ class MeanReversionResult:
     momentum: float
     reason: str
     confidence_boost: float  # Additional confidence if signal is strong
+    override_edge: bool = False  # If True, bypass edge requirement (at extreme RSI)
 
 
 class MeanReversionGate:
@@ -68,6 +75,9 @@ class MeanReversionGate:
         self.rsi_overbought = MR_MAX_RSI_OVERBOUGHT
         self.avoid_lunch = MR_AVOID_LUNCH
         self.calls_only = MR_CALLS_ONLY
+        self.override_edge = MR_OVERRIDE_EDGE
+        self.extreme_rsi_oversold = MR_EXTREME_RSI_OVERSOLD
+        self.extreme_rsi_overbought = MR_EXTREME_RSI_OVERBOUGHT
 
         if self.enabled:
             logger.info(f"📊 Mean Reversion Gate ENABLED")
@@ -76,6 +86,8 @@ class MeanReversionGate:
             logger.info(f"   RSI overbought: >{self.rsi_overbought}")
             logger.info(f"   Avoid lunch: {self.avoid_lunch}")
             logger.info(f"   Calls only: {self.calls_only}")
+            logger.info(f"   Override edge: {self.override_edge}")
+            logger.info(f"   Extreme RSI: <{self.extreme_rsi_oversold} or >{self.extreme_rsi_overbought}")
 
     def is_enabled(self) -> bool:
         return self.enabled
@@ -267,6 +279,11 @@ class MeanReversionGate:
                 confidence_boost=0.0
             )
 
+        # Determine if we should override edge requirement
+        # At extreme RSI, bypass the edge filter (neural network predicts small returns at extremes)
+        is_extreme = (rsi <= self.extreme_rsi_oversold or rsi >= self.extreme_rsi_overbought)
+        should_override = self.override_edge and is_extreme
+
         # All checks passed - allow trade with confidence boost
         return MeanReversionResult(
             should_trade=True,
@@ -275,8 +292,9 @@ class MeanReversionGate:
             rsi=rsi,
             bb_position=bb_pos,
             momentum=momentum,
-            reason=signal_reason,
-            confidence_boost=confidence_boost
+            reason=signal_reason + (" [EXTREME]" if should_override else ""),
+            confidence_boost=confidence_boost,
+            override_edge=should_override
         )
 
 
