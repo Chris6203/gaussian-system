@@ -737,6 +737,18 @@ logger.info(f"[INIT] Initializing UnifiedOptionsBot with ${initial_balance:,.2f}
 from unified_options_trading_bot import UnifiedOptionsBot
 from backend.experience_replay import TradeExperienceManager
 
+# Adaptive Exit Optimizer (Phase 58d - ML-driven exits with crash protection)
+ADAPTIVE_EXIT_ENABLED = os.environ.get('ADAPTIVE_EXIT', '0') == '1'
+adaptive_exit_optimizer = None
+if ADAPTIVE_EXIT_ENABLED:
+    try:
+        from backend.adaptive_exit_optimizer import get_adaptive_optimizer, should_exit_adaptive
+        adaptive_exit_optimizer = get_adaptive_optimizer()
+        logger.info(f"[INIT] 🎯 Adaptive Exit Optimizer ENABLED")
+    except Exception as e:
+        logger.warning(f"[INIT] Could not load adaptive exit optimizer: {e}")
+        ADAPTIVE_EXIT_ENABLED = False
+
 # Try to import trading mode config (optional)
 try:
     from trading_mode_config import TradingModeConfig
@@ -2364,6 +2376,41 @@ for idx, sim_time in enumerate(common_times):
                     if hold_pct >= time_decay_hold_pct and pnl_pct < time_decay_min_profit and pnl_pct > -2:
                         close_reason = f"TIME_DECAY: {hold_pct:.0f}% of hold with only {pnl_pct:+.1f}% profit"
 
+                # Rule 6: ADAPTIVE ML EXIT (Phase 58d) - No hard switches, uses probability
+                if close_reason is None and ADAPTIVE_EXIT_ENABLED and adaptive_exit_optimizer:
+                    try:
+                        direction = 'CALL' if is_call else 'PUT'
+                        vix_val = vix_price if vix_price else None
+                        rsi_val = getattr(trade, 'entry_rsi', None)
+
+                        # Update optimizer with current price data
+                        adaptive_exit_optimizer.update(current_price, vix_val)
+
+                        # Get ML recommendation
+                        exit_rec = adaptive_exit_optimizer.get_exit_recommendation(
+                            direction=direction,
+                            entry_price=trade.entry_price,
+                            current_price=current_price,
+                            mins_held=int(minutes_held),
+                            entry_rsi=rsi_val
+                        )
+
+                        # CRASH PROTECTION: Exit immediately on VIX spike
+                        if exit_rec.crash_mode and exit_rec.action == 'EXIT_NOW':
+                            close_reason = f"🚨 CRASH_PROTECT: {exit_rec.reason}"
+
+                        # ML says exit now - but only if past minimum hold
+                        elif exit_rec.action == 'EXIT_NOW' and minutes_held >= 10:
+                            close_reason = f"🎯 ADAPTIVE_EXIT: {exit_rec.reason}"
+
+                        # Log horizon analysis occasionally
+                        if cycle % 500 == 0 and len(exit_rec.horizon_analysis) > 0:
+                            horizons = [(h.horizon_mins, h.win_probability) for h in exit_rec.horizon_analysis[:3]]
+                            logger.debug(f"[ADAPTIVE] Horizons: {horizons}")
+
+                    except Exception as e:
+                        logger.debug(f"[ADAPTIVE] Exit check error: {e}")
+
                 if close_reason:
                     trades_to_close.append((trade, minutes_held, close_reason))
             except Exception:
@@ -2424,6 +2471,31 @@ for idx, sim_time in enumerate(common_times):
                                       f"Win rate: {pnl_metrics.get('pnl_win_rate', 0):.1%}")
                     except Exception as e:
                         logger.debug(f"[PNL_CAL] Could not record PnL outcome: {e}")
+
+                # ADAPTIVE EXIT LEARNING: Record outcome for optimal hold time learning
+                if ADAPTIVE_EXIT_ENABLED and adaptive_exit_optimizer:
+                    try:
+                        from backend.adaptive_exit_optimizer import TradeOutcome
+                        outcome = TradeOutcome(
+                            entry_time=datetime.fromisoformat(str(trade.get('entry_time', '')).replace('Z', '+00:00')),
+                            exit_time=datetime.fromisoformat(str(trade.get('exit_time', '')).replace('Z', '+00:00')),
+                            entry_price=float(trade.get('entry_price', 0)),
+                            exit_price=current_price,
+                            direction='CALL' if 'CALL' in str(trade.get('option_type', '')).upper() else 'PUT',
+                            entry_rsi=float(trade.get('entry_rsi', 50)),
+                            entry_vix=float(trade.get('entry_vix', 15)),
+                            actual_hold_mins=int(trade.get('hold_time_minutes', 45)),
+                            pnl_pct=float(trade.get('pnl', 0)) / 100.0  # Convert to decimal
+                        )
+                        adaptive_exit_optimizer.record_outcome(outcome)
+
+                        # Log learning progress occasionally
+                        stats = adaptive_exit_optimizer.get_stats()
+                        if stats['total_outcomes'] % 5 == 0:
+                            logger.info(f"[ADAPTIVE] Learned from {stats['total_outcomes']} trades | "
+                                       f"Call optimal: {stats['call_optimal_hold']}min, Put optimal: {stats['put_optimal_hold']}min")
+                    except Exception as e:
+                        logger.debug(f"[ADAPTIVE] Could not record outcome: {e}")
 
                 # Only add if we haven't processed it yet
                 if trade['id'] not in experience_manager.processed_trade_ids:
