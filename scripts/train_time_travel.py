@@ -785,6 +785,22 @@ if MOMENTUM_EXHAUSTION_ENABLED:
         logger.warning(f"[INIT] Could not load momentum exhaustion detector: {e}")
         MOMENTUM_EXHAUSTION_ENABLED = False
 
+# Confidence Calibrator (Phase 58i - The Missing Verses)
+# Fixes: feedback loop, consistency, calibration, temporal memory
+CONF_CAL_ENABLED = (os.environ.get('CONFIDENCE_FEEDBACK', '0') == '1' or
+                    os.environ.get('CONFIDENCE_CONSISTENCY', '0') == '1' or
+                    os.environ.get('CONFIDENCE_CALIBRATION', '0') == '1' or
+                    os.environ.get('CONFIDENCE_MEMORY', '0') == '1')
+confidence_calibrator = None
+if CONF_CAL_ENABLED:
+    try:
+        from backend.confidence_calibrator import get_confidence_calibrator, calibrate_confidence, record_confidence_outcome
+        confidence_calibrator = get_confidence_calibrator()
+        logger.info(f"[INIT] 🎵 Confidence Calibrator ENABLED")
+    except Exception as e:
+        logger.warning(f"[INIT] Could not load confidence calibrator: {e}")
+        CONF_CAL_ENABLED = False
+
 # Try to import trading mode config (optional)
 try:
     from trading_mode_config import TradingModeConfig
@@ -2591,6 +2607,16 @@ for idx, sim_time in enumerate(common_times):
                                            f"Overall WR={stats['overall_win_rate']:.1%}")
                         except Exception as e:
                             logger.debug(f"[WIN_PROB] Could not record outcome: {e}")
+
+                    # Confidence Calibrator feedback loop - record outcome
+                    if CONF_CAL_ENABLED and confidence_calibrator:
+                        try:
+                            conf = float(trade.get('ml_confidence', 0.5))
+                            actual_pnl = float(trade.get('pnl', 0))
+                            direction = 'CALL' if 'CALL' in str(trade.get('option_type', '')).upper() else 'PUT'
+                            record_confidence_outcome(conf, actual_pnl, direction)
+                        except Exception as e:
+                            logger.debug(f"[CONF_CAL] Could not record outcome: {e}")
 
                     # Direction controller learning - record outcome
                     if HAS_DIRECTION_CONTROLLER and direction_controller is not None:
@@ -4512,6 +4538,41 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception as e:
                                     print(f"   [MOM_EX ERROR] {e}")
                             # ============= END MOMENTUM EXHAUSTION DETECTOR =============
+
+                            # ============= CONFIDENCE CALIBRATOR (Phase 58i - Missing Verses) =============
+                            # Fixes: feedback loop, consistency, calibration, temporal memory
+                            calibration_ok = True
+                            if CONF_CAL_ENABLED and confidence_calibrator and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
+                                try:
+                                    # Get direction probabilities (should be available from neural prediction)
+                                    direction_probs_list = dir_probs.tolist() if 'dir_probs' in dir() and hasattr(dir_probs, 'tolist') else [0.33, 0.34, 0.33]
+
+                                    cal_result = calibrate_confidence(
+                                        raw_confidence=confidence,
+                                        direction_probs=direction_probs_list,
+                                        predicted_return=predicted_return,
+                                        action=action
+                                    )
+
+                                    # Log calibration result
+                                    if not cal_result.consistency_ok:
+                                        calibration_ok = False
+                                        filter_ok = False
+                                        filter_reason = f"inconsistent ({cal_result.adjustment_reason})"
+                                        print(f"   [CONF_CAL] BLOCKED: {cal_result.adjustment_reason}")
+                                    elif not cal_result.should_trade:
+                                        calibration_ok = False
+                                        filter_ok = False
+                                        filter_reason = f"low_calibrated_conf ({cal_result.calibrated_confidence:.0%})"
+                                        print(f"   [CONF_CAL] BLOCKED: calibrated={cal_result.calibrated_confidence:.0%} < 40%")
+                                    else:
+                                        # Update confidence with calibrated value
+                                        original_conf = confidence
+                                        confidence = cal_result.calibrated_confidence
+                                        print(f"   [CONF_CAL] OK: raw={original_conf:.0%} -> cal={confidence:.0%} (mem={cal_result.memory_factor:.2f})")
+                                except Exception as e:
+                                    print(f"   [CONF_CAL ERROR] {e}")
+                            # ============= END CONFIDENCE CALIBRATOR =============
 
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
