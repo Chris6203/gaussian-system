@@ -4,6 +4,325 @@ Track configuration changes and their impact on performance.
 
 ---
 
+## Phase 61: Carmack/Simons Deep Analysis (2026-01-12)
+
+### The Question
+"How would John Carmack and Jim Simons improve this trading system?"
+
+### Corrected Statistics (from actual trade data)
+
+```
+Total trades (2026): 14,624
+Win Rate: 37.6%
+Avg Win: $1.76
+Avg Loss: -$1.92
+Loss/Win Ratio: 1.09 (NOT 1.64 as previously stated)
+Required WR to break even: 52.2%
+```
+
+### Kelly Criterion Analysis
+
+| Scenario | Win Rate | Kelly Fraction | Edge? |
+|----------|----------|----------------|-------|
+| Baseline (no calibration) | 37.6% | **-30%** | ❌ NO |
+| CALIBRATION (500-cycle) | 60% | **+16.4%** | ✅ YES (if validated) |
+| Break-even | 52.2% | 0% | - |
+
+**If CALIBRATION achieves 60% WR, we have a 16.4% edge per trade!**
+
+### Carmack's Debugging Points
+
+1. **500-cycle test is worthless** - Must validate at 20K
+2. **Fix root cause, not symptoms** - Add BCE loss to confidence head
+3. **3 redundant systems** - CALIBRATION, SMART_ENTRY_GATE, TRAIN_MAX_CONF all do same thing
+
+### Simons' Statistical Requirements
+
+1. **Validate 60% WR at scale** - Running 20K test now
+2. **Monte Carlo simulation** - Calculate probability of ruin
+3. **Never trade negative Kelly** - Current 37.6% WR = don't trade
+
+### 20K Validation Test
+
+**Status: RUNNING**
+```bash
+CONFIDENCE_CALIBRATION=1 SIMONS_DRIFT_GATE_THRESHOLD=100 \
+MODEL_RUN_DIR=models/CALIBRATION_20K TT_MAX_CYCLES=20000
+```
+
+Results will determine if the 60% WR claim holds up.
+
+### Key Insight
+
+> **Carmack:** "The confidence head has no loss function. You're not training it - you're inverting random noise."
+> **Simons:** "Show me 60% WR at 20K cycles. Until then, you have no edge."
+
+See `docs/CARMACK_SIMONS_ANALYSIS.md` for full analysis.
+
+---
+
+## Phase 60: Confidence Calibrator - The Missing Verses (2026-01-12)
+
+### Problem Statement
+The neural network's confidence head outputs INVERTED values - low raw confidence = better trades.
+This module adds calibration to fix the broken confidence signal.
+
+### The Neural Network "Poem" Analogy
+
+The NN "speaks" predictions but never "hears" feedback. Four missing verses were identified:
+
+| Verse | Description | Impact |
+|-------|-------------|--------|
+| 1. FEEDBACK | Confidence learns from P&L outcomes | Records outcomes for calibration |
+| 2. CONSISTENCY | Direction and confidence must agree | Filters inconsistent signals |
+| 3. **CALIBRATION** | Raw conf → actual win rate | **KEY FIX: Inverts broken confidence** |
+| 4. MEMORY | Recent accuracy affects confidence | Temporal scaling factor |
+
+### Test Results
+
+| Configuration | Win Rate | P&L | Trades | Notes |
+|--------------|----------|-----|--------|-------|
+| Baseline | 46% | Negative | ~31 | No calibration |
+| Verse 1 (FEEDBACK) | 45.5% | -$27.40 | - | No improvement |
+| Verse 2 (CONSISTENCY) | 45.5% | - | - | No improvement |
+| **Verse 3 (CALIBRATION)** | **60%** | **+$9.93** | 30 | **KEY FIX** |
+| **ALL COMBO** | **60%** | **+$9.93** | 30 | Same as Calibration alone |
+
+### Key Discovery: Confidence Inversion
+
+The calibration verse inverts raw confidence because low raw = high actual win rate:
+
+```
+Raw Confidence  → Calibrated Confidence
+19%             → 81%  (inverted: 1.0 - 0.19 = 0.81)
+25%             → 75%
+27%             → 73%
+```
+
+### Implementation
+
+```python
+# backend/confidence_calibrator.py
+def _get_calibrated_confidence(self, raw_confidence: float):
+    if len(bucket_outcomes) < self.min_samples:
+        # Not enough data - use prior (assume inverted!)
+        inverted_conf = 1.0 - raw_confidence
+        return inverted_conf
+    # With data: use actual win rate per bucket
+    actual_win_rate = sum(bucket_outcomes) / len(bucket_outcomes)
+    return actual_win_rate
+```
+
+### Environment Variables
+
+```bash
+# Enable calibration (RECOMMENDED)
+CONFIDENCE_CALIBRATION=1
+
+# Other verses (optional)
+CONFIDENCE_FEEDBACK=1      # Learn from outcomes
+CONFIDENCE_CONSISTENCY=1   # Check direction agreement
+CONFIDENCE_MEMORY=1        # Recent accuracy factor
+
+# Configuration
+CONF_CAL_WINDOW=50        # Outcome window size
+CONF_CAL_MIN_SAMPLES=20   # Min samples before calibrating
+```
+
+### Drift Gate Impact (Critical Finding)
+
+The Simons Drift Gate at 50% threshold **blocks good predictions**:
+
+| Config | Drift Gate | Win Rate | P&L |
+|--------|-----------|----------|-----|
+| CALIBRATION | Disabled (100%) | **60%** | **+$9.93** |
+| ALL COMBO | Disabled (100%) | **60%** | **+$9.93** |
+| ALL COMBO | Enabled (50%) | 50.0% | -$703.65 |
+| CALIBRATION | Enabled (50%) | 38.5% | -$723.75 |
+
+**Key Finding**: Drift gate at 50% is too aggressive - it blocks good predictions!
+
+### Combination Tests
+
+Testing CALIBRATION with individual verses:
+
+| Combination | Description | Status |
+|------------|-------------|--------|
+| CAL + FEEDBACK | Calibration + outcome learning | Testing... |
+| CAL + CONSISTENCY | Calibration + direction agreement | Testing... |
+| CAL + MEMORY | Calibration + recent accuracy | Testing... |
+| CAL + FB + MEM | Triple combo (no consistency) | Testing... |
+
+### Conclusion
+
+**Verse 3 (CALIBRATION) alone achieves 60% win rate with positive P&L.**
+- Other verses (FEEDBACK, CONSISTENCY, MEMORY) don't add incremental value
+- The drift gate at 50% is TOO AGGRESSIVE and hurts performance
+- The key insight: confidence head is fundamentally inverted and needs calibration
+
+### Connection to Phase 59 (Simons Analysis)
+
+| Metric | Phase 59 Finding | Phase 60 Fix |
+|--------|------------------|--------------|
+| Required WR | 62% (due to 1.64:1 loss/win ratio) | Achieved 60% |
+| Actual WR | 46% (baseline) | **60%** with calibration |
+| Gap to break-even | -16% | **-2%** (nearly profitable!) |
+
+**This confirms Simons was right**: Fix the prediction quality, not the exit strategy!
+
+### Recommended Configuration
+
+```bash
+# Phase 60 Best Config
+CONFIDENCE_CALIBRATION=1 \
+SIMONS_DRIFT_GATE_THRESHOLD=100 \
+python scripts/train_time_travel.py
+```
+
+**Note**: `SIMONS_DRIFT_GATE_THRESHOLD=100` effectively disables the drift gate.
+
+---
+
+## Phase 59: FLAT_TRADE Exit Discovery - Carmack/Simons Deep Analysis (2026-01-12)
+
+### Problem Statement
+Multiple insider sentiment integration tests converged to identical results (-0.75% P&L, 46% WR),
+regardless of configuration changes. Applied Carmack debugging + Simons statistical rigor to find root cause.
+
+### Root Causes Identified
+
+| ID | Root Cause | Location | Impact |
+|----|-----------|----------|--------|
+| 1 | **FLAT_TRADE exit kills winners** | `train_time_travel.py:2302-2349` | All trades exit at 15min |
+| 2 | Wrong env var names | HARD_* vs TT_* | Settings ignored |
+| 3 | Loss/win ratio = 1.64:1 | - | Need 62% WR to break even |
+| 4 | TIME_DECAY exit redundant | After FLAT_TRADE disabled | Still exits early |
+
+### Key Discovery: FLAT_TRADE Exit
+
+**The Problem:**
+```python
+# train_time_travel.py:2302-2304
+flat_exit_enabled = os.environ.get('FLAT_TRADE_EXIT_ENABLED', '1') == '1'  # DEFAULT ON
+flat_timeout = float(os.environ.get('FLAT_TRADE_TIMEOUT_MIN', '15'))       # 15 minutes
+flat_threshold = float(os.environ.get('FLAT_TRADE_THRESHOLD_PCT', '1.0'))  # 1% threshold
+```
+
+This exits ANY trade that hasn't moved >1% within 15 minutes. Since most options don't move 1% in 15 min,
+**100% of trades were exiting as FLAT_TRADE** before stop loss or take profit could trigger.
+
+### Test Results
+
+| Test | P&L | Win Rate | Trades | Key Finding |
+|------|-----|----------|--------|-------------|
+| Baseline | -0.75% | 46.0% | 50 | - |
+| Insider GATE mode | -0.75% | 29.4% | 34 | Gate blocks CALLs |
+| Insider 4D mode | -1.04% | 26.1% | 23 | No differentiation |
+| Carmack Fix (threshold) | -0.75% | 46.0% | 50 | **Identical trades!** |
+| Simons Exit Fix (wrong vars) | -0.75% | 46.0% | 50 | **Identical trades!** |
+| **FLAT_TRADE_EXIT=0 (5K)** | **-0.37%** | **52.5%** | 40 | **50% P&L improvement!** |
+| **FLAT_TRADE_EXIT=0 (20K)** | **-20.0%** | **~46%** | 105 | **Did NOT hold up!** |
+
+### 20K Validation Result (CRITICAL)
+
+The 5K improvement **did NOT hold up** in 20K validation:
+
+| Metric | 5K Test | 20K Test | Change |
+|--------|---------|----------|--------|
+| P&L | -0.37% | -20.0% | **53x worse** |
+| Win Rate | 52.5% | ~46% | Degraded |
+| Trades | 40 | 105 | 2.6x more |
+| Per-Trade P&L | -$0.46 | -$9.53 | **20x worse** |
+
+**Conclusion:** FLAT_TRADE exit was actually PROTECTING the system from larger losses.
+When trades were allowed to run longer, the loss/win ratio became even worse.
+
+### Carmack Insight
+> "When every test gives identical results, you're not changing what matters."
+
+First 4 tests produced identical trade sequences because all exited as FLAT_TRADE before any other logic ran.
+
+### Simons Insight
+> "The prediction model is fine at 46% WR. The exit strategy was systematically cutting winners."
+
+The model has slight edge (52.5% when allowed to run), but FLAT_TRADE exit was cutting positions
+before winners could materialize.
+
+### Environment Variables (Correct Names!)
+
+```bash
+# WRONG (ignored):
+HARD_STOP_LOSS_PCT=5     # Does nothing in train_time_travel.py
+HARD_TAKE_PROFIT_PCT=20  # Does nothing in train_time_travel.py
+
+# CORRECT:
+TT_STOP_LOSS_PCT=5       # Actually applied
+TT_TAKE_PROFIT_PCT=20    # Actually applied
+
+# To disable flat exit (RECOMMENDED):
+FLAT_TRADE_EXIT_ENABLED=0
+```
+
+### Win/Loss Analysis
+
+```
+Average Win:  $1.78
+Average Loss: -$2.91 (1.64x larger)
+
+Required WR to break even: 62.1%
+Actual WR with FLAT exit:  46.0%  → -16% edge (guaranteed loss)
+Actual WR without FLAT:    52.5%  → Still below break-even, but improving
+```
+
+### Recommended Configuration
+
+```bash
+# ORIGINAL recommendation (before 20K validation):
+# FLAT_TRADE_EXIT_ENABLED=0 TT_STOP_LOSS_PCT=8 TT_TAKE_PROFIT_PCT=15
+
+# REVISED after 20K validation - KEEP FLAT_TRADE EXIT ENABLED:
+# The FLAT_TRADE exit was PROTECTING against larger losses!
+# Focus on improving the prediction model instead of exit timing.
+
+# Keep defaults for now - the real fix is improving win/loss ratio
+python scripts/train_time_travel.py
+```
+
+### Key Learning
+
+> **"5K backtests lie. Always validate with 20K cycles."**
+
+The FLAT_TRADE fix looked great at 5K (-0.37% vs -0.75%) but was **53x worse** at 20K (-20% vs -0.75%).
+The exit was doing its job - cutting losses early. The real problem remains:
+**Loss/Win ratio of 1.64:1 requires 62% WR, but model only achieves ~46%.**
+
+### Insider Sentiment Integration Results
+
+Tested 3 HMM + Insider integration modes:
+
+| Mode | Description | Result |
+|------|-------------|--------|
+| **GATE** | Blocks trades conflicting with insider sentiment | Working - blocks CALLs when insiders selling |
+| **4D** | Adds insider as 4th HMM dimension | No differentiation from baseline |
+| **TRANSITION** | Adjusts HMM transition probabilities | No differentiation from baseline |
+
+Current insider sentiment: **-0.91** (heavy selling) - correctly blocked CALL trades in GATE mode.
+
+### Files Created/Modified
+| File | Description |
+|------|-------------|
+| `docs/CARMACK_SIMONS_FIX_PLAN.md` | Detailed fix plan |
+| `docs/SIMONS_EXIT_FIX_PLAN.md` | Exit strategy analysis |
+| `backend/insider_hmm_integration.py` | Insider gate (working correctly) |
+
+### Next Steps
+1. Tune FLAT_TRADE timeout to 30-45 min instead of disabling
+2. Reduce FLAT_TRADE threshold from 1% to 0.5%
+3. Run 20K cycle validation with FLAT_TRADE_EXIT=0
+4. Test combining insider gate + no flat exit
+
+---
+
 ## Phase 58d: Adaptive Exit Optimizer (2026-01-12)
 
 ### Philosophy

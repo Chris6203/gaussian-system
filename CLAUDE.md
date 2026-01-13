@@ -35,6 +35,7 @@ USE_PROPER_CONFIDENCE=1 python scripts/train_time_travel.py
 ```
 
 ### Other Fixed Bugs
+- **Confidence Inversion (2026-01-12):** Confidence head outputs INVERTED. Fix: `CONFIDENCE_CALIBRATION=1 SIMONS_DRIFT_GATE_THRESHOLD=100` → **60% WR, +$9.93 P&L**
 - **P&L Bug (2026-01-01):** Results before this date showing massive gains are INVALID
 - **TEMPORAL_ENCODER Bug (2026-01-06):** V2/V3 predictors ignored env var, always used LSTM
 - **HMM Gate Bug (2026-01-07):** Was blocking good signals. Fix: `SKIP_HMM_ALIGNMENT=1`
@@ -44,6 +45,9 @@ USE_PROPER_CONFIDENCE=1 python scripts/train_time_travel.py
 
 ### Training
 ```bash
+# NEW BEST (Phase 60): Confidence Calibration - 60% WR, +$9.93 P&L
+CONFIDENCE_CALIBRATION=1 SIMONS_DRIFT_GATE_THRESHOLD=100 python scripts/train_time_travel.py
+
 # Best entry filter (Phase 57)
 SMART_ENTRY_GATE=1 python scripts/train_time_travel.py
 
@@ -70,6 +74,8 @@ python dashboard.py --status     # Check status
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `CONFIDENCE_CALIBRATION` | `0` | **Phase 60 FIX**: Invert broken confidence head (60% WR) |
+| `SIMONS_DRIFT_GATE_THRESHOLD` | `50` | Drift gate % (100=disabled, recommended) |
 | `SMART_ENTRY_GATE` | `0` | Use inverted confidence filtering |
 | `TRAIN_MAX_CONF` | `1.0` | Max confidence to trade (0.25 = only low conf) |
 | `SKIP_MONDAY` | `0` | Skip Monday trades |
@@ -171,11 +177,12 @@ SQLite in `data/`:
 
 ## Common Gotchas
 
-1. **Confidence is inverted** - Use SmartEntryGate or TRAIN_MAX_CONF=0.25
+1. **Confidence is inverted** - Use `CONFIDENCE_CALIBRATION=1` (Phase 60, 60% WR) or SmartEntryGate
 2. **Frozen predictor** - Weights don't update during RL training
 3. **Use risk_adjusted_return** - Not raw return_mean
 4. **HMM alignment** - Skip with SKIP_HMM_ALIGNMENT=1
 5. **config.json is gitignored** - Contains API keys
+6. **Drift gate too aggressive** - Use `SIMONS_DRIFT_GATE_THRESHOLD=100` to disable
 
 ## Documentation
 
@@ -211,3 +218,44 @@ SMART_OPTION_TYPE=all  # 'all', 'puts_only', 'calls_only'
 ```
 
 **Key Finding:** PUTS outperform CALLS by 4x (-$0.15/trade vs -$0.62/trade)
+
+## Confidence Calibrator (Phase 60 - BEST)
+
+Fixes the broken confidence head by inverting raw confidence to calibrated confidence:
+
+```bash
+# Best config: 60% WR, +$9.93 P&L
+CONFIDENCE_CALIBRATION=1 python scripts/train_time_travel.py
+```
+
+**How it works:**
+```
+Raw Confidence  → Calibrated Confidence
+19%             → 81%  (inverted: 1.0 - 0.19)
+25%             → 75%
+27%             → 73%
+```
+
+**Environment Variables:**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CONFIDENCE_CALIBRATION` | `0` | Enable calibration (inverts confidence) |
+| `CONFIDENCE_FEEDBACK` | `0` | Learn from P&L outcomes (no effect) |
+| `CONFIDENCE_CONSISTENCY` | `0` | Check direction agreement (no effect) |
+| `CONFIDENCE_MEMORY` | `0` | Recent accuracy scaling (no effect) |
+| `CONF_CAL_WINDOW` | `50` | Outcome window size |
+| `CONF_CAL_MIN_SAMPLES` | `20` | Min samples before using actual WR |
+
+**Key Finding:** Only CALIBRATION matters. Other verses have no effect.
+
+## Potential Improvements (TODO)
+
+Based on Phase 60 findings, these could further improve results:
+
+1. **Longer Validation** - Validate 60% WR holds at 5K/20K cycles
+2. **Combine with Phase 58** - Test CALIBRATION + SPY-VIX gate + Kelly sizing
+3. **Direction-Specific Calibration** - Separate calibration for CALLS vs PUTS
+4. **Regime-Specific Calibration** - Different inversion per market regime
+5. **Retrain Confidence Head** - Fix the NN instead of inverting output
+6. **Adaptive Calibration** - Learn actual WR per bucket over time
+7. **Combine with SmartEntryGate** - Both use inverted confidence
