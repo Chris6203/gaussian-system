@@ -219,12 +219,12 @@ SMART_OPTION_TYPE=all  # 'all', 'puts_only', 'calls_only'
 
 **Key Finding:** PUTS outperform CALLS by 4x (-$0.15/trade vs -$0.62/trade)
 
-## Confidence Calibrator (Phase 60 - BEST)
+## Confidence Calibrator (Phase 60 - DID NOT HOLD UP)
 
-Fixes the broken confidence head by inverting raw confidence to calibrated confidence:
+**WARNING:** The 60% WR at 500 cycles was SAMPLING VARIANCE. At 5K cycles: **46.9% WR** (same as baseline).
 
 ```bash
-# Best config: 60% WR, +$9.93 P&L
+# Does NOT improve win rate at scale
 CONFIDENCE_CALIBRATION=1 python scripts/train_time_travel.py
 ```
 

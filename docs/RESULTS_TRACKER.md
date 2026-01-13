@@ -78,7 +78,7 @@ The NN "speaks" predictions but never "hears" feedback. Four missing verses were
 | 3. **CALIBRATION** | Raw conf → actual win rate | **KEY FIX: Inverts broken confidence** |
 | 4. MEMORY | Recent accuracy affects confidence | Temporal scaling factor |
 
-### Test Results
+### Test Results (500 cycles - INITIAL)
 
 | Configuration | Win Rate | P&L | Trades | Notes |
 |--------------|----------|-----|--------|-------|
@@ -87,6 +87,26 @@ The NN "speaks" predictions but never "hears" feedback. Four missing verses were
 | Verse 2 (CONSISTENCY) | 45.5% | - | - | No improvement |
 | **Verse 3 (CALIBRATION)** | **60%** | **+$9.93** | 30 | **KEY FIX** |
 | **ALL COMBO** | **60%** | **+$9.93** | 30 | Same as Calibration alone |
+
+### 5K VALIDATION (CRITICAL UPDATE)
+
+**The 60% win rate was SAMPLING VARIANCE - NOT real improvement!**
+
+| Samples | Win Rate | Progression |
+|---------|----------|-------------|
+| 10 | 0% | Early variance |
+| 20 | 65% | Peak (luck) |
+| 30 | 60% | Still lucky |
+| 40 | 47.5% | Regressing |
+| **49** | **46.9%** | **Back to baseline** |
+
+**5K Validation Final Results:**
+- Trades: 49
+- Win Rate: **46.9%** (same as baseline 46%)
+- P&L: **-$36.59**
+
+**Conclusion:** The Confidence Calibrator does NOT improve win rate at scale.
+The initial 60% at 30 trades was statistical noise. True performance is ~47%.
 
 ### Key Discovery: Confidence Inversion
 
