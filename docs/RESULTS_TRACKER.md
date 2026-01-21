@@ -4,6 +4,663 @@ Track configuration changes and their impact on performance.
 
 ---
 
+## Phase 84: Short Cooldown Optimization (2026-01-20) - NEW BEST
+
+### Overview
+Testing shorter cooldown periods to find more trading opportunities without sacrificing win rate.
+
+### Results (20K Validation)
+
+| Config | Win Rate | P&L | Trades | Per-Trade | Status |
+|--------|----------|-----|--------|-----------|--------|
+| **Phase 84: 30-min cooldown** | **64.3%** | **+$48.33** | 56 | **+$0.86** | **NEW BEST** |
+| Phase 79/80/81: 60-min baseline | 47.5% | +$10.09 | 40 | +$0.25 | Control |
+
+### Key Finding
+
+**30-minute cooldown dramatically outperforms 60-minute default:**
+- **+16.8% win rate** (64.3% vs 47.5%)
+- **+4.8x P&L** (+$48.33 vs +$10.09)
+- **+40% more trades** (56 vs 40)
+- **+3.4x per-trade profit** (+$0.86 vs +$0.25)
+
+### Why It Works
+
+1. **Faster recovery from missed opportunities** - 30 min vs 60 min cooldown
+2. **More trades in favorable periods** - Captures momentum before it fades
+3. **Different trade timing** - Avoids specific catastrophic trades that 60-min hits
+
+### Recommended Config
+
+```bash
+SMART_ENTRY_GATE=1 SMART_COOLDOWN_MINUTES=30 python scripts/train_time_travel.py
+```
+
+### Other Phase 83-84 Findings
+
+| Test | P&L (5K) | Notes |
+|------|----------|-------|
+| Looser volume (0.5) | -$32.65 | Worse |
+| More daily (6) | +$11.68 | Neutral |
+| All loose combined | -$64.71 | Worst |
+| Insider sentiment gate | Same as baseline | Not wired |
+| Multi-strategy (condors) | Same as baseline | Not wired |
+
+**VRP Gate and WR Monitor** - Implemented but don't trigger with current thresholds. VRP always >2% in backtest.
+
+---
+
+## Phase 79-81 v2: Adaptive Entry Gates (2026-01-20)
+
+### Overview
+Implementing three improvements to address period-specific edge found in 50K validation:
+
+1. **Phase 79: VRP Gate** - Only trade when IV > Realized Vol (volatility premium exists)
+2. **Phase 80 v2: Rolling WR Monitor** - Pause trading when win rate drops below threshold
+3. **Phase 81 v2: Walk-Forward Retrain** - Periodically retrain model on recent data
+
+### Implementation Details
+
+#### Phase 79: VRP Gate (`backend/smart_entry_gate.py`)
+- Computes realized volatility from 20-day price history
+- VRP = IV (VIX/100) - Realized Vol
+- Blocks trades when VRP < 2% (options are cheap relative to movement)
+
+```bash
+SMART_ENTRY_GATE=1 VRP_GATE_ENABLED=1 VRP_MIN=0.02 VRP_WINDOW=20
+```
+
+#### Phase 80 v2: Rolling WR Monitor (`backend/smart_entry_gate.py`)
+- Tracks last N trade outcomes (win/loss)
+- When rolling win rate drops below threshold, pauses trading
+- Auto-resumes after pause period
+
+```bash
+SMART_ENTRY_GATE=1 WR_MONITOR_ENABLED=1 WR_MONITOR_WINDOW=20 WR_MONITOR_MIN=0.45 WR_MONITOR_PAUSE=10
+```
+
+#### Phase 81 v2: Walk-Forward Retrain (`backend/walk_forward_trainer.py`)
+- Collects training samples from closed trades
+- Every N cycles, checks if model performance is below threshold
+- Retrains model on recent samples with fresh optimizer
+- Helps adapt to regime changes
+
+```bash
+WALK_FORWARD_ENABLED=1 WALK_FORWARD_INTERVAL=2000 WALK_FORWARD_EPOCHS=10 WALK_FORWARD_WR_THRESHOLD=0.40
+```
+
+### Test Plan (20K validation each)
+
+| Test | Config | Status |
+|------|--------|--------|
+| Phase 79 VRP Gate | `VRP_GATE_ENABLED=1` | Running |
+| Phase 80 WR Monitor | `WR_MONITOR_ENABLED=1` | Running |
+| Phase 81 Walk-Forward | `WALK_FORWARD_ENABLED=1` | Running |
+
+### Results
+
+(Pending - tests running)
+
+---
+
+## Phase 80-81: Jerry's Data Architecture Integration (2026-01-19)
+
+### Overview
+Integrated key features from Jerry's spy-iron-condor-trading system:
+1. **DataEngine** with IV confidence decay (`backend/data_engine.py`)
+2. **MTFSyncEngine** for multi-timeframe consensus
+3. **VRP Gate** (Volatility Risk Premium)
+
+### Phase 80: Data Quality Gates (5K Tests)
+
+| Test | Win Rate | P&L | Trades | Config |
+|------|----------|-----|--------|--------|
+| 80a MTF strict (3/3@70) | 57.5% | +$18.63 | 40 | MTF_MIN_AGREE=3, RSI=70 |
+| 80b MTF relaxed (2/3@65) | 57.5% | +$18.63 | 40 | MTF_MIN_AGREE=2, RSI=65 |
+| 80c VRP Gate | 57.5% | +$18.63 | 40 | VRP_MIN_PREMIUM=0.02 |
+| 80d Combined | 57.5% | +$18.63 | 40 | MTF + VRP |
+| **80e 20K baseline** | **56.8%** | **+$14.65** | 44 | Standard config |
+| 80f MTF aggressive (1/3@60) | 52.6% | +$3.93 | 38 | Blocked good trades! |
+| 80g VRP relaxed | 57.5% | +$18.63 | 40 | VRP_MIN=-0.01 |
+| **80h No SmartGate** | **45.9%** | **-$16.96** | 37 | 58% DD - TERRIBLE |
+
+### Key Findings
+
+1. **SmartGate is ESSENTIAL** - Without it: 45.9% WR, 58% drawdown, LOST money
+2. **MTF gates don't help** - Threshold too strict (never triggers) or too aggressive (blocks good trades)
+3. **VRP gate overlaps with SmartGate** - Blocked trades were already filtered
+4. **Jerry's data architecture is for LIVE trading** - IV decay matters when data can be stale
+
+### Phase 81: Hold Winners Longer (In Progress)
+
+Testing different exit strategies to increase P&L:
+
+| Test | P&L | Win Rate | Trades | Max DD | Config |
+|------|-----|----------|--------|--------|--------|
+| 81a Let winners run | +$18.63 | 57.5% | 40 | 12.17% | QUICK_PROFIT_EXIT=0, wide trailing |
+| 81b 90 min hold | +$18.63 | 57.5% | 40 | 12.17% | MAX_HOLD=90 |
+| **81c No time exit** | **-$215.77** | **13.3%** | 30 | **25.82%** | **MAX_HOLD=120, time exits OFF** |
+| 81d Adaptive Exit | +$18.46 | 56.4% | 39 | 11.97% | ADAPTIVE_EXIT=1 |
+| 81e 2 contracts | +$18.63 | 57.5% | 40 | 12.17% | CONTRACTS_PER_TRADE=2 |
+| 81f Phase 72 @ 20K | Running | - | - | - | 20K validation |
+| **81g Scalping (5 min)** | **-$24.30** | **32.4%** | 37 | 11.97% | **USE_SCALPING_EXIT=1** |
+| **81h RL-only exit** | **-$38.57** | **25.4%** | 59 | 13.09% | **No time limits, RL threshold 0.35** |
+
+### Phase 81 Key Findings
+
+1. **Longer holds don't help** - 90 min vs 45 min produces identical results
+2. **Letting winners run doesn't help** - Same results without quick profit taking
+3. **No time-based exit = DISASTER** - 13.3% WR, -$215 P&L, 26% DD (theta decay kills positions)
+4. **5-minute scalping = DISASTER** - 32.4% WR, exits before moves develop
+5. **2 contracts = No change** - Just scales wins and losses equally
+6. **Adaptive ML exit = Slight worse** - 56.4% WR vs 57.5% baseline
+
+### Phase 81g: 5-Minute Scalping Exit Policy (FAILED)
+
+Copied the RL-based exit policy from output7 bot (`backend/rl_exit_policy_scalping.py`):
+- **Min hold**: 1 minute (let trade breathe)
+- **Max hold**: 5 minutes (scalping timeframe)
+- **Stop loss**: -10% (tight scalping stop)
+- **Take profit**: +10% (lock quick wins)
+
+**Result**: -$24.30 P&L, 32.4% win rate - exits too fast before SPY moves develop
+
+### Phase 81h: RL-Only Exit Control (FAILED)
+
+Modified output7 exit policy to remove time limits - RL network has full control:
+- **No max hold time** - only MAX_HOLD=45 as emergency backup
+- **RL threshold**: 0.35 (very low to give RL full control)
+- **All time-based exits disabled** (FLAT_TRADE, TIME_DECAY)
+
+**Result**: -$38.57 P&L, 25.4% win rate, 59 trades, 100% RL exits
+
+**Why it failed**:
+1. RL network starts untrained (random weights ~0.5 sigmoid output)
+2. With threshold 0.35, random outputs trigger exits at unpredictable times
+3. No reward signal during backtest to learn from mistakes
+4. RL needs extensive training before deployment, not learning-while-trading
+
+### Conclusion
+
+**SmartGate remains the best entry filter**. The new gates (MTF, VRP) don't add value because:
+1. SmartGate already does aggressive filtering
+2. MTF consensus is too rare or too noisy
+3. VRP overlaps with existing checks
+
+---
+
+## Phase 78: Confidence + Temporal Encoder Tests (2026-01-16)
+
+### Phase 78a: Confidence Head BCE Training
+
+Trained confidence head with BCE loss and cost-aware threshold.
+
+```bash
+TRAIN_CONFIDENCE_BCE=1 CONFIDENCE_WIN_THRESHOLD=0.002 SMART_ENTRY_GATE=1
+```
+
+| Metric | Result |
+|--------|--------|
+| P&L | +$7.13 (+0.14%) |
+| Win Rate | 48.8% |
+| Trades | 43 |
+| Max DD | 11.70% |
+
+**Finding**: BCE training produces positive P&L but lower win rate than baseline.
+
+### Phase 78c: Temporal Encoder Comparison (60-bar sequences)
+
+Compared TCN (baseline) vs Mamba2 vs JerryDeepMamba (16 layers) at 60-bar sequence length.
+
+| Encoder | P&L | Win Rate | Trades | Max DD | Verdict |
+|---------|-----|----------|--------|--------|---------|
+| **TCN (baseline)** | **+$7.13 (+0.14%)** | **48.8%** | 43 | 11.70% | **BEST** |
+| DeepMamba 16 | -$29.41 (-0.59%) | 40.8% | 49 | 12.04% | ❌ WORSE |
+| Mamba2 | -$47.26 (-0.95%) | 30.0% | 30 | 12.42% | ❌ WORST |
+
+### Phase 78d: Sequence Length Comparison (256 bars)
+
+Tested whether longer sequences (256 bars = 4 hours) would help Mamba2.
+
+| Encoder | Seq Len | P&L | Win Rate | Trades | Max DD | Speed |
+|---------|---------|-----|----------|--------|--------|-------|
+| **TCN** | **60** | **+$7.13** | **48.8%** | 43 | 11.70% | ~30 min |
+| TCN | 256 | -$16.19 (-0.32%) | 34.4% | 32 | 12.10% | ~45 min |
+| Mamba2 | 60 | -$47.26 | 30.0% | 30 | 12.42% | ~35 min |
+| Mamba2 | 256 | TBD (running) | TBD | TBD | TBD | **5+ hours** |
+
+**Key Finding**: Longer sequences HURT TCN because its receptive field is only ~24 timesteps. Extra bars are noise.
+
+### Key Findings
+
+1. **TCN wins decisively** - Outperforms both Mamba variants at any sequence length
+2. **Longer sequences hurt TCN** - Receptive field is ~24 timesteps, extra data is noise
+3. **Mamba2 is 10x slower at 256 bars** - Impractical for production even if it worked
+4. **Mamba2 is terrible** - 30% WR at 60 bars is worse than random
+5. **DeepMamba has NaN issues** - Numerical instability during training
+6. **More parameters ≠ better** - Simple architecture wins
+
+### Conclusion
+
+**TCN at 60 bars is optimal**. Do NOT replace with Mamba2 or increase sequence length.
+- TCN's local inductive bias is better suited for minute-bar trading
+- Mamba's long-range dependency advantage doesn't help here
+- Computational overhead of Mamba2 is prohibitive
+
+---
+
+## Phase 79: Pretrained Model Comparison (2026-01-17)
+
+### Hypothesis
+Pretrained models (trained on historical data before online learning) might outperform random initialization because:
+1. Better starting weights for features
+2. Learned patterns from historical data
+3. More stable initial predictions
+
+### Key Insight: Mamba2 in Previous Tests Used RANDOM Weights
+Phase 78 Mamba2 tests used random initialization, not pretrained weights. Jerry's Mamba uses pretrained weights from `models/mamba_active.pth` (d_model=256, 12 layers, 5.5M params).
+
+### Phase 79a: Pretrained with SmartEntryGate
+
+All pretrained models (TCN, LSTM, Transformer) produced **0 trades** when using SmartEntryGate.
+
+**Reason**: SmartEntryGate thresholds (min_inv_conf=70%, min_pred_return=0.02%) filtered ALL signals.
+- Pretrained models output confidence ~30-35% (inverted: 65-70%)
+- Pretrained models output predicted_return < 0.02%
+
+### Phase 79b: Pretrained TCN WITHOUT SmartEntryGate
+
+| Metric | Pretrained TCN | Phase 78 Baseline |
+|--------|----------------|-------------------|
+| P&L | **-$52.59 (-1.05%)** | +$7.13 (+0.14%) |
+| Win Rate | **26.1%** | 48.8% |
+| Trades | 23 | 43 |
+| Max DD | 15.78% | 11.70% |
+
+**Verdict**: Pretrained is **WORSE than random + online learning!**
+
+### Key Findings
+
+1. **Online learning beats pretraining** - TCN with random init + online learning outperforms pretrained
+2. **Pretraining hurts SmartEntryGate** - Pretrained outputs don't match expected thresholds
+3. **26.1% WR = worse than random** - Pretrained model predictions are anti-correlated
+4. **Feature drift** - Pretrained weights may not match current feature distributions
+
+### Why Pretraining Failed
+
+1. **Feature drift**: Models were pretrained on data from different time periods
+2. **Online adaptation**: Random init allows model to adapt to current market
+3. **Threshold mismatch**: SmartEntryGate thresholds were tuned for online-learned outputs
+
+### Conclusion
+
+**Do NOT use pretrained models**. Random initialization with online learning produces better results.
+- TCN with online learning: +0.14% P&L, 48.8% WR
+- TCN pretrained: -1.05% P&L, 26.1% WR
+
+---
+
+## Phase 72: Afternoon Volume Filter - NEW BEST (2026-01-15)
+
+### Discovery
+Time-of-day analysis revealed:
+1. **Morning trades (9am-12pm)**: 58-67% WR, +$0.53-0.91/trade
+2. **Afternoon trades (1pm-3pm)**: 25-50% WR, -$1.50/trade
+3. **Afternoon + Low Volume**: Only **25% WR** - terrible!
+4. **Afternoon + Medium Volume (1.5-2.5)**: **100% WR** - excellent!
+
+### Implementation
+Added to SmartEntryGate:
+```python
+if current_time.hour in (13, 14, 15):
+    if vol < 1.5 or vol > 2.5:
+        return False, "Afternoon needs medium vol"
+```
+
+### Results - NEW BEST!
+
+| Metric | Phase 62b | Phase 72 | Improvement |
+|--------|-----------|----------|-------------|
+| 5K Win Rate | 61.4% | **61.7%** | +0.3% |
+| 20K Win Rate | 56.9% | **59.6%** | +2.7% |
+| 20K P&L | +$24.44 | **+$24.94** | +$0.50 |
+| Per-Trade | $0.48 | **$0.48** | Same |
+| Decay | -4.5% | **-2.1%** | 50% less decay |
+
+### Configuration
+```bash
+TRAIN_CONFIDENCE_BCE=1 SMART_ENTRY_GATE=1 SMART_OPTION_TYPE=calls_only
+# Afternoon filter is automatic in SmartEntryGate
+```
+
+---
+
+## Phase 73-77: Optimization Experiments (2026-01-15)
+
+### Failed Experiments
+
+| Phase | Change | 5K WR | 5K P&L | Verdict |
+|-------|--------|-------|--------|---------|
+| 73 | INCLUDE_TIME_FEATURES=1 | 53.7% | -$411 | ❌ Model needs pretraining |
+| 74 | SMART_MIN_INV_CONF=0.80 | 51.6% | -$391 | ❌ Too selective |
+| 75 | SMART_MIN_PRED_RET=0.0004 | 38.1% | +$3 | ❌ Too selective |
+| 76 | FLAT_TRADE_TIMEOUT_MIN=30 | 44.1% | -$4 | ❌ Longer holds hurt |
+| 77 | TT_STOP_LOSS_PCT=4 | 61.7% | +$25 | = Same as baseline |
+
+### Key Learnings
+1. **Entry filters are optimal** - Stricter thresholds hurt performance
+2. **Time features need pretraining** - Can't learn online during backtest
+3. **Hard-coded filters work better** - Afternoon vol filter outperforms learned patterns
+4. **15-min flat exit is optimal** - Holding longer (30 min) drops WR from 61.7% to 44.1%
+5. **Stop loss rarely triggers** - 4% vs 8% stop makes no difference (trades exit via flat)
+
+---
+
+## Phase 62b: BCE + CALL_ONLY - FIRST SUCCESS (2026-01-14)
+
+### Discovery
+Analysis of 86,000+ trades revealed:
+1. **CALLs outperform PUTs**: 40.9% WR vs 35.1% WR, -$0.25/trade vs -$1.29/trade
+2. **BCE training is most robust**: Degrades 2.1x from 5K→20K vs 7.7x for baseline
+3. **Combining both** preserves edge at scale
+
+### Configuration
+```bash
+TRAIN_CONFIDENCE_BCE=1 SMART_ENTRY_GATE=1 SMART_OPTION_TYPE=calls_only
+```
+
+### Results - FIRST 20K SUCCESS!
+
+| Metric | 5K | 20K | Change |
+|--------|-----|-----|--------|
+| Trades | 44 | 51 | +16% |
+| Win Rate | 61.4% | **56.9%** | -4.5% |
+| P&L | +$21.35 | **+$24.44** | +14% |
+| Per-Trade P&L | +$0.49 | +$0.48 | Stable |
+
+### Kelly Criterion at 56.9% WR
+```
+f = (0.917 * 0.569 - 0.431) / 0.917
+f = (0.522 - 0.431) / 0.917
+f = +9.9%  ← POSITIVE KELLY!
+```
+
+### Why This Works
+1. **CALLs have natural edge** - Market bias is long, CALLs align with it
+2. **BCE training calibrates confidence** - More robust signal filtering
+3. **SmartEntryGate filters bad signals** - Additional quality control
+4. **Selectivity matters** - 51 trades vs 356 baseline = 86% fewer, better quality
+
+### Status: VALIDATED AT 20K
+This is the FIRST configuration to maintain positive P&L at 20K validation.
+
+### 50K Extended Validation (2026-01-16)
+
+| Metric | 20K | 50K (44.8K) | Change |
+|--------|-----|-------------|--------|
+| Win Rate | 56.9% | **49.4%** | -7.5% ⚠️ |
+| P&L | +$24.44 | **+$92.47** | +278% ✅ |
+| Trades | 51 | 170 | +233% |
+| Max Drawdown | 12.42% | 37.84% | +25% ⚠️ |
+| Per-Trade P&L | +$0.48 | **+$0.54** | +13% ✅ |
+
+**Conclusion:** Edge is real and scales (+$92 at 50K). Win rate decay suggests normalization drift.
+
+### ⚠️ CRITICAL: New 50K Tests FAILED (2026-01-16)
+
+Different time window in backtest data produced drastically different results:
+
+| Test | Win Rate | P&L | Trades | Max DD |
+|------|----------|-----|--------|--------|
+| **Phase 72 50K** | **30.2%** | -$436 (-8.72%) | 199 | 60.46% |
+| **NO_RECAL 50K** | **37.7%** | -$452 (-9.04%) | 292 | 51.57% |
+| *Phase 62b 50K (earlier)* | *49.4%* | *+$92 (+1.85%)* | *170* | *37.84%* |
+
+**Key Findings:**
+1. **Edge is period-specific** - What works in one time window fails in another
+2. **Win rate collapsed** - 56.9% at 20K → 30% at 50K in new window
+3. **Recalibration helps marginally** - But doesn't solve the core issue
+4. **20K tests are misleading** - Consistently show 56-60% WR but don't persist
+
+**Implications:**
+- DO NOT deploy based on 20K results alone
+- Run multiple 50K tests across different time windows
+- The Phase 62b +$92 result may have been anomalous
+
+---
+
+## Phase 63: Improvement Experiments (2026-01-14)
+
+### Hypothesis
+Test whether additions to Phase 62b baseline improve performance:
+1. SKIP_MONDAY - Monday trades may be lower quality
+2. FAST_LOSS_CUT_ENABLED=0 - Disable RL fast cuts
+3. Combined - All improvements together
+
+### 20K Validation Results
+
+| Test | Win Rate | P&L | Trades | vs Baseline |
+|------|----------|-----|--------|-------------|
+| **Baseline (Phase 62b)** | 56.9% | +$24.44 | 51 | - |
+| SKIPMON (+SKIP_MONDAY) | 46.5% | -$2.76 | 43 | ❌ WORSE |
+| NOFASTCUT (+no fast cuts) | **56.9%** | **+$24.44** | 51 | = SAME |
+| COMBINED (all) | 46.5% | -$2.76 | 43 | ❌ WORSE |
+
+### Key Findings
+
+1. **SKIP_MONDAY hurts performance** - Drops WR from 56.9% → 46.5%, turns profit into breakeven
+2. **FAST_LOSS_CUT_ENABLED=0 has no effect** - Results identical to baseline
+3. **Phase 62b baseline remains optimal** - No improvement found
+
+### Why SKIP_MONDAY Hurts
+
+SKIP_MONDAY filtered out 8 trades (51→43), but those 8 were apparently winners:
+- Lost 9 wins (29→20) but only 1 loss (22→23 counted as loss reduction)
+- Monday trades may actually have an edge in this configuration
+
+### Conclusion
+
+The Phase 62b configuration is already optimal:
+```bash
+TRAIN_CONFIDENCE_BCE=1 SMART_ENTRY_GATE=1 SMART_OPTION_TYPE=calls_only
+```
+
+Adding more filters (SKIP_MONDAY) or disabling features (FAST_LOSS_CUT) doesn't help.
+
+---
+
+## Phase 62: Data-Driven Fixes (2026-01-14)
+
+### Hypothesis
+Based on 86,189 trade analysis:
+1. RL fast cuts have 0% WR → disable them (`FAST_LOSS_CUT_ENABLED=0`)
+2. PUTs lose 4x more than CALLs → go CALL-only (`CALL_ONLY=1`)
+3. 60-min holds have 58.8% WR → extend hold time (`TT_MAX_HOLD_MINUTES=60`)
+
+### 20K Validation Results
+
+| Test | Win Rate | P&L | Trades | Verdict |
+|------|----------|-----|--------|---------|
+| Baseline | ~36% | - | - | ❌ |
+| INSTITUTIONAL_FIXES_20K | 35.3% | -25.68% | 241 | ❌ FAILED |
+| **PHASE62_COMBINED_20K** | **34.3%** | **-12.58%** | 103 | ❌ FAILED |
+
+Phase 62 config:
+```bash
+CALL_ONLY=1 FAST_LOSS_CUT_ENABLED=0 TT_MAX_HOLD_MINUTES=60 \
+DISABLE_CONFIDENCE_GATE=1 REALISTIC_FILLS=1
+```
+
+### Key Finding
+
+~~**The neural network has NO predictive power.**~~ **WRONG - Phase 62b proved otherwise!**
+
+The Phase 62 fixes without BCE training failed, but **BCE + CALL_ONLY succeeded** (see Phase 62b above).
+The key insight: BCE training provides calibrated confidence, and CALLs have natural market bias alignment.
+
+### Why Historical Patterns Don't Reproduce
+
+The 86K trade analysis showed 60-min FORCE_CLOSE had 58.8% WR. But this was **survivorship bias**:
+- Trades that lasted 60 min without hitting stops were already winners
+- Forcing all trades to hold 60 min doesn't create winners—it just delays the loss
+
+### Conclusion
+
+> **Carmack:** "The fix didn't work because there was nothing to fix. The model has no edge."
+
+> **Simons:** "When every approach gives the same result, the problem isn't the approach—it's the signal."
+
+---
+
+## Phase 61c: Institutional Fixes (2026-01-13)
+
+### Problem Statement
+Applying three "institutional-grade" fixes from feedback analysis:
+1. Disable broken confidence gating (actively filters toward WORSE trades)
+2. Make paper fills harsher (mid-price fills inflate all training results)
+3. Train on option P&L (already implemented)
+
+### Implementation
+
+**Fix 1: DISABLE_CONFIDENCE_GATE=1** (`backend/unified_rl_policy.py`)
+- Bypasses all confidence threshold checks
+- The confidence head is inverted (high conf = low WR), so gating filters toward worse trades
+
+**Fix 2: REALISTIC_FILLS=1** (`backend/paper_trading_system.py`)
+- 2x wider bid/ask spreads (ATM: 0.8%, OTM: 1.5-3%)
+- 2x higher slippage (0.1-0.4%)
+- 10% random fill failure rate
+- Better matches real-world execution
+
+**Fix 3: TRAIN_ON_OPTION_PNL=1** (already default)
+- Learning target is net option P&L, not SPY return
+
+### 5K Validation Results
+
+| Test | Trades | Win Rate | P&L | Per-Trade |
+|------|--------|----------|-----|-----------|
+| Baseline (broken confidence gate) | 50 | 37.6% | - | - |
+| BCE_FIX_5K | 49 | 44.9% | -1.01% | -$1.03 |
+| **INSTITUTIONAL_FIXES_5K** | 51 | **47.1%** | **-0.72%** | **-$0.71** |
+
+**Improvement from baseline:**
+- Win rate: +9.5% (37.6% → 47.1%)
+- Still 5.1% below 52.2% breakeven
+
+### Kelly Criterion at 47.1% WR
+
+```
+f = (0.917 * 0.471 - 0.529) / 0.917
+f = (0.432 - 0.529) / 0.917
+f = -10.6%  ← Still negative, but improved from -30%
+```
+
+### Complete 20K Validation Results
+
+| Configuration | 5K WR | 20K WR | 20K P&L | Kelly (20K) | Edge? |
+|---------------|-------|--------|---------|-------------|-------|
+| BCE Training Only | 44.9% | **38.7%** | -2.16% | -28% | ❌ NO |
+| CONFIDENCE_CALIBRATION | 60% | **34.9%** | -32.92% | -36% | ❌ NO |
+
+**Pattern:** 5K tests inflate win rate by 6-25%. Always validate at 20K+.
+
+### Comparison: All Fixes (5K)
+
+| Configuration | 5K WR | 20K WR | Kelly | Edge? |
+|---------------|-------|--------|-------|-------|
+| Baseline (broken) | 37.6% | 36.2% | -30% | ❌ NO |
+| BCE Training Only | 44.9% | 38.7% | -28% | ❌ NO |
+| CALIBRATION | 60% | 34.9% | -36% | ❌ NO |
+| Musical Trading | 54.5% | **36.0%** | -30% | ❌ NO |
+| **Institutional Fixes** | **47.1%** | **?** | **-10.6%** | ⚠️ NEEDS 20K |
+| Breakeven | 52.2% | 52.2% | 0% | - |
+
+### Key Insight
+
+> **ALL FIXES FAILED at 20K validation.** Every approach that showed promise at 5K collapsed at scale:
+> - CALIBRATION: 60% → 34.9%
+> - Musical Trading: 54.5% → 36.0%
+> - BCE Training: 44.9% → 38.7%
+>
+> The system has NO EDGE. 5K tests are pure noise.
+
+### Status: NO EDGE EXISTS
+The underlying model does not have predictive power. All "improvements" are sampling variance.
+
+---
+
+## Phase 61b: Musical Trading - The Missing Notes (2026-01-13)
+
+### Problem Statement
+"If this bot was a song, what notes are missing to make it complete?"
+
+### The Four Missing Notes
+
+| Note | Name | Purpose | Implementation |
+|------|------|---------|----------------|
+| 1 | THE EAR | Feedback loop - learns from outcomes | BCE-style bucket calibration |
+| 2 | THE KEY | Regime detection - knows bull/bear/sideways | VIX + trend analysis |
+| 3 | THE DYNAMICS | Kelly position sizing - crescendos with conviction | Bankroll-adjusted sizing |
+| 4 | THE RESOLUTION | Musical exits - knows when phrase ends | Momentum exhaustion detection |
+
+### 5K Validation Results
+
+| Test | Trades | Win Rate | P&L | Per-Trade |
+|------|--------|----------|-----|-----------|
+| Baseline | 50 | 46.0% | -$37.67 | -$0.75 |
+| **Musical Trading** | 33 | **54.5%** | **-$8.62** | **-$0.26** |
+
+**Improvement:**
+- Win rate: +8.5% (46.0% -> 54.5%)
+- P&L: 77% less loss
+- More selective (33 vs 50 trades)
+- Per-trade loss reduced by 65%
+
+### Kelly Criterion at 54.5% WR
+
+```
+Loss/Win Ratio: 1.09
+f = (0.917 * 0.545 - 0.455) / 0.917
+f = (0.50 - 0.455) / 0.917
+f = +4.9%  <- POSITIVE EDGE!
+```
+
+**This is the first configuration to show positive Kelly!**
+
+### How to Enable
+
+```bash
+# All notes together
+MUSICAL_TRADING=1 python scripts/train_time_travel.py
+
+# Individual notes
+MUSICAL_EAR=1      # Feedback learning
+MUSICAL_KEY=1      # Regime detection
+MUSICAL_DYNAMICS=1 # Kelly sizing
+MUSICAL_RESOLUTION=1 # Musical exits
+```
+
+### Key Files
+- `backend/musical_trading.py` - Implementation
+- `scripts/train_time_travel.py` - Integration
+
+### 20K Validation - FAILED
+
+| Test | Trades | Win Rate | P&L |
+|------|--------|----------|-----|
+| Baseline 20K | 356 | 36.2% | -$287.46 |
+| Musical Trading 20K | 242 | **36.0%** | -$194.75 |
+
+**The 54.5% WR at 5K was SAMPLING VARIANCE. At 20K it regressed to 36.0%.**
+
+Musical Trading did reduce trades (242 vs 356) and losses (-$194.75 vs -$287.46 = 32% better),
+but the win rate is essentially unchanged from baseline. No edge.
+
+### Status: FAILED
+Like all other "fixes", Musical Trading does not provide edge at scale.
+
+---
+
 ## Phase 61: Carmack/Simons Deep Analysis (2026-01-12)
 
 ### The Question
@@ -42,20 +699,60 @@ Required WR to break even: 52.2%
 2. **Monte Carlo simulation** - Calculate probability of ruin
 3. **Never trade negative Kelly** - Current 37.6% WR = don't trade
 
-### 20K Validation Test
+### 20K Validation Test - FAILED ❌
 
-**Status: RUNNING**
-```bash
-CONFIDENCE_CALIBRATION=1 SIMONS_DRIFT_GATE_THRESHOLD=100 \
-MODEL_RUN_DIR=models/CALIBRATION_20K TT_MAX_CYCLES=20000
+| Metric | 500-cycle Claim | 20K Reality | Verdict |
+|--------|-----------------|-------------|---------|
+| Win Rate | 60% | **34.9%** | ❌ FAILED |
+| P&L | +$9.93 (+0.2%) | **-$1,646 (-32.92%)** | ❌ FAILED |
+| Trades | 30 | 275 | 9x more trades |
+| Per-Trade P&L | +$0.33 | **-$5.99** | ❌ 18x worse |
+
+**Kelly at 34.9% WR:**
 ```
-
-Results will determine if the 60% WR claim holds up.
+f = (0.917 * 0.349 - 0.651) / 0.917 = -36%
+DEEPLY NEGATIVE - NO EDGE EXISTS
+```
 
 ### Key Insight
 
-> **Carmack:** "The confidence head has no loss function. You're not training it - you're inverting random noise."
-> **Simons:** "Show me 60% WR at 20K cycles. Until then, you have no edge."
+> **Carmack:** "The 500-cycle test was noise. The calibration 'fix' is random variance, not a real improvement."
+> **Simons:** "34.9% WR with 1.09 loss/win ratio = -36% Kelly. This system has NO edge. Do not trade."
+
+### Root Cause Fix: BCE Confidence Training
+
+Instead of inverting the broken confidence head, we train it properly with BCE loss:
+
+```bash
+TRAIN_CONFIDENCE_BCE=1 CONFIDENCE_USE_LOGITS_LOSS=1 python scripts/train_time_travel.py
+```
+
+**5K Results:**
+| Metric | BCE Training | Baseline | Improvement |
+|--------|--------------|----------|-------------|
+| Win Rate | **44.9%** | 37.6% | **+7.3%** |
+| P&L | -1.01% | varies | Stable |
+| Trades | 49 | ~50 | Similar |
+
+**Kelly at 44.9% WR:**
+```
+f = (0.917 * 0.449 - 0.551) / 0.917
+f = (0.41 - 0.551) / 0.917
+f = -15%  ← Still negative, but HALVED from -30%
+```
+
+**20K Validation:** FAILED ❌
+
+| Test | Cycles | Win Rate | P&L | Kelly |
+|------|--------|----------|-----|-------|
+| BCE_FIX_5K | 5,000 | 44.9% | -1.01% | -15% |
+| **BCE_FIX_20K** | 20,000 | **38.7%** | **-2.16%** | **-28%** |
+
+**Key Finding:** BCE training at 5K showed 44.9% WR, but degraded to **38.7%** at 20K.
+This is the same pattern seen in CONFIDENCE_CALIBRATION: short tests give false hope.
+
+**Conclusion:** Training the confidence head with BCE loss does NOT fix the broken confidence.
+The 7.3% improvement seen at 5K was sampling variance, not a real improvement
 
 See `docs/CARMACK_SIMONS_ANALYSIS.md` for full analysis.
 

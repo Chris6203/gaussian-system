@@ -749,6 +749,18 @@ if ADAPTIVE_EXIT_ENABLED:
         logger.warning(f"[INIT] Could not load adaptive exit optimizer: {e}")
         ADAPTIVE_EXIT_ENABLED = False
 
+# 5-Minute Scalping Exit Policy (Phase 81g - from output7 bot)
+USE_SCALPING_EXIT = os.environ.get('USE_SCALPING_EXIT', '0') == '1'
+scalping_exit_policy = None
+if USE_SCALPING_EXIT:
+    try:
+        from backend.rl_exit_policy_scalping import RLExitPolicy as ScalpingExitPolicy
+        scalping_exit_policy = ScalpingExitPolicy(learning_rate=0.001)
+        logger.info(f"[INIT] ⚡ 5-Minute Scalping Exit Policy ENABLED")
+    except Exception as e:
+        logger.warning(f"[INIT] Could not load scalping exit policy: {e}")
+        USE_SCALPING_EXIT = False
+
 # Kelly Position Sizing (Phase 58f - optimal position sizing)
 KELLY_SIZING_ENABLED = os.environ.get('KELLY_POSITION_SIZING', '0') == '1'
 kelly_sizer = None
@@ -800,6 +812,23 @@ if CONF_CAL_ENABLED:
     except Exception as e:
         logger.warning(f"[INIT] Could not load confidence calibrator: {e}")
         CONF_CAL_ENABLED = False
+
+# Musical Trading (Phase 61 - The Missing Notes)
+# Adds: THE EAR (feedback), THE KEY (regime), DYNAMICS (Kelly), RESOLUTION (exits)
+MUSICAL_ENABLED = (os.environ.get('MUSICAL_TRADING', '0') == '1' or
+                   os.environ.get('MUSICAL_EAR', '0') == '1' or
+                   os.environ.get('MUSICAL_KEY', '0') == '1' or
+                   os.environ.get('MUSICAL_DYNAMICS', '0') == '1' or
+                   os.environ.get('MUSICAL_RESOLUTION', '0') == '1')
+musical_trader = None
+if MUSICAL_ENABLED:
+    try:
+        from backend.musical_trading import get_musical_trader, musical_should_trade, musical_record_outcome
+        musical_trader = get_musical_trader()
+        logger.info(f"[INIT] 🎼 Musical Trading ENABLED")
+    except Exception as e:
+        logger.warning(f"[INIT] Could not load musical trading: {e}")
+        MUSICAL_ENABLED = False
 
 # Try to import trading mode config (optional)
 try:
@@ -1690,6 +1719,66 @@ if SMART_ENTRY_GATE_ENABLED:
         logger.warning(f"[WARN] Could not initialize Smart Entry Gate: {e}")
         SMART_ENTRY_GATE_ENABLED = False
 
+# ============================================================================
+# Data Quality Gate - MTF consensus filter for backtesting
+# In backtesting, data is always "fresh" so we focus on MTF consensus
+# ============================================================================
+USE_MTF_CONSENSUS_GATE = os.environ.get('USE_MTF_CONSENSUS_GATE', '0') == '1'
+MTF_BLOCK_CONTRARIAN = os.environ.get('MTF_BLOCK_CONTRARIAN', '1') == '1'  # Block trades against MTF consensus
+MTF_MIN_AGREE = int(os.environ.get('MTF_MIN_AGREE', '3'))  # How many timeframes must agree (2 or 3)
+MTF_RSI_THRESHOLD = float(os.environ.get('MTF_RSI_THRESHOLD', '70'))  # RSI level for overbought (30 for oversold)
+
+# Track MTF consensus stats
+mtf_consensus_stats = {
+    'blocked_calls_overbought': 0,
+    'blocked_puts_oversold': 0,
+    'allowed': 0,
+    'warnings': 0,
+}
+
+if USE_MTF_CONSENSUS_GATE:
+    logger.info(f"[OK] MTF Consensus Gate ENABLED (min_agree={MTF_MIN_AGREE}, rsi_thresh={MTF_RSI_THRESHOLD})")
+
+# ============================================================================
+# VRP Gate - Volatility Risk Premium (trade when IV > realized vol)
+# ============================================================================
+USE_VRP_GATE = os.environ.get('USE_VRP_GATE', '0') == '1'
+VRP_MIN_PREMIUM = float(os.environ.get('VRP_MIN_PREMIUM', '0.02'))  # Min 2% IV over realized vol
+
+vrp_gate_stats = {
+    'blocked_low_vrp': 0,
+    'allowed': 0,
+}
+
+if USE_VRP_GATE:
+    logger.info(f"[OK] VRP Gate ENABLED (min_premium={VRP_MIN_PREMIUM:.1%})")
+
+# ============================================================================
+# Fuzzy Position Sizing - Confidence-based adaptive sizing
+# ============================================================================
+USE_FUZZY_SIZING = os.environ.get('USE_FUZZY_SIZING', '0') == '1'
+FUZZY_BASE_QTY = int(os.environ.get('FUZZY_BASE_QTY', '1'))  # Base position size
+FUZZY_MAX_MULT = float(os.environ.get('FUZZY_MAX_MULT', '3.0'))  # Max multiplier
+
+if USE_FUZZY_SIZING:
+    logger.info(f"[OK] Fuzzy Position Sizing ENABLED (base={FUZZY_BASE_QTY}, max_mult={FUZZY_MAX_MULT}x)")
+
+# ============================================================================
+# Walk-Forward Retrain (Phase 81) - Periodically retrain on recent data
+# ============================================================================
+WALK_FORWARD_ENABLED = os.environ.get('WALK_FORWARD_ENABLED', '0') == '1'
+walk_forward_trainer = None
+
+if WALK_FORWARD_ENABLED:
+    try:
+        from backend.walk_forward_trainer import get_walk_forward_trainer
+        # Note: trainer will be initialized after bot.model is available
+        WALK_FORWARD_INTERVAL = int(os.environ.get('WALK_FORWARD_INTERVAL', '2000'))
+        logger.info(f"[OK] Walk-Forward Retrain ENABLED (interval={WALK_FORWARD_INTERVAL} cycles)")
+    except Exception as e:
+        logger.warning(f"[WARN] Could not initialize Walk-Forward Trainer: {e}")
+        WALK_FORWARD_ENABLED = False
+
 # PARTIAL RESET - Only delete trades from THIS run, preserve history from other runs
 logger.info(f"[RESET] Clearing old data for run: {run_name}...")
 conn = sqlite3.connect(bot.paper_trader.db_path)
@@ -1759,6 +1848,15 @@ logger.info(f"   Max positions: {bot.paper_trader.max_positions}")
 logger.info(f"   Confidence threshold: {bot.min_confidence_threshold:.0%}")
 logger.info(f"   Learning enabled: {bot.learning_enabled}")
 logger.info(f"   RL Policy: {'ENABLED' if bot.use_rl_policy else 'DISABLED'}")
+
+# Initialize Walk-Forward Trainer after bot.model is available
+if WALK_FORWARD_ENABLED and hasattr(bot, 'model') and bot.model is not None:
+    try:
+        walk_forward_trainer = get_walk_forward_trainer(bot.model)
+        logger.info(f"[WALK_FORWARD] Trainer initialized with {sum(p.numel() for p in bot.model.parameters())} params")
+    except Exception as e:
+        logger.warning(f"[WALK_FORWARD] Could not initialize trainer: {e}")
+        WALK_FORWARD_ENABLED = False
 
 print(f"\n    [OK] Bot initialized")
 print(f"    [OK] Log file: {log_file}")
@@ -2258,7 +2356,11 @@ for idx, sim_time in enumerate(common_times):
         current_price = tt_source.get_current_price(trading_symbol)
         if not current_price:
             continue
-        
+
+        # Phase 79: Update price history for VRP calculation
+        if SMART_ENTRY_GATE_ENABLED and smart_entry_gate is not None:
+            smart_entry_gate.update_price(current_price)
+
         # === VERBOSE OUTPUT FOR EACH CYCLE ===
         print(f"\n{'='*70}")
         print(f"[CYCLE {cycles}] | {sim_time}")
@@ -2404,12 +2506,35 @@ for idx, sim_time in enumerate(common_times):
 
                 close_reason = None
 
-                # Rule 1: Max hold time (original rule)
-                if minutes_held >= max_hold_minutes:
+                # Rule 0: RL EXIT POLICY (Phase 81h) - First priority when enabled
+                if USE_SCALPING_EXIT and scalping_exit_policy:
+                    try:
+                        pred_timeframe = 30  # 30 min prediction for longer holds
+                        pred_move = getattr(trade, 'predicted_move', 0.01)
+                        entry_conf = getattr(trade, 'entry_confidence', 0.5)
+                        days_to_exp = 0  # 0DTE
+
+                        should_exit, exit_score, exit_details = scalping_exit_policy.should_exit(
+                            prediction_timeframe_minutes=pred_timeframe,
+                            time_held_minutes=int(minutes_held),
+                            current_pnl_pct=pnl_pct,
+                            days_to_expiration=days_to_exp,
+                            predicted_move_pct=pred_move * 100,
+                            actual_move_pct=pnl_pct / 10,
+                            entry_confidence=entry_conf
+                        )
+
+                        if should_exit:
+                            close_reason = f"🤖 RL_EXIT: {exit_details.get('reason', 'RL decision')}"
+                    except Exception as e:
+                        logger.debug(f"[RL_EXIT] Error: {e}")
+
+                # Rule 1: Max hold time (original rule) - Skip if RL exit enabled
+                if close_reason is None and minutes_held >= max_hold_minutes:
                     close_reason = f"MAX_HOLD: Held {minutes_held:.0f}min"
 
-                # Rule 2: Flat trade exit (Phase 34)
-                elif flat_exit_enabled and minutes_held >= flat_timeout and abs(pnl_pct) < flat_threshold:
+                # Rule 2: Flat trade exit (Phase 34) - Skip if RL exit enabled
+                elif close_reason is None and not USE_SCALPING_EXIT and flat_exit_enabled and minutes_held >= flat_timeout and abs(pnl_pct) < flat_threshold:
                     close_reason = f"FLAT_TRADE: P&L {pnl_pct:.1f}% after {minutes_held:.0f}min - freeing liquidity"
 
                 # Rule 3: Profit pullback (Phase 34)
@@ -2422,8 +2547,8 @@ for idx, sim_time in enumerate(common_times):
                 elif quick_profit_enabled and minutes_held <= quick_profit_time and pnl_pct >= quick_profit_pct:
                     close_reason = f"QUICK_PROFIT: +{pnl_pct:.1f}% in {minutes_held:.0f}min - locking gains"
 
-                # Rule 5: Time decay (Phase 34)
-                elif time_decay_enabled:
+                # Rule 5: Time decay (Phase 34) - Skip if RL exit enabled
+                elif not USE_SCALPING_EXIT and time_decay_enabled:
                     hold_pct = (minutes_held / max_hold_minutes) * 100
                     if hold_pct >= time_decay_hold_pct and pnl_pct < time_decay_min_profit and pnl_pct > -2:
                         close_reason = f"TIME_DECAY: {hold_pct:.0f}% of hold with only {pnl_pct:+.1f}% profit"
@@ -2549,6 +2674,33 @@ for idx, sim_time in enumerate(common_times):
                     except Exception as e:
                         logger.debug(f"[ADAPTIVE] Could not record outcome: {e}")
 
+                # SCALPING EXIT LEARNING: Record outcome for RL learning
+                if USE_SCALPING_EXIT and scalping_exit_policy:
+                    try:
+                        pnl = float(trade.get('pnl', 0))
+                        hold_mins = int(trade.get('hold_time_minutes', 45))
+                        pred_move = 0.01  # Default 1% predicted move
+                        entry_conf = 0.5  # Default confidence
+
+                        scalping_exit_policy.store_exit_experience(
+                            prediction_timeframe_minutes=15,
+                            time_held_minutes=hold_mins,
+                            exit_pnl_pct=pnl / 100.0 if abs(pnl) > 1 else pnl,  # Handle percentage vs dollars
+                            days_to_expiration=0,
+                            predicted_move_pct=pred_move * 100,
+                            actual_move_pct=pnl / 10,  # Approximate
+                            entry_confidence=entry_conf,
+                            exited_early=(hold_mins < 5)  # Scalping = early exit if < 5 min
+                        )
+
+                        # Train periodically
+                        if len(scalping_exit_policy.experiences) >= 32:
+                            scalping_exit_policy.train_from_experiences(batch_size=32)
+                            stats = scalping_exit_policy.get_stats()
+                            logger.debug(f"[SCALP] Trained | Early WR: {stats['early_exit_win_rate']:.1%} | Full WR: {stats['full_hold_win_rate']:.1%}")
+                    except Exception as e:
+                        logger.debug(f"[SCALP] Could not record outcome: {e}")
+
                 # Only add if we haven't processed it yet
                 if trade['id'] not in experience_manager.processed_trade_ids:
                     # Find the original signal that led to this trade (if available)
@@ -2565,6 +2717,32 @@ for idx, sim_time in enumerate(common_times):
                         record_trade(pnl_pct, is_win)
                     except ImportError:
                         pass  # Kill switches not available
+
+                    # Phase 80: Record trade outcome for Rolling WR Monitor
+                    if SMART_ENTRY_GATE_ENABLED and smart_entry_gate is not None:
+                        smart_entry_gate.record_trade_outcome(is_win)
+
+                    # Phase 81: Collect samples for Walk-Forward Retrain
+                    if WALK_FORWARD_ENABLED and walk_forward_trainer is not None:
+                        try:
+                            # Get features from the signal that led to this trade
+                            trade_features = signal_for_trade.get('features', None)
+                            if trade_features is not None:
+                                import numpy as np
+                                if hasattr(trade_features, 'numpy'):
+                                    trade_features = trade_features.numpy()
+                                elif not isinstance(trade_features, np.ndarray):
+                                    trade_features = np.array(trade_features)
+
+                                actual_return = pnl_pct / 100.0  # Convert to decimal
+                                walk_forward_trainer.add_sample(
+                                    features=trade_features,
+                                    actual_return=actual_return,
+                                    was_profitable=is_win,
+                                    timestamp=str(sim_time)
+                                )
+                        except Exception as e:
+                            logger.debug(f"[WALK_FORWARD] Could not add sample: {e}")
 
                     # KELLY POSITION SIZING: Record trade result for optimal sizing
                     if KELLY_SIZING_ENABLED and kelly_sizer:
@@ -2617,6 +2795,19 @@ for idx, sim_time in enumerate(common_times):
                             record_confidence_outcome(conf, actual_pnl, direction)
                         except Exception as e:
                             logger.debug(f"[CONF_CAL] Could not record outcome: {e}")
+
+                    # Musical Trading feedback loop - record outcome (THE EAR learns)
+                    if MUSICAL_ENABLED and musical_trader:
+                        try:
+                            conf = float(trade.get('ml_confidence', 0.5))
+                            actual_pnl = float(trade.get('pnl', 0))
+                            direction = 'CALL' if 'CALL' in str(trade.get('option_type', '')).upper() else 'PUT'
+                            hold_mins = float(trade.get('hold_minutes', 0))
+                            exit_reason = str(trade.get('exit_reason', 'unknown'))
+                            regime = musical_trader.state.regime if musical_trader else 'UNKNOWN'
+                            musical_record_outcome(conf, actual_pnl, direction, regime, hold_mins, exit_reason)
+                        except Exception as e:
+                            logger.debug(f"[MUSICAL] Could not record outcome: {e}")
 
                     # Direction controller learning - record outcome
                     if HAS_DIRECTION_CONTROLLER and direction_controller is not None:
@@ -3970,11 +4161,124 @@ for idx, sim_time in enumerate(common_times):
                                 pass  # Keep original confidence if entropy calc fails
 
                         # ==============================================================
+                        # MTF CONSENSUS GATE: Multi-timeframe RSI consensus filter
+                        # Blocks contrarian trades when all timeframes agree on direction
+                        # ==============================================================
+                        data_quality_blocked = False
+                        if USE_MTF_CONSENSUS_GATE:
+                            try:
+                                # Compute RSI at multiple timeframes from available data
+                                spy_data = tt_source.get_data('SPY', period='1d', interval='1m')
+                                if not spy_data.empty and len(spy_data) >= 60:
+                                    close_col = 'Close' if 'Close' in spy_data.columns else 'close'
+                                    close = spy_data[close_col].values
+
+                                    def compute_rsi(prices, period=14):
+                                        if len(prices) < period + 1:
+                                            return 50.0
+                                        delta = np.diff(prices)
+                                        gain = np.clip(delta, 0, None)
+                                        loss = np.clip(-delta, 0, None)
+                                        avg_gain = np.mean(gain[-period:])
+                                        avg_loss = np.mean(loss[-period:])
+                                        if avg_loss == 0:
+                                            return 100.0
+                                        rs = avg_gain / avg_loss
+                                        return 100.0 - (100.0 / (1.0 + rs))
+
+                                    # 1m RSI (last 14 bars)
+                                    rsi_1m = compute_rsi(close[-15:])
+                                    # 5m RSI (resample to 5m, last 14 bars = 70 1m bars)
+                                    if len(close) >= 70:
+                                        close_5m = close[-70:].reshape(-1, 5).mean(axis=1)
+                                        rsi_5m = compute_rsi(close_5m)
+                                    else:
+                                        rsi_5m = rsi_1m
+                                    # 15m RSI (resample to 15m, last 14 bars = 210 1m bars)
+                                    if len(close) >= 210:
+                                        # Pad to make divisible by 15
+                                        trim = len(close[-210:]) - (len(close[-210:]) % 15)
+                                        close_15m = close[-trim:].reshape(-1, 15).mean(axis=1)
+                                        rsi_15m = compute_rsi(close_15m)
+                                    else:
+                                        rsi_15m = rsi_5m
+
+                                    # Determine consensus using configurable thresholds
+                                    rsi_values = [rsi_1m, rsi_5m, rsi_15m]
+                                    oversold_thresh = 100 - MTF_RSI_THRESHOLD  # e.g., 70 -> 30
+                                    oversold = [r < oversold_thresh for r in rsi_values]
+                                    overbought = [r > MTF_RSI_THRESHOLD for r in rsi_values]
+
+                                    # Count how many timeframes agree
+                                    n_overbought = sum(overbought)
+                                    n_oversold = sum(oversold)
+
+                                    # Block contrarian trades when MTF consensus is strong
+                                    if MTF_BLOCK_CONTRARIAN:
+                                        if n_overbought >= MTF_MIN_AGREE and action == 'BUY_CALLS':
+                                            should_trade = False
+                                            data_quality_blocked = True
+                                            mtf_consensus_stats['blocked_calls_overbought'] += 1
+                                            print(f"   [MTF_GATE] BLOCKED CALL: {n_overbought}/3 RSI overbought ({rsi_1m:.0f}/{rsi_5m:.0f}/{rsi_15m:.0f})")
+                                        elif n_oversold >= MTF_MIN_AGREE and action == 'BUY_PUTS':
+                                            should_trade = False
+                                            data_quality_blocked = True
+                                            mtf_consensus_stats['blocked_puts_oversold'] += 1
+                                            print(f"   [MTF_GATE] BLOCKED PUT: {n_oversold}/3 RSI oversold ({rsi_1m:.0f}/{rsi_5m:.0f}/{rsi_15m:.0f})")
+                                        else:
+                                            mtf_consensus_stats['allowed'] += 1
+                                    else:
+                                        # Just warn, don't block
+                                        if all(overbought) and action == 'BUY_CALLS':
+                                            print(f"   [MTF_GATE] WARNING: CALL with overbought RSI ({rsi_1m:.0f}/{rsi_5m:.0f}/{rsi_15m:.0f})")
+                                            mtf_consensus_stats['warnings'] += 1
+                                        elif all(oversold) and action == 'BUY_PUTS':
+                                            print(f"   [MTF_GATE] WARNING: PUT with oversold RSI ({rsi_1m:.0f}/{rsi_5m:.0f}/{rsi_15m:.0f})")
+                                            mtf_consensus_stats['warnings'] += 1
+                            except Exception as e:
+                                logger.debug(f"[MTF_GATE] Check failed: {e}")
+
+                        # ==============================================================
+                        # VRP GATE: Only trade when IV > Realized Vol (volatility premium)
+                        # ==============================================================
+                        if USE_VRP_GATE and not data_quality_blocked:
+                            try:
+                                # Get VIX (proxy for IV) and compute realized vol
+                                vix_data = tt_source.get_data('VIX', period='1d', interval='1m')
+                                spy_data = tt_source.get_data('SPY', period='1d', interval='1m')
+
+                                if not vix_data.empty and not spy_data.empty:
+                                    # Current VIX (annualized IV proxy)
+                                    vix_col = 'Close' if 'Close' in vix_data.columns else 'close'
+                                    current_vix = float(vix_data[vix_col].iloc[-1]) / 100  # Convert to decimal
+
+                                    # Realized vol (20-day annualized)
+                                    spy_col = 'Close' if 'Close' in spy_data.columns else 'close'
+                                    if len(spy_data) >= 20:
+                                        returns = spy_data[spy_col].pct_change().dropna()
+                                        realized_vol = float(returns.tail(20).std()) * np.sqrt(252 * 390)  # Annualized from 1-min
+                                    else:
+                                        realized_vol = current_vix  # Assume no edge if not enough data
+
+                                    # VRP = IV - Realized Vol
+                                    vrp = current_vix - realized_vol
+
+                                    if vrp < VRP_MIN_PREMIUM:
+                                        should_trade = False
+                                        data_quality_blocked = True
+                                        vrp_gate_stats['blocked_low_vrp'] += 1
+                                        print(f"   [VRP_GATE] BLOCKED: VRP={vrp:.1%} < {VRP_MIN_PREMIUM:.1%} (VIX={current_vix:.1%}, RV={realized_vol:.1%})")
+                                    else:
+                                        vrp_gate_stats['allowed'] += 1
+                            except Exception as e:
+                                logger.debug(f"[VRP_GATE] Check failed: {e}")
+
+                        # ==============================================================
                         # SMART ENTRY GATE: Use INVERTED confidence as primary filter
                         # When enabled, bypasses standard bandit mode logic
                         # ==============================================================
                         smart_gate_decided = False
-                        if not hmm_decision_made and SMART_ENTRY_GATE_ENABLED and smart_entry_gate is not None:
+                        if not hmm_decision_made and not data_quality_blocked and SMART_ENTRY_GATE_ENABLED and smart_entry_gate is not None:
                             try:
                                 ml_conf = confidence
                                 pred_ret = predicted_return
@@ -4006,7 +4310,7 @@ for idx, sim_time in enumerate(common_times):
                                 logger.warning(f"[SMART_GATE] Error: {e}")
                                 smart_gate_decided = False  # Fall back to standard logic
 
-                        if not hmm_decision_made and not smart_gate_decided:
+                        if not hmm_decision_made and not smart_gate_decided and not data_quality_blocked:
                             try:
                                 if bot_config and hasattr(bot_config, "config") and not skip_gates:
                                     ep = bot_config.config.get("architecture", {}).get("entry_policy", {})
@@ -4573,6 +4877,38 @@ for idx, sim_time in enumerate(common_times):
                                 except Exception as e:
                                     print(f"   [CONF_CAL ERROR] {e}")
                             # ============= END CONFIDENCE CALIBRATOR =============
+
+                            # ============= MUSICAL TRADING (Phase 61 - Missing Notes) =============
+                            if MUSICAL_ENABLED and musical_trader and filter_ok and action in ('BUY_CALLS', 'BUY_PUTS'):
+                                try:
+                                    # Update market data for regime detection
+                                    current_vix = vix_current if 'vix_current' in dir() else 15
+                                    musical_trader.update_market_data(current_price, current_vix)
+
+                                    # Check if we should trade (EAR, KEY, DYNAMICS)
+                                    direction = 'CALL' if action == 'BUY_CALLS' else 'PUT'
+                                    should_enter, musical_reason, musical_conf = musical_should_trade(
+                                        raw_confidence=confidence,
+                                        predicted_return=predicted_return,
+                                        direction=direction,
+                                        price=current_price,
+                                        vix=current_vix
+                                    )
+
+                                    if not should_enter:
+                                        filter_ok = False
+                                        filter_reason = f"musical:{musical_reason}"
+                                        print(f"   [MUSICAL] BLOCKED: {musical_reason}")
+                                    else:
+                                        # Update confidence with musical calibration
+                                        if musical_conf != confidence:
+                                            print(f"   [MUSICAL] OK: conf={confidence:.0%} -> {musical_conf:.0%} | {musical_reason}")
+                                            confidence = musical_conf
+                                        else:
+                                            print(f"   [MUSICAL] OK: {musical_reason}")
+                                except Exception as e:
+                                    print(f"   [MUSICAL ERROR] {e}")
+                            # ============= END MUSICAL TRADING =============
 
                             # Apply Phase 44 boost to confidence (for logging)
                             if phase44_boost > 0:
@@ -5434,6 +5770,16 @@ for idx, sim_time in enumerate(common_times):
         # Increment cycle counter first
         cycles += 1
 
+        # Phase 81: Walk-Forward Retrain check
+        if WALK_FORWARD_ENABLED and walk_forward_trainer is not None:
+            should_retrain, retrain_reason = walk_forward_trainer.should_retrain()
+            if should_retrain:
+                logger.info(f"[WALK_FORWARD] Triggering retrain: {retrain_reason}")
+                retrain_result = walk_forward_trainer.retrain()
+                if 'error' not in retrain_result:
+                    logger.info(f"[WALK_FORWARD] Retrain #{retrain_result['retrain_num']} complete: "
+                               f"loss={retrain_result['avg_loss']:.6f}")
+
         # Optional: stop after N cycles (useful for quick dataset smoke tests)
         if TT_MAX_CYCLES > 0 and cycles >= TT_MAX_CYCLES:
             logger.info(f"[STOP] TT_MAX_CYCLES reached ({cycles}); stopping time-travel run.")
@@ -5684,6 +6030,17 @@ try:
 except Exception as e:
     print(f"  [WARN] Could not save neural network: {e}")
     logger.error(f"[ERROR] Failed to save model: {e}")
+
+# Save scalping exit policy if enabled
+if USE_SCALPING_EXIT and scalping_exit_policy:
+    try:
+        scalp_path = os.path.join(run_dir, "state", "scalping_exit_policy.pth")
+        scalping_exit_policy.save(scalp_path)
+        print(f"  [OK] Scalping exit policy saved")
+        logger.info(f"[SAVE] Scalping exit policy saved to {scalp_path}")
+    except Exception as e:
+        print(f"  [WARN] Could not save scalping exit policy: {e}")
+        logger.warning(f"[WARN] Could not save scalping exit policy: {e}")
 
 # Save performance summary for easy comparison
 summary_file = os.path.join(run_dir, "SUMMARY.txt")

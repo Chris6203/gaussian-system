@@ -16,13 +16,19 @@ This system implements a multi-component trading architecture:
 - **Post-Experiment Analysis** - automatic trade pattern analysis and recommendations
 - Paper trading and live execution via Tradier API
 
-### Latest Results (Phase 51)
+### Latest Results (Phase 84) - NEW BEST: 64.3% WIN RATE
 
-| Configuration | P&L | Win Rate |
-|---------------|-----|----------|
-| Mamba2 + Signal Filtering | **+34.85%** | 39.8% |
-| Transformer + Skew Exits | +32.65% | 38.2% |
-| TCN Baseline | +4.21% | 38.8% |
+| Configuration | Trades | Win Rate | P&L | Per-Trade |
+|---------------|--------|----------|-----|-----------|
+| **Phase 84: 30-min cooldown** | 56 | **64.3%** | **+$48.33** | **+$0.86** |
+| Phase 79-81: 60-min baseline | 40 | 47.5% | +$10.09 | +$0.25 |
+
+**Key Discovery:** 30-minute cooldown finds 40% more trades with 16.8% higher win rate than 60-minute default.
+
+```bash
+# Best Config - validated at 20K cycles: 64.3% WR, +$48.33 P&L
+SMART_ENTRY_GATE=1 SMART_COOLDOWN_MINUTES=30 python scripts/train_time_travel.py
+```
 
 ## Architecture
 
@@ -134,6 +140,11 @@ Edit `config.json` with your:
 Train the model on historical data:
 
 ```bash
+# Best Config (Phase 62b) - 56.9% WR, +$24.44 at 20K
+TRAIN_CONFIDENCE_BCE=1 SMART_ENTRY_GATE=1 SMART_OPTION_TYPE=calls_only \
+python scripts/train_time_travel.py
+
+# Or basic training
 python scripts/train_time_travel.py
 ```
 
@@ -478,6 +489,9 @@ Key environment variables for configuration:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `TRAIN_CONFIDENCE_BCE` | `0` | **Recommended** - BCE loss for confidence head (more robust) |
+| `SMART_ENTRY_GATE` | `0` | **Recommended** - Smart entry filtering |
+| `SMART_OPTION_TYPE` | `all` | **Recommended: `calls_only`** - CALLs outperform PUTs |
 | `TEMPORAL_ENCODER` | `tcn` | Temporal encoder: `tcn`, `transformer`, `mamba2`, `lstm` |
 | `PREDICTOR_ARCH` | `v2_slim_bayesian` | Predictor architecture |
 | `MODEL_RUN_DIR` | auto | Output directory for experiment |

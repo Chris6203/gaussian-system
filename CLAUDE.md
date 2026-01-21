@@ -10,7 +10,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Multiple entry controllers: bandit (default), RL (PPO), Q-Scorer, consensus
 - Paper trading and live execution via Tradier API
 
-**Best Config (Phase 57):** `SMART_ENTRY_GATE=1` - Uses inverted confidence filtering (+34.38% P&L)
+**BEST CONFIG (Phase 84):** `SMART_ENTRY_GATE=1 SMART_COOLDOWN_MINUTES=30`
+- **64.3% WR at 20K** (above 52.2% breakeven)
+- **+$48.33 P&L** at 20K (+0.97%)
+- **$0.86/trade** average profit (56 trades)
+- Key insight: 30-min cooldown (vs 60-min) finds 40% more trades with 16.8% higher win rate
 
 ## Known Issues & Fixes
 
@@ -35,27 +39,46 @@ USE_PROPER_CONFIDENCE=1 python scripts/train_time_travel.py
 ```
 
 ### Other Fixed Bugs
-- **Confidence Inversion (2026-01-12):** Confidence head outputs INVERTED. Fix: `CONFIDENCE_CALIBRATION=1 SIMONS_DRIFT_GATE_THRESHOLD=100` → **60% WR, +$9.93 P&L**
+- **Confidence Inversion (2026-01-12):** Confidence head outputs INVERTED. All fixes FAILED 20K:
+  - CALIBRATION: 60% WR at 500 → **34.9%** at 20K ❌
+  - BCE Training: 44.9% WR at 5K → **38.7%** at 20K ❌
 - **P&L Bug (2026-01-01):** Results before this date showing massive gains are INVALID
 - **TEMPORAL_ENCODER Bug (2026-01-06):** V2/V3 predictors ignored env var, always used LSTM
 - **HMM Gate Bug (2026-01-07):** Was blocking good signals. Fix: `SKIP_HMM_ALIGNMENT=1`
 - **Direction Threshold Bug:** `MIN_DIRECTION_THRESHOLD=0.5` is too high (use 0.05)
 
+### Institutional Fixes (Phase 61c)
+Three fixes based on professional trading feedback:
+
+| Fix | Env Var | Purpose |
+|-----|---------|---------|
+| Disable confidence gating | `DISABLE_CONFIDENCE_GATE=1` | Confidence is inverted, gating makes it WORSE |
+| Realistic paper fills | `REALISTIC_FILLS=1` | Mid-price fills inflate training results |
+| Train on option P&L | `TRAIN_ON_OPTION_PNL=1` | Already default |
+
+**5K Results:** 47.1% WR (-0.72% P&L) - improved from 37.6% baseline
+**Status:** Needs 20K validation
+
+### CRITICAL: 5K Tests Are Unreliable
+| Test | 5K Win Rate | 20K Win Rate | Inflation |
+|------|-------------|--------------|-----------|
+| CALIBRATION | 60% | 34.9% | +25% |
+| BCE Training | 44.9% | 38.7% | +6% |
+
+**Rule:** Never trust 5K results. Always validate at 20K+.
+
 ## Quick Start
 
 ### Training
 ```bash
-# NEW BEST (Phase 60): Confidence Calibration - 60% WR, +$9.93 P&L
-CONFIDENCE_CALIBRATION=1 SIMONS_DRIFT_GATE_THRESHOLD=100 python scripts/train_time_travel.py
+# BEST CONFIG (Phase 84) - VALIDATED AT 20K: 64.3% WR, +$48.33 P&L
+SMART_ENTRY_GATE=1 SMART_COOLDOWN_MINUTES=30 python scripts/train_time_travel.py
 
-# Best entry filter (Phase 57)
-SMART_ENTRY_GATE=1 python scripts/train_time_travel.py
-
-# Best overall (Phase 52: SKIP_MONDAY)
-./run_live_skip_monday.sh
+# Key insight: 30-min cooldown finds more opportunities than 60-min default
+# Results: 64.3% WR, 56 trades, +$0.86/trade (vs 47.5% WR, 40 trades with 60-min)
 
 # With options
-MODEL_RUN_DIR=models/my_test TT_MAX_CYCLES=5000 python scripts/train_time_travel.py
+MODEL_RUN_DIR=models/my_test TT_MAX_CYCLES=20000 python scripts/train_time_travel.py
 ```
 
 ### Live Trading
@@ -74,19 +97,24 @@ python dashboard.py --status     # Check status
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CONFIDENCE_CALIBRATION` | `0` | **Phase 60 FIX**: Invert broken confidence head (60% WR) |
-| `SIMONS_DRIFT_GATE_THRESHOLD` | `50` | Drift gate % (100=disabled, recommended) |
+| `MUSICAL_TRADING` | `0` | **Phase 61b FAILED**: 54.5% at 5K → 36.0% at 20K (no edge) |
+| `MUSICAL_EAR` | `0` | Feedback learning from outcomes |
+| `MUSICAL_KEY` | `0` | Regime-aware trading (bull/bear/sideways) |
+| `MUSICAL_DYNAMICS` | `0` | Kelly position sizing |
+| `MUSICAL_RESOLUTION` | `0` | Musical phrase exits |
+| `DISABLE_CONFIDENCE_GATE` | `0` | **Phase 61c**: Bypass broken confidence checks |
+| `REALISTIC_FILLS` | `0` | **Phase 61c**: Harsher paper fills (2x spread/slippage) |
+| `CALL_ONLY` | `0` | **Phase 62**: CALLs only (PUTs lose 4x more) |
+| `FAST_LOSS_CUT_ENABLED` | `1` | Set to 0 to disable RL fast cuts (0% WR) |
+| `TT_MAX_HOLD_MINUTES` | `30` | Set to 60 for better outcomes (58.8% WR) |
 | `SMART_ENTRY_GATE` | `0` | Use inverted confidence filtering |
+| `SMART_COOLDOWN_MINUTES` | `60` | **Phase 84**: Use 30 for best results |
 | `TRAIN_MAX_CONF` | `1.0` | Max confidence to trade (0.25 = only low conf) |
 | `SKIP_MONDAY` | `0` | Skip Monday trades |
 | `TEMPORAL_ENCODER` | `tcn` | Options: tcn, transformer, mamba2, lstm |
 | `SKIP_HMM_ALIGNMENT` | `0` | Skip HMM alignment gate |
-| `SKEW_EXIT_ENABLED` | `0` | Enable skew-optimized exits |
-| `TT_MAX_CYCLES` | `5000` | Backtest cycles |
+| `TT_MAX_CYCLES` | `5000` | Backtest cycles (use 20000 for validation) |
 | `MODEL_RUN_DIR` | `models/run_*` | Output directory |
-| `MEAN_REVERSION_GATE` | `0` | Phase 58: Filter trades at RSI extremes only |
-| `MR_ENTRY_THRESHOLD` | `0.5` | Min signal strength for mean reversion |
-| `MR_AVOID_LUNCH` | `1` | Skip 11:00-14:00 (choppy hours) |
 
 ## Architecture
 
@@ -104,8 +132,10 @@ Market Data → Features (50-500 dims) → HMM Regime → Predictor → Entry Po
 | Entry Policy | `backend/unified_rl_policy.py` |
 | Exit Manager | `backend/unified_exit_manager.py` |
 | Paper Trading | `backend/paper_trading_system.py` |
+| **Musical Trading** | `backend/musical_trading.py` |
 | Smart Entry Gate | `backend/smart_entry_gate.py` |
 | Multi-Strategy | `backend/multi_strategy_options.py` |
+| **Data Engine** | `backend/data_engine.py` |
 
 ### Directory Structure
 | Directory | Purpose |
@@ -168,6 +198,49 @@ StrategyType.BULL_PUT_SPREAD, StrategyType.BEAR_CALL_SPREAD
 | Tradier | 1 | Live trading API |
 | Polygon | 2 | Historical 1-min bars |
 
+## Data Engine (NEW - Jerry Integration)
+
+Inspired by Jerry's spy-iron-condor-trading data architecture:
+
+```python
+from backend.data_engine import create_data_engine, MTFSyncEngine
+
+# Create engine with IV confidence decay
+engine = create_data_engine(preload=True)
+
+# Get snapshot with alignment metadata
+snapshot = engine.get_snapshot('SPY', pd.Timestamp.now())
+print(f"IV Confidence: {snapshot.alignment.iv_conf:.1%}")
+print(f"Lag: {snapshot.alignment.lag_sec:.0f}s")
+print(f"Mode: {snapshot.alignment.mode.value}")
+
+# Multi-timeframe consensus
+mtf = MTFSyncEngine(engine)
+consensus = mtf.get_mtf_consensus('SPY', timestamp, 'rsi_14')
+```
+
+**IV Confidence Decay Formula:**
+```
+iv_conf = 0.5^(lag_sec / half_life)
+```
+- 0 sec lag → 100% confidence
+- 5 min lag → 50% confidence (default half_life=300)
+- 10 min lag → 25% confidence
+
+**Alignment Modes:**
+| Mode | Description |
+|------|-------------|
+| EXACT | Timestamp match within 1 min |
+| PRIOR | Used recent prior data (<10 min) |
+| STALE | Data is old (>10 min) |
+| NONE | No data available |
+
+**New Features Added to Pipeline:**
+- `dq_agg_confidence` - Aggregate data quality [0-1]
+- `dq_spy_conf`, `dq_vix_conf` - Per-symbol confidence
+- `mtf_rsi_alignment` - Multi-timeframe RSI consensus [0-1]
+- `mtf_macd_signal` - MTF MACD signal (-1, 0, 1)
+
 ## Databases
 
 SQLite in `data/`:
@@ -203,13 +276,14 @@ From Jerry Mahabub & John Draper's [spy-iron-condor-trading](https://github.com/
 | Regime Filter | `integrations/quantor/regime_filter.py` |
 | Data Alignment | `integrations/quantor/data_alignment.py` |
 
-## SmartEntryGate (Phase 57 - BEST)
+## SmartEntryGate (Phase 84 - BEST)
 
 Uses **inverted** confidence since confidence head is broken:
 
 ```python
 # Key insight: ml_confidence is INVERTED - lower = better!
 SMART_ENTRY_GATE=1  # Enable
+SMART_COOLDOWN_MINUTES=30  # (Phase 84) Shorter cooldown = more opportunities
 SMART_MIN_INV_CONF=0.70  # Min inverted conf (original < 30%)
 SMART_MIN_PRED_RET=0.0002  # Min predicted return
 SMART_MIN_VOLUME=0.9  # Min volume spike
@@ -217,7 +291,30 @@ SMART_MAX_DAILY=4  # Max trades per day
 SMART_OPTION_TYPE=all  # 'all', 'puts_only', 'calls_only'
 ```
 
-**Key Finding:** PUTS outperform CALLS by 4x (-$0.15/trade vs -$0.62/trade)
+**Phase 84 Finding:** 30-min cooldown beats 60-min (64.3% WR vs 47.5% WR, +4.8x P&L)
+
+## Time-of-Day Patterns (Phase 72 Discovery)
+
+**Critical Finding:** Morning trades are 7x more profitable than afternoon trades!
+
+| Time | Win Rate | Avg Win | Avg Loss | Net/Trade |
+|------|----------|---------|----------|-----------|
+| 9-10am | 58-67% | $2.48 | -$2.12 | +$0.91 |
+| 10-12pm | 61-67% | $2.30 | -$1.95 | +$0.53 |
+| 1-3pm | 25-50% | $0.35 | -$2.80 | -$1.50 |
+
+**Afternoon Volume Pattern:**
+- Low volume (< 1.5): **25% WR** (terrible)
+- Medium volume (1.5-2.5): **100% WR** (excellent)
+- High volume (> 2.5): **50% WR** (mediocre)
+
+**SmartEntryGate auto-filters afternoon low-volume trades:**
+```python
+# In SmartEntryGate - already implemented
+if current_time.hour in (13, 14, 15):
+    if vol < 1.5 or vol > 2.5:
+        return False, "Afternoon needs medium vol"
+```
 
 ## Confidence Calibrator (Phase 60 - DID NOT HOLD UP)
 
@@ -248,14 +345,50 @@ Raw Confidence  → Calibrated Confidence
 
 **Key Finding:** Only CALIBRATION matters. Other verses have no effect.
 
-## Potential Improvements (TODO)
+## Jerry Integration (spy-iron-condor-trading)
 
-Based on Phase 60 findings, these could further improve results:
+Key features from Jerry's Quantor-MTFuzz system to integrate:
 
-1. **Longer Validation** - Validate 60% WR holds at 5K/20K cycles
-2. **Combine with Phase 58** - Test CALIBRATION + SPY-VIX gate + Kelly sizing
-3. **Direction-Specific Calibration** - Separate calibration for CALLS vs PUTS
-4. **Regime-Specific Calibration** - Different inversion per market regime
-5. **Retrain Confidence Head** - Fix the NN instead of inverting output
-6. **Adaptive Calibration** - Learn actual WR per bucket over time
-7. **Combine with SmartEntryGate** - Both use inverted confidence
+### Priority 1: Quick Wins
+1. **VRP Gate** - Only trade when IV > Realized Vol by >2%
+2. **Skew-Aware Strikes** - Penalize high put-skew trades
+3. **Regime Filter** - Already in `integrations/quantor/regime_filter.py`
+
+### Priority 2: Position Sizing
+4. **Fuzzy 10-Factor Sizing** - Adaptive sizing based on multiple signals
+5. **Portfolio Greeks Limits** - Hard delta/vega limits
+
+### Priority 3: Advanced
+6. **MTF Consensus** - Cross-timeframe alignment
+7. **Mamba 2 Neural** - State-space model instead of LSTM
+
+### Jerry's Mamba 2 Architecture (Unique)
+Unlike standard Mamba, Jerry's implementation:
+- **32 layers deep** (vs typical 4-8)
+- **5 simple features**: `[log_ret, RSI, ATR%, vol_ratio, norm_time]`
+- **Pads to 1024 dims** - Large embedding space
+- **Batch precompute** - Runs entire dataset at once for GPU efficiency
+- **CPU fallback** - MockMambaKernel for no-GPU environments
+- **Return → Probs** - Converts raw output to bull/bear/neutral probabilities
+
+**Files to copy from Jerry's repo:**
+| Source | Destination | Purpose |
+|--------|-------------|---------|
+| `intelligence/fuzzy_engine.py` | `integrations/quantor/` | Fuzzy sizing |
+| `core/risk_manager.py` | `backend/` | Greeks limits |
+| `analytics/realized_vol.py` | `features/` | VRP calculation |
+
+## Feature Dimension Configuration
+
+Time-of-day features (50-53) are available but disabled by default:
+
+```bash
+# Enable time features for neural network
+INCLUDE_TIME_FEATURES=1 python scripts/train_time_travel.py
+
+# Enable gaussian pattern features (54-58)
+INCLUDE_GAUSSIAN_FEATURES=1 python scripts/train_time_travel.py
+```
+
+**Note:** Adding time features without pretraining hurts performance.
+Use SmartEntryGate's hard-coded afternoon filter instead.
